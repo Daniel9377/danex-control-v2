@@ -48,7 +48,7 @@ export function Sidebar({ locale, open, onClose }: Props) {
         {onClose && (
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 lg:hidden"
+            className="min-h-[44px] min-w-[44px] rounded-lg p-1 text-slate-400 hover:bg-slate-800 lg:hidden"
           >
             <X size={18} />
           </button>
@@ -66,7 +66,7 @@ export function Sidebar({ locale, open, onClose }: Props) {
                 href={fullHref}
                 onClick={onClose}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
                   isActive
                     ? "bg-orange-600/20 text-orange-400"
                     : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
