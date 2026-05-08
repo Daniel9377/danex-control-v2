@@ -5,10 +5,14 @@ import { routing } from "./i18n/routing";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-const PUBLIC_PATHS = ["/login", "/api"];
+const PUBLIC_PATHS = ["/login"];
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  if (pathname.startsWith("/api/") || pathname === "/api") {
+    return NextResponse.next();
+  }
 
   // Strip locale prefix to check if path is public
   const pathnameWithoutLocale = pathname.replace(/^\/(fr|en)/, "") || "/";
