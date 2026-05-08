@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "PowerShell(cd \"D:\\\\NEW APP\\\\danex-control-v2\"; $env:NODE_OPTIONS=\"--max-old-space-size=4096\"; npx next build --no-turbo 2>&1 | Select-Object -Last 30)",
+      "PowerShell(cd \"D:\\\\NEW APP\\\\danex-control-v2\"; $env:NODE_OPTIONS=\"--max-old-space-size=4096\"; $env:NEXT_TELEMETRY_DISABLED=\"1\"; npx next build 2>&1 | Select-Object -Last 40)",
+      "PowerShell(npm run *)"
+    ]
+  }
+}

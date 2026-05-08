@@ -1,0 +1,183 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "accounts": "Accounts",
+    "transactions": "Transactions",
+    "transfers": "Transfers",
+    "debts": "Debts",
+    "clients": "Clients",
+    "orders": "Orders",
+    "alerts": "Alerts",
+    "settings": "Settings"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "loading": "Loading...",
+    "empty": "No items",
+    "confirm_delete": "Confirm deletion",
+    "currency_missing": "* Some accounts excluded (missing rate)",
+    "search": "Search",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "full_name": "Full name",
+    "login_button": "Sign in",
+    "signup_button": "Create account",
+    "logout": "Logout",
+    "no_account": "No account yet?",
+    "has_account": "Already have an account?"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "total_balance": "Total balance",
+    "balance_by_currency": "Balance by currency",
+    "recent_transactions": "Recent transactions",
+    "active_debts": "Active debts",
+    "balance_over_time": "Balance over time",
+    "expenses_by_category": "Expenses by category",
+    "income_vs_expenses": "Income vs Expenses"
+  },
+  "accounts": {
+    "title": "Accounts",
+    "add": "New account",
+    "name": "Account name",
+    "type": "Type",
+    "currency": "Currency",
+    "balance": "Balance",
+    "note": "Note",
+    "types": {
+      "personal": "Personal",
+      "business": "Business",
+      "client": "Client",
+      "held": "Held"
+    },
+    "negative_warning": "Negative balance"
+  },
+  "transactions": {
+    "title": "Transactions",
+    "add": "New transaction",
+    "type": "Type",
+    "amount": "Amount",
+    "account": "Account",
+    "category": "Category",
+    "date": "Date",
+    "note": "Note",
+    "income": "Income",
+    "expense": "Expense",
+    "filters": {
+      "all_types": "All types",
+      "all_accounts": "All accounts",
+      "all_categories": "All categories"
+    }
+  },
+  "transfers": {
+    "title": "Transfers",
+    "add": "New transfer",
+    "from": "From",
+    "to": "To",
+    "from_amount": "Amount sent",
+    "to_amount": "Amount received",
+    "exchange_rate": "Exchange rate",
+    "date": "Date",
+    "note": "Note"
+  },
+  "debts": {
+    "title": "Debts",
+    "add": "New debt",
+    "i_owe": "I owe",
+    "owes_me": "Owed to me",
+    "person": "Person",
+    "amount": "Amount",
+    "paid": "Paid",
+    "remaining": "Remaining",
+    "status": "Status",
+    "due_date": "Due date",
+    "note": "Note",
+    "linked_account": "Linked account",
+    "add_payment": "Add payment",
+    "payment_history": "Payment history",
+    "statuses": {
+      "unpaid": "Unpaid",
+      "partial": "Partial",
+      "paid": "Paid"
+    },
+    "overdue": "Overdue"
+  },
+  "clients": {
+    "title": "Clients",
+    "add": "New client",
+    "name": "Name",
+    "phone": "Phone",
+    "country": "Country",
+    "city": "City",
+    "trust_level": "Trust level",
+    "note": "Note",
+    "trust_levels": {
+      "standard": "Standard",
+      "vip": "VIP",
+      "risky": "Risky"
+    },
+    "orders_count": "orders"
+  },
+  "orders": {
+    "title": "Orders",
+    "add": "New order",
+    "product": "Product",
+    "client": "Client",
+    "tracking": "Tracking code",
+    "client_price": "Client price",
+    "supplier_price": "Supplier price",
+    "margin": "Margin",
+    "advance": "Advance received",
+    "status": "Status",
+    "last_update": "Last update",
+    "next_action": "Next action",
+    "note": "Note",
+    "statuses": {
+      "new": "New",
+      "sourcing": "Sourcing",
+      "ordered": "Ordered",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    }
+  },
+  "alerts": {
+    "title": "Alerts",
+    "mark_read": "Mark as read",
+    "mark_all_read": "Mark all as read",
+    "types": {
+      "budget": "Budget",
+      "debt_due": "Debt due",
+      "negative_balance": "Negative balance",
+      "custom": "Custom"
+    },
+    "empty": "No alerts"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "currencies": "Currencies",
+    "integrations": "Integrations",
+    "language": "Language",
+    "full_name": "Full name",
+    "rate": "Rate (USD)",
+    "connect": "Connect",
+    "connected": "Connected",
+    "google_calendar": "Google Calendar",
+    "notion": "Notion",
+    "calendar_desc": "Sync order deadlines with your calendar",
+    "notion_desc": "Sync clients and orders with Notion"
+  }
+}

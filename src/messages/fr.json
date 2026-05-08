@@ -1,0 +1,183 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "accounts": "Comptes",
+    "transactions": "Transactions",
+    "transfers": "Transferts",
+    "debts": "Dettes",
+    "clients": "Clients",
+    "orders": "Commandes",
+    "alerts": "Alertes",
+    "settings": "Paramètres"
+  },
+  "common": {
+    "save": "Sauvegarder",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "loading": "Chargement...",
+    "empty": "Aucun élément",
+    "confirm_delete": "Confirmer la suppression",
+    "currency_missing": "* Certains comptes exclus (taux manquant)",
+    "search": "Rechercher",
+    "close": "Fermer",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "auth": {
+    "login": "Connexion",
+    "signup": "Inscription",
+    "email": "Email",
+    "password": "Mot de passe",
+    "full_name": "Nom complet",
+    "login_button": "Se connecter",
+    "signup_button": "Créer un compte",
+    "logout": "Déconnexion",
+    "no_account": "Pas encore de compte ?",
+    "has_account": "Déjà un compte ?"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "total_balance": "Solde total",
+    "balance_by_currency": "Solde par devise",
+    "recent_transactions": "Transactions récentes",
+    "active_debts": "Dettes actives",
+    "balance_over_time": "Évolution du solde",
+    "expenses_by_category": "Dépenses par catégorie",
+    "income_vs_expenses": "Revenus vs Dépenses"
+  },
+  "accounts": {
+    "title": "Comptes",
+    "add": "Nouveau compte",
+    "name": "Nom du compte",
+    "type": "Type",
+    "currency": "Devise",
+    "balance": "Solde",
+    "note": "Note",
+    "types": {
+      "personal": "Personnel",
+      "business": "Professionnel",
+      "client": "Client",
+      "held": "En garde"
+    },
+    "negative_warning": "Solde négatif"
+  },
+  "transactions": {
+    "title": "Transactions",
+    "add": "Nouvelle transaction",
+    "type": "Type",
+    "amount": "Montant",
+    "account": "Compte",
+    "category": "Catégorie",
+    "date": "Date",
+    "note": "Note",
+    "income": "Revenu",
+    "expense": "Dépense",
+    "filters": {
+      "all_types": "Tous les types",
+      "all_accounts": "Tous les comptes",
+      "all_categories": "Toutes les catégories"
+    }
+  },
+  "transfers": {
+    "title": "Transferts",
+    "add": "Nouveau transfert",
+    "from": "De",
+    "to": "Vers",
+    "from_amount": "Montant envoyé",
+    "to_amount": "Montant reçu",
+    "exchange_rate": "Taux de change",
+    "date": "Date",
+    "note": "Note"
+  },
+  "debts": {
+    "title": "Dettes",
+    "add": "Nouvelle dette",
+    "i_owe": "Je dois",
+    "owes_me": "On me doit",
+    "person": "Personne",
+    "amount": "Montant",
+    "paid": "Payé",
+    "remaining": "Restant",
+    "status": "Statut",
+    "due_date": "Échéance",
+    "note": "Note",
+    "linked_account": "Compte lié",
+    "add_payment": "Ajouter un paiement",
+    "payment_history": "Historique des paiements",
+    "statuses": {
+      "unpaid": "Impayé",
+      "partial": "Partiel",
+      "paid": "Payé"
+    },
+    "overdue": "En retard"
+  },
+  "clients": {
+    "title": "Clients",
+    "add": "Nouveau client",
+    "name": "Nom",
+    "phone": "Téléphone",
+    "country": "Pays",
+    "city": "Ville",
+    "trust_level": "Niveau de confiance",
+    "note": "Note",
+    "trust_levels": {
+      "standard": "Standard",
+      "vip": "VIP",
+      "risky": "Risqué"
+    },
+    "orders_count": "commandes"
+  },
+  "orders": {
+    "title": "Commandes",
+    "add": "Nouvelle commande",
+    "product": "Produit",
+    "client": "Client",
+    "tracking": "Code suivi",
+    "client_price": "Prix client",
+    "supplier_price": "Prix fournisseur",
+    "margin": "Marge",
+    "advance": "Avance reçue",
+    "status": "Statut",
+    "last_update": "Dernière MAJ",
+    "next_action": "Prochaine action",
+    "note": "Note",
+    "statuses": {
+      "new": "Nouveau",
+      "sourcing": "En recherche",
+      "ordered": "Commandé",
+      "shipped": "Expédié",
+      "delivered": "Livré",
+      "paid": "Payé",
+      "cancelled": "Annulé"
+    }
+  },
+  "alerts": {
+    "title": "Alertes",
+    "mark_read": "Marquer comme lu",
+    "mark_all_read": "Tout marquer comme lu",
+    "types": {
+      "budget": "Budget",
+      "debt_due": "Dette échue",
+      "negative_balance": "Solde négatif",
+      "custom": "Personnalisé"
+    },
+    "empty": "Aucune alerte"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "profile": "Profil",
+    "currencies": "Devises",
+    "integrations": "Intégrations",
+    "language": "Langue",
+    "full_name": "Nom complet",
+    "rate": "Taux (USD)",
+    "connect": "Connecter",
+    "connected": "Connecté",
+    "google_calendar": "Google Agenda",
+    "notion": "Notion",
+    "calendar_desc": "Synchronisez les délais de commandes avec votre agenda",
+    "notion_desc": "Synchronisez les clients et commandes avec Notion"
+  }
+}
