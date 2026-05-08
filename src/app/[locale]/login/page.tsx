@@ -31,38 +31,44 @@ export default function LoginPage({ params }: Props) {
     setError(null);
     setLoading(true);
 
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    if (mode === "login") {
-      const { error: err } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (err) {
-        setError(err.message);
-        setLoading(false);
-        return;
+      if (mode === "login") {
+        const { error: err } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (err) {
+          setError(err.message);
+          setLoading(false);
+          return;
+        }
+      } else {
+        const { error: err } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName } },
+        });
+        if (err) {
+          setError(err.message);
+          setLoading(false);
+          return;
+        }
       }
-    } else {
-      const { error: err } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
-      });
-      if (err) {
-        setError(err.message);
-        setLoading(false);
-        return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await seedIfEmpty(user.id);
       }
-    }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await seedIfEmpty(user.id);
+      router.push(`/${locale}/dashboard`);
+      router.refresh();
+    } catch (err) {
+      console.error("[login] unexpected error:", err);
+      setError(err instanceof Error ? err.message : "Network error. Please try again.");
+      setLoading(false);
     }
-
-    router.push(`/${locale}/dashboard`);
-    router.refresh();
   }
 
   return (

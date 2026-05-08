@@ -7,7 +7,7 @@ const intlMiddleware = createIntlMiddleware(routing);
 
 const PUBLIC_PATHS = ["/login"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Strip locale prefix to check if path is public
