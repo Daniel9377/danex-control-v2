@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { MoneyAmount } from "@/components/ui/MoneyAmount";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { LoadingPage } from "@/components/ui/LoadingSpinner";
+import { SkeletonList } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DebtDirection, DebtPayment } from "@/lib/supabase/types";
 import { formatDate, isOverdue } from "@/lib/utils";
@@ -90,7 +90,18 @@ export default function DebtsPage({ params }: Props) {
     unpaid: "danger", partial: "warning", paid: "success",
   };
 
-  if (loading) return <PageWrapper locale={locale}><LoadingPage /></PageWrapper>;
+  if (loading) return (
+    <PageWrapper locale={locale}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="h-7 w-20 animate-pulse rounded-lg bg-slate-800" />
+          <div className="h-9 w-36 animate-pulse rounded-lg bg-slate-800" />
+        </div>
+        <div className="h-10 animate-pulse rounded-lg bg-slate-800" />
+        <SkeletonList count={4} />
+      </div>
+    </PageWrapper>
+  );
 
   return (
     <PageWrapper locale={locale}>

@@ -61,7 +61,7 @@ export function ExpenseChart({ data, currency = "USD" }: Props) {
           }
         />
         <Bar dataKey="income" fill="#10b981" radius={[3, 3, 0, 0]} />
-        <Bar dataKey="expenses" fill="#C2550A" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="expenses" fill="#ef4444" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

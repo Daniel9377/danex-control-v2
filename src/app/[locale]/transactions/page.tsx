@@ -11,16 +11,27 @@ import { Card } from "@/components/ui/Card";
 import { MoneyAmount } from "@/components/ui/MoneyAmount";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { LoadingPage } from "@/components/ui/LoadingSpinner";
+import { SkeletonList } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TransactionType } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 
-const CATEGORIES = [
-  "Alimentation", "Transport", "Loyer", "Salaire", "Sourcing",
-  "Commission", "Frais bancaires", "Marketing", "Autre",
+const EXPENSE_CATEGORIES = [
+  "Alimentation", "Transport", "Logement/Loyer", "Santé", "Vêtements",
+  "Éducation", "Loisirs", "Hôtel/Voyage", "Télécommunications", "Électronique",
+  "Frais bancaires", "Marketing", "Sourcing", "Salaire versé", "Commission payée",
+  "Investissement", "Épargne", "Remboursement dette", "Divers dépenses",
 ];
+
+const INCOME_CATEGORIES = [
+  "Commission reçue", "Salaire reçu", "Vente produit", "Remboursement reçu",
+  "Transfert reçu", "Investissement retour", "Cadeau reçu", "Divers revenus",
+];
+
+const ALL_CATEGORIES = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
+
+const PAGE_SIZE = 20;
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -33,6 +44,7 @@ export default function TransactionsPage({ params }: Props) {
 
   const [showForm, setShowForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; accountId: string; type: TransactionType; amount: number } | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   // Filters
   const [filterType, setFilterType] = useState<"" | "income" | "expense">("");
@@ -54,6 +66,19 @@ export default function TransactionsPage({ params }: Props) {
     return true;
   });
 
+  const visible = showAll ? filtered : filtered.slice(0, PAGE_SIZE);
+  const hasMore = filtered.length > PAGE_SIZE;
+
+  function openForm() {
+    setAccountId(accounts[0]?.id ?? "");
+    setTxType("expense");
+    setCategory("");
+    setAmount("");
+    setNote("");
+    setDate(new Date().toISOString().split("T")[0]);
+    setShowForm(true);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const supabase = createClient();
@@ -69,7 +94,24 @@ export default function TransactionsPage({ params }: Props) {
     setAmount(""); setNote(""); setCategory("");
   }
 
-  if (txLoading || accLoading) return <PageWrapper locale={locale}><LoadingPage /></PageWrapper>;
+  const formCategories = txType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  if (txLoading || accLoading) return (
+    <PageWrapper locale={locale}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="h-7 w-32 animate-pulse rounded-lg bg-slate-800" />
+          <div className="h-9 w-44 animate-pulse rounded-lg bg-slate-800" />
+        </div>
+        <div className="flex gap-2">
+          {[80, 100, 120].map((w) => (
+            <div key={w} className={`h-8 w-${w} animate-pulse rounded-lg bg-slate-800`} />
+          ))}
+        </div>
+        <SkeletonList count={5} />
+      </div>
+    </PageWrapper>
+  );
 
   return (
     <PageWrapper locale={locale}>
@@ -77,7 +119,7 @@ export default function TransactionsPage({ params }: Props) {
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
           <button
-            onClick={() => { setAccountId(accounts[0]?.id ?? ""); setShowForm(true); }}
+            onClick={openForm}
             className="flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700"
           >
             <Plus size={15} />
@@ -112,7 +154,7 @@ export default function TransactionsPage({ params }: Props) {
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 focus:border-orange-500 focus:outline-none"
           >
             <option value="">{t("filters.all_categories")}</option>
-            {CATEGORIES.map((c) => (
+            {ALL_CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
@@ -122,7 +164,7 @@ export default function TransactionsPage({ params }: Props) {
           <EmptyState message={tc("empty")} />
         ) : (
           <div className="space-y-2">
-            {filtered.map((tx) => {
+            {visible.map((tx) => {
               const acc = accounts.find((a) => a.id === tx.account_id);
               return (
                 <Card key={tx.id}>
@@ -160,6 +202,23 @@ export default function TransactionsPage({ params }: Props) {
                 </Card>
               );
             })}
+
+            {hasMore && !showAll && (
+              <button
+                onClick={() => setShowAll(true)}
+                className="w-full rounded-lg border border-slate-700 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              >
+                Voir tout ({filtered.length} transactions)
+              </button>
+            )}
+            {showAll && filtered.length > PAGE_SIZE && (
+              <button
+                onClick={() => setShowAll(false)}
+                className="w-full rounded-lg border border-slate-700 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              >
+                Réduire
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -177,7 +236,7 @@ export default function TransactionsPage({ params }: Props) {
                     <button
                       key={tp}
                       type="button"
-                      onClick={() => setTxType(tp)}
+                      onClick={() => { setTxType(tp); setCategory(""); }}
                       className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
                         txType === tp
                           ? tp === "income"
@@ -225,7 +284,7 @@ export default function TransactionsPage({ params }: Props) {
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
                 >
                   <option value="">—</option>
-                  {CATEGORIES.map((c) => (
+                  {formCategories.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
@@ -237,7 +296,7 @@ export default function TransactionsPage({ params }: Props) {
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
+                  className="w-48 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
               </div>
               <div>

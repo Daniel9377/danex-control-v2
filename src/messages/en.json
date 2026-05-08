@@ -56,10 +56,12 @@
     "balance": "Balance",
     "note": "Note",
     "types": {
-      "personal": "Personal",
-      "business": "Business",
-      "client": "Client",
-      "held": "Held"
+      "personnel": "Personal",
+      "professionnel": "Professional",
+      "epargne": "Savings",
+      "investissement": "Investment",
+      "ecole": "School",
+      "risque": "Risk"
     },
     "negative_warning": "Negative balance"
   },
@@ -94,8 +96,8 @@
   "debts": {
     "title": "Debts",
     "add": "New debt",
-    "i_owe": "I owe",
-    "owes_me": "Owed to me",
+    "i_owe": "My debts",
+    "owes_me": "My receivables",
     "person": "Person",
     "amount": "Amount",
     "paid": "Paid",
@@ -169,6 +171,7 @@
     "title": "Settings",
     "profile": "Profile",
     "currencies": "Currencies",
+    "export": "Export",
     "integrations": "Integrations",
     "language": "Language",
     "full_name": "Full name",

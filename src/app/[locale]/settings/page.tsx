@@ -5,17 +5,56 @@ import { use } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useCurrencies } from "@/hooks/useCurrencies";
+import { useTransactions } from "@/hooks/useTransactions";
+import { useAccounts } from "@/hooks/useAccounts";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { Card } from "@/components/ui/Card";
 import { LoadingPage } from "@/components/ui/LoadingSpinner";
-import { Profile } from "@/lib/supabase/types";
-import { Check, Save } from "lucide-react";
+import { Profile, Transaction, Account } from "@/lib/supabase/types";
+import { Check, Save, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type Props = { params: Promise<{ locale: string }> };
 
-const TABS = ["profile", "currencies", "integrations"] as const;
+const TABS = ["profile", "currencies", "export", "integrations"] as const;
 type Tab = (typeof TABS)[number];
+
+function exportTransactionsPDF(transactions: Transaction[], accounts: Account[], title: string) {
+  import("jspdf").then(({ jsPDF }) => {
+    import("jspdf-autotable").then(() => {
+      const doc = new jsPDF({ orientation: "landscape" });
+      doc.setFontSize(14);
+      doc.text(title, 14, 18);
+      doc.setFontSize(10);
+      doc.text(`Généré le ${new Date().toLocaleDateString("fr-FR")}`, 14, 25);
+
+      const rows = transactions.map((tx) => {
+        const acc = accounts.find((a) => a.id === tx.account_id);
+        return [
+          tx.transaction_date,
+          tx.type === "income" ? "Revenu" : "Dépense",
+          acc?.name ?? "—",
+          tx.category ?? "—",
+          Number(tx.amount).toFixed(2),
+          tx.currency,
+          tx.note ?? "",
+        ];
+      });
+
+      (doc as any).autoTable({
+        startY: 30,
+        head: [["Date", "Type", "Compte", "Catégorie", "Montant", "Devise", "Note"]],
+        body: rows,
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [194, 85, 10], textColor: 255 },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+      });
+
+      const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_");
+      doc.save(`${safeTitle}.pdf`);
+    });
+  });
+}
 
 export default function SettingsPage({ params }: Props) {
   const { locale } = use(params);
@@ -23,14 +62,16 @@ export default function SettingsPage({ params }: Props) {
   const tc = useTranslations("common");
   const router = useRouter();
   const { currencies, upsertCurrency, loading: currLoading } = useCurrencies();
+  const { transactions } = useTransactions();
+  const { accounts } = useAccounts();
 
   const [tab, setTab] = useState<Tab>("profile");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [fullName, setFullName] = useState("");
   const [language, setLanguage] = useState(locale);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [exporting, setExporting] = useState<string | null>(null);
 
-  // Per-currency rate editing
   const [rates, setRates] = useState<Record<string, string>>({});
   const [savedCodes, setSavedCodes] = useState<Set<string>>(new Set());
 
@@ -86,6 +127,38 @@ export default function SettingsPage({ params }: Props) {
     setTimeout(() => setSavedCodes((prev) => { const s = new Set(prev); s.delete(code); return s; }), 2000);
   }
 
+  function handleExport(period: "week" | "month" | "all") {
+    const now = new Date();
+    let filtered: Transaction[];
+    let title: string;
+
+    if (period === "week") {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      filtered = transactions.filter((tx) => new Date(tx.transaction_date) >= weekAgo);
+      title = `Transactions_semaine_${now.toLocaleDateString("fr-FR").replace(/\//g, "-")}`;
+    } else if (period === "month") {
+      filtered = transactions.filter((tx) => {
+        const d = new Date(tx.transaction_date);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+      const monthLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+      title = `Transactions_${monthLabel.replace(/ /g, "_")}`;
+    } else {
+      filtered = transactions;
+      title = `Toutes_les_transactions_${now.toLocaleDateString("fr-FR").replace(/\//g, "-")}`;
+    }
+
+    const displayTitle =
+      period === "week" ? "Transactions — Cette semaine" :
+      period === "month" ? `Transactions — ${now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}` :
+      "Toutes les transactions";
+
+    setExporting(period);
+    exportTransactionsPDF(filtered, accounts, displayTitle);
+    setTimeout(() => setExporting(null), 1500);
+  }
+
   if (currLoading) return <PageWrapper locale={locale}><LoadingPage /></PageWrapper>;
 
   return (
@@ -94,7 +167,7 @@ export default function SettingsPage({ params }: Props) {
         <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
 
         {/* Tab bar */}
-        <div className="flex gap-1 rounded-lg border border-slate-800 bg-slate-900 p-1">
+        <div className="flex flex-wrap gap-1 rounded-lg border border-slate-800 bg-slate-900 p-1">
           {TABS.map((tb) => (
             <button
               key={tb}
@@ -183,6 +256,74 @@ export default function SettingsPage({ params }: Props) {
                 </div>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Export tab */}
+        {tab === "export" && (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-400">
+              Exportez vos transactions au format PDF.
+            </p>
+            <Card>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-100">Cette semaine</p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Transactions des 7 derniers jours
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleExport("week")}
+                  disabled={exporting === "week"}
+                  className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+                >
+                  <Download size={14} />
+                  {exporting === "week" ? "Génération..." : "PDF"}
+                </button>
+              </div>
+            </Card>
+            <Card>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-100">Ce mois</p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Transactions du mois en cours
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleExport("month")}
+                  disabled={exporting === "month"}
+                  className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+                >
+                  <Download size={14} />
+                  {exporting === "month" ? "Génération..." : "PDF"}
+                </button>
+              </div>
+            </Card>
+            <Card>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-100">Toutes les données</p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Export complet de toutes vos transactions
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleExport("all")}
+                  disabled={exporting === "all"}
+                  className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+                >
+                  <Download size={14} />
+                  {exporting === "all" ? "Génération..." : "PDF"}
+                </button>
+              </div>
+            </Card>
+            {transactions.length === 0 && (
+              <p className="text-center text-sm text-slate-500 py-4">
+                Aucune transaction à exporter.
+              </p>
+            )}
           </div>
         )}
 

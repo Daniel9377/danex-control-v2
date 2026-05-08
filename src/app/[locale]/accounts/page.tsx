@@ -11,12 +11,12 @@ import { Card } from "@/components/ui/Card";
 import { MoneyAmount } from "@/components/ui/MoneyAmount";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { LoadingPage } from "@/components/ui/LoadingSpinner";
+import { SkeletonList } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AccountType } from "@/lib/supabase/types";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
-const ACCOUNT_TYPES: AccountType[] = ["personal", "business", "client", "held"];
+const ACCOUNT_TYPES: AccountType[] = ["personnel", "professionnel", "epargne", "investissement", "ecole", "risque"];
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -32,14 +32,14 @@ export default function AccountsPage({ params }: Props) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
-  const [type, setType] = useState<AccountType>("personal");
+  const [type, setType] = useState<AccountType>("personnel");
   const [currency, setCurrency] = useState("USD");
   const [balance, setBalance] = useState("0");
   const [note, setNote] = useState("");
 
   function openAdd() {
     setEditing(null);
-    setName(""); setType("personal"); setCurrency("USD");
+    setName(""); setType("personnel"); setCurrency("USD");
     setBalance("0"); setNote("");
     setShowForm(true);
   }
@@ -67,14 +67,26 @@ export default function AccountsPage({ params }: Props) {
     setShowForm(false);
   }
 
-  const typeVariant: Record<AccountType, "default" | "info" | "success" | "warning"> = {
-    personal: "default",
-    business: "info",
-    client: "success",
-    held: "warning",
+  const typeVariant: Record<AccountType, "default" | "info" | "success" | "warning" | "danger"> = {
+    personnel: "default",
+    professionnel: "info",
+    epargne: "success",
+    investissement: "warning",
+    ecole: "info",
+    risque: "danger",
   };
 
-  if (loading) return <PageWrapper locale={locale}><LoadingPage /></PageWrapper>;
+  if (loading) return (
+    <PageWrapper locale={locale}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="h-7 w-24 animate-pulse rounded-lg bg-slate-800" />
+          <div className="h-9 w-36 animate-pulse rounded-lg bg-slate-800" />
+        </div>
+        <SkeletonList count={3} />
+      </div>
+    </PageWrapper>
+  );
 
   return (
     <PageWrapper locale={locale}>

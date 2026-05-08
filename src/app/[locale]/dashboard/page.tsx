@@ -10,11 +10,10 @@ import { PageWrapper } from "@/components/layout/PageWrapper";
 import { Card } from "@/components/ui/Card";
 import { MoneyAmount } from "@/components/ui/MoneyAmount";
 import { Badge } from "@/components/ui/Badge";
-import { LoadingPage } from "@/components/ui/LoadingSpinner";
 import { BalanceChart } from "@/components/charts/BalanceChart";
 import { ExpenseChart } from "@/components/charts/ExpenseChart";
 import { CategoryPie } from "@/components/charts/CategoryPie";
-import { sumAccountsInCurrency } from "@/lib/currency";
+import { sumAccountsInCurrency, getValidRate } from "@/lib/currency";
 import { formatDate, isOverdue } from "@/lib/utils";
 import { use } from "react";
 
@@ -36,7 +35,31 @@ export default function DashboardPage({ params }: Props) {
 
   if (accountsLoading || txLoading || debtsLoading) return (
     <PageWrapper locale={locale}>
-      <LoadingPage />
+      <div className="space-y-6">
+        <div className="h-7 w-40 animate-pulse rounded-lg bg-slate-800" />
+        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div className="h-4 w-24 animate-pulse rounded bg-slate-800 mb-2" />
+          <div className="h-9 w-40 animate-pulse rounded bg-slate-800" />
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex justify-between">
+              <div className="h-4 w-20 animate-pulse rounded bg-slate-800" />
+              <div className="h-4 w-24 animate-pulse rounded bg-slate-800" />
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+            <div className="h-4 w-32 animate-pulse rounded bg-slate-800 mb-3" />
+            <div className="h-48 animate-pulse rounded bg-slate-800" />
+          </div>
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+            <div className="h-4 w-36 animate-pulse rounded bg-slate-800 mb-3" />
+            <div className="h-48 animate-pulse rounded bg-slate-800" />
+          </div>
+        </div>
+      </div>
     </PageWrapper>
   );
 
@@ -61,11 +84,11 @@ export default function DashboardPage({ params }: Props) {
   // Unread alerts
   const unreadAlerts = alerts.filter((a) => !a.is_read);
 
-  // Build expense chart data (last 6 months)
-  const monthData = buildMonthData(transactions);
+  // Build expense chart data (last 6 months) — amounts converted to USD
+  const monthData = buildMonthData(transactions, ratesByCode);
 
-  // Category breakdown this month
-  const categoryData = buildCategoryData(transactions);
+  // Category breakdown this month — amounts converted to USD
+  const categoryData = buildCategoryData(transactions, ratesByCode);
 
   return (
     <PageWrapper locale={locale}>
@@ -119,14 +142,14 @@ export default function DashboardPage({ params }: Props) {
             <p className="mb-3 text-sm font-medium text-slate-400">
               {t("income_vs_expenses")}
             </p>
-            <ExpenseChart data={monthData} />
+            <ExpenseChart data={monthData} currency="USD" />
           </Card>
           <Card>
             <p className="mb-3 text-sm font-medium text-slate-400">
               {t("expenses_by_category")}
             </p>
             {categoryData.length > 0 ? (
-              <CategoryPie data={categoryData} />
+              <CategoryPie data={categoryData} currency="USD" />
             ) : (
               <p className="py-12 text-center text-sm text-slate-500">
                 {tc("empty")}
@@ -225,7 +248,10 @@ export default function DashboardPage({ params }: Props) {
   );
 }
 
-function buildMonthData(transactions: { type: string; amount: number; transaction_date: string }[]) {
+function buildMonthData(
+  transactions: { type: string; amount: number; currency: string; transaction_date: string }[],
+  ratesByCode: Record<string, number | string | null>
+) {
   const months: Record<string, { income: number; expenses: number }> = {};
   const now = new Date();
   for (let i = 5; i >= 0; i--) {
@@ -237,13 +263,18 @@ function buildMonthData(transactions: { type: string; amount: number; transactio
     const d = new Date(tx.transaction_date);
     const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
     if (!months[key]) return;
-    if (tx.type === "income") months[key].income += Number(tx.amount);
-    else months[key].expenses += Number(tx.amount);
+    const rate = getValidRate(ratesByCode[tx.currency]) ?? 1;
+    const usd = Number(tx.amount) * rate;
+    if (tx.type === "income") months[key].income += usd;
+    else months[key].expenses += usd;
   });
   return Object.entries(months).map(([month, v]) => ({ month, ...v }));
 }
 
-function buildCategoryData(transactions: { type: string; amount: number; category: string | null; transaction_date: string }[]) {
+function buildCategoryData(
+  transactions: { type: string; amount: number; currency: string; category: string | null; transaction_date: string }[],
+  ratesByCode: Record<string, number | string | null>
+) {
   const now = new Date();
   const thisMonth = now.getMonth();
   const thisYear = now.getFullYear();
@@ -254,8 +285,9 @@ function buildCategoryData(transactions: { type: string; amount: number; categor
       return tx.type === "expense" && d.getMonth() === thisMonth && d.getFullYear() === thisYear;
     })
     .forEach((tx) => {
-      const cat = tx.category ?? "Autre";
-      cats[cat] = (cats[cat] ?? 0) + Number(tx.amount);
+      const cat = tx.category ?? "Divers dépenses";
+      const rate = getValidRate(ratesByCode[tx.currency]) ?? 1;
+      cats[cat] = (cats[cat] ?? 0) + Number(tx.amount) * rate;
     });
   return Object.entries(cats).map(([name, value]) => ({ name, value }));
 }

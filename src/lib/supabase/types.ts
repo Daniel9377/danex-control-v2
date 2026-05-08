@@ -17,7 +17,7 @@ export type Currency = {
   updated_at: string;
 };
 
-export type AccountType = "personal" | "business" | "client" | "held";
+export type AccountType = "personnel" | "professionnel" | "epargne" | "investissement" | "ecole" | "risque";
 
 export type Account = {
   id: string;

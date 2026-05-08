@@ -16,6 +16,13 @@ body {
   box-sizing: border-box;
 }
 
+/* Navigation progress bar animation */
+@keyframes progress {
+  0% { transform: translateX(-100%); width: 50%; }
+  50% { width: 70%; }
+  100% { transform: translateX(200%); width: 50%; }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

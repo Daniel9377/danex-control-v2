@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Wallet,
@@ -38,9 +39,20 @@ type Props = {
 export function Sidebar({ locale, open, onClose }: Props) {
   const t = useTranslations("nav");
   const pathname = usePathname();
+  const [navigating, setNavigating] = useState(false);
+
+  useEffect(() => {
+    setNavigating(false);
+  }, [pathname]);
 
   const sidebarContent = (
-    <nav className="flex h-full flex-col">
+    <nav className="relative flex h-full flex-col">
+      {/* Navigation progress indicator */}
+      {navigating && (
+        <div className="absolute left-0 top-0 h-0.5 w-full overflow-hidden z-10">
+          <div className="h-full animate-[progress_1.5s_ease-in-out_infinite] bg-orange-500" />
+        </div>
+      )}
       <div className="flex items-center justify-between px-4 py-5">
         <span className="text-lg font-bold tracking-tight text-orange-500">
           DANEX
@@ -64,7 +76,7 @@ export function Sidebar({ locale, open, onClose }: Props) {
             <li key={key}>
               <Link
                 href={fullHref}
-                onClick={onClose}
+                onClick={() => { if (!isActive) setNavigating(true); onClose?.(); }}
                 className={cn(
                   "flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
                   isActive

@@ -56,10 +56,12 @@
     "balance": "Solde",
     "note": "Note",
     "types": {
-      "personal": "Personnel",
-      "business": "Professionnel",
-      "client": "Client",
-      "held": "En garde"
+      "personnel": "Personnel",
+      "professionnel": "Professionnel",
+      "epargne": "Épargne",
+      "investissement": "Investissement",
+      "ecole": "École",
+      "risque": "Risque"
     },
     "negative_warning": "Solde négatif"
   },
@@ -94,8 +96,8 @@
   "debts": {
     "title": "Dettes",
     "add": "Nouvelle dette",
-    "i_owe": "Je dois",
-    "owes_me": "On me doit",
+    "i_owe": "Mes dettes",
+    "owes_me": "Mes créances",
     "person": "Personne",
     "amount": "Montant",
     "paid": "Payé",
@@ -169,6 +171,7 @@
     "title": "Paramètres",
     "profile": "Profil",
     "currencies": "Devises",
+    "export": "Export",
     "integrations": "Intégrations",
     "language": "Langue",
     "full_name": "Nom complet",
