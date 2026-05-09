@@ -10,11 +10,12 @@ const PUBLIC_PATHS = ["/login"];
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Never intercept API routes
   if (pathname.startsWith("/api/") || pathname === "/api") {
     return NextResponse.next();
   }
 
-  // Strip locale prefix to check if path is public
+  // Strip locale prefix to determine if the path is public
   const pathnameWithoutLocale = pathname.replace(/^\/(fr|en)/, "") || "/";
   const isPublic = PUBLIC_PATHS.some(
     (p) => pathnameWithoutLocale === p || pathnameWithoutLocale.startsWith(p + "/")
@@ -24,7 +25,8 @@ export async function proxy(request: NextRequest) {
 
   if (isPublic) return response;
 
-  // Auth check
+  // Build a Supabase server client that reads cookies from the request
+  // and writes refreshed tokens back to the response.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -42,14 +44,27 @@ export async function proxy(request: NextRequest) {
     }
   );
 
+  // getUser() validates the JWT and refreshes it if needed.
+  // If the refresh token is invalid, it returns user = null.
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!user || error) {
     const locale = pathname.split("/")[1] || "fr";
     const loginUrl = new URL(`/${locale}/login`, request.url);
-    return NextResponse.redirect(loginUrl);
+
+    // Build a redirect that also clears stale auth cookies so the
+    // browser doesn't keep trying to refresh an invalid token.
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    request.cookies.getAll().forEach(({ name }) => {
+      if (name.startsWith("sb-")) {
+        redirectResponse.cookies.delete(name);
+      }
+    });
+
+    return redirectResponse;
   }
 
   return response;
