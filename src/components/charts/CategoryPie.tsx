@@ -45,6 +45,7 @@ export function CategoryPie({ data, currency = "USD" }: Props) {
           paddingAngle={2}
           dataKey="value"
           strokeWidth={0}
+          stroke="none"
           isAnimationActive={false}
         >
           {data.map((_, index) => (

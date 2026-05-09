@@ -14,11 +14,13 @@ import { ExpenseChart } from "@/components/charts/ExpenseChart";
 import { CategoryPie } from "@/components/charts/CategoryPie";
 import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES } from "@/lib/currency";
 import { formatDate, isOverdue } from "@/lib/utils";
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 
 type Props = {
   params: Promise<{ locale: string }>;
 };
+
+type ChartPeriod = "week" | "month" | "3months" | "6months" | "year";
 
 export default function DashboardPage({ params }: Props) {
   const { locale } = use(params);
@@ -31,6 +33,7 @@ export default function DashboardPage({ params }: Props) {
   const { debts, loading: debtsLoading } = useDebts();
   const { alerts } = useAlerts();
   const { ratesByCode, loading: currLoading } = useCurrencies();
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
 
   // All hooks must run unconditionally — moved above the loading guard to
   // satisfy the Rules of Hooks (hook count must not change between renders).
@@ -50,7 +53,7 @@ export default function DashboardPage({ params }: Props) {
   const recent = useMemo(() => transactions.slice(0, 5), [transactions]);
   const activeDebts = useMemo(() => debts.filter((d) => d.status !== "paid").slice(0, 5), [debts]);
   const unreadAlerts = useMemo(() => alerts.filter((a) => !a.is_read), [alerts]);
-  const monthData = useMemo(() => buildMonthData(transactions, ratesByCode), [transactions, ratesByCode]);
+  const monthData = useMemo(() => buildPeriodChartData(transactions, ratesByCode, chartPeriod), [transactions, ratesByCode, chartPeriod]);
   const categoryData = useMemo(() => buildCategoryData(transactions, ratesByCode), [transactions, ratesByCode]);
 
   if (accountsLoading || txLoading || debtsLoading || currLoading) return (
@@ -132,9 +135,22 @@ export default function DashboardPage({ params }: Props) {
         {/* Charts row */}
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
-            <p className="mb-3 text-sm font-medium text-slate-400">
-              {t("income_vs_expenses")}
-            </p>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-sm font-medium text-slate-400">
+                {t("income_vs_expenses")}
+              </p>
+              <select
+                value={chartPeriod}
+                onChange={(e) => setChartPeriod(e.target.value as ChartPeriod)}
+                className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
+              >
+                <option value="week">Cette semaine</option>
+                <option value="month">Ce mois</option>
+                <option value="3months">3 derniers mois</option>
+                <option value="6months">6 derniers mois</option>
+                <option value="year">Cette année</option>
+              </select>
+            </div>
             <ExpenseChart data={monthData} currency="USD" />
           </Card>
           <Card>
@@ -249,27 +265,63 @@ function resolveRate(currency: string, ratesByCode: Record<string, number | stri
   return getValidRate(ratesByCode[currency]) ?? DEFAULT_RATE_MAP[currency] ?? 1;
 }
 
-function buildMonthData(
+function buildPeriodChartData(
   transactions: { type: string; amount: number; currency: string; transaction_date: string }[],
-  ratesByCode: Record<string, number | string | null>
+  ratesByCode: Record<string, number | string | null>,
+  period: ChartPeriod
 ) {
-  const months: Record<string, { income: number; expenses: number }> = {};
   const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
-    months[key] = { income: 0, expenses: 0 };
-  }
   const displayRate = resolveRate("USD", ratesByCode);
-  transactions.forEach((tx) => {
-    const d = new Date(tx.transaction_date);
-    const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
-    if (!months[key]) return;
-    const usd = (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
-    if (tx.type === "income") months[key].income += usd;
-    else months[key].expenses += usd;
-  });
-  return Object.entries(months).map(([month, v]) => ({ month, ...v }));
+  const buckets: Record<string, { income: number; expenses: number }> = {};
+
+  if (period === "week") {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const key = d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+      buckets[key] = { income: 0, expenses: 0 };
+    }
+    transactions.forEach((tx) => {
+      const d = new Date(tx.transaction_date);
+      const msAgo = now.getTime() - d.getTime();
+      if (msAgo > 7 * 24 * 60 * 60 * 1000) return;
+      const key = d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+      if (!buckets[key]) return;
+      const usd = (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
+      if (tx.type === "income") buckets[key].income += usd;
+      else buckets[key].expenses += usd;
+    });
+  } else if (period === "month") {
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+      buckets[key] = { income: 0, expenses: 0 };
+    }
+    transactions.forEach((tx) => {
+      const d = new Date(tx.transaction_date);
+      const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+      if (!buckets[key]) return;
+      const usd = (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
+      if (tx.type === "income") buckets[key].income += usd;
+      else buckets[key].expenses += usd;
+    });
+  } else {
+    const monthCount = period === "3months" ? 3 : period === "6months" ? 6 : 12;
+    for (let i = monthCount - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+      buckets[key] = { income: 0, expenses: 0 };
+    }
+    transactions.forEach((tx) => {
+      const d = new Date(tx.transaction_date);
+      const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+      if (!buckets[key]) return;
+      const usd = (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
+      if (tx.type === "income") buckets[key].income += usd;
+      else buckets[key].expenses += usd;
+    });
+  }
+
+  return Object.entries(buckets).map(([month, v]) => ({ month, ...v }));
 }
 
 function buildCategoryData(

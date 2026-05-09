@@ -62,6 +62,9 @@ export default function SettingsPage({ params }: Props) {
   const [language, setLanguage] = useState(locale);
   const [profileSaved, setProfileSaved] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const [rates, setRates] = useState<Record<string, string>>({});
   const [savedCodes, setSavedCodes] = useState<Set<string>>(new Set());
@@ -148,6 +151,70 @@ export default function SettingsPage({ params }: Props) {
     setExporting(period);
     exportTransactionsCSV(filtered, accounts, title);
     setTimeout(() => setExporting(null), 1500);
+  }
+
+  async function exportPDF() {
+    const from = exportFrom ? new Date(exportFrom) : null;
+    const to = exportTo ? new Date(exportTo + "T23:59:59") : null;
+    const filtered = transactions.filter((tx) => {
+      const d = new Date(tx.transaction_date);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+    setExportingPdf(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ orientation: "landscape" });
+      doc.setFontSize(14);
+      doc.text("Transactions", 14, 15);
+      if (from || to) {
+        doc.setFontSize(10);
+        doc.text(
+          `Période : ${from ? from.toLocaleDateString("fr-FR") : "—"} → ${to ? to.toLocaleDateString("fr-FR") : "—"}`,
+          14,
+          22
+        );
+      }
+      const headers = ["Date", "Type", "Compte", "Catégorie", "Montant", "Devise", "Note"];
+      const rows = filtered.map((tx) => {
+        const acc = accounts.find((a) => a.id === tx.account_id);
+        return [
+          tx.transaction_date,
+          tx.type === "income" ? "Revenu" : "Dépense",
+          acc?.name ?? "",
+          tx.category ?? "",
+          Number(tx.amount).toFixed(2),
+          tx.currency,
+          tx.note ?? "",
+        ];
+      });
+      let y = from || to ? 30 : 24;
+      const colWidths = [24, 22, 36, 36, 22, 16, 50];
+      const colX = colWidths.reduce<number[]>((acc, w, i) => {
+        acc.push(i === 0 ? 14 : acc[i - 1] + colWidths[i - 1]);
+        return acc;
+      }, []);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      headers.forEach((h, i) => doc.text(h, colX[i], y));
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      rows.forEach((row) => {
+        if (y > 195) { doc.addPage(); y = 14; }
+        row.forEach((cell, i) => {
+          const text = doc.splitTextToSize(String(cell), colWidths[i] - 2);
+          doc.text(text[0], colX[i], y);
+        });
+        y += 6;
+      });
+      const label = from || to
+        ? `Transactions_${exportFrom || "debut"}_${exportTo || "fin"}`
+        : `Toutes_transactions`;
+      doc.save(`${label}.pdf`);
+    } finally {
+      setExportingPdf(false);
+    }
   }
 
   if (currLoading) return <PageWrapper locale={locale}><LoadingPage /></PageWrapper>;
@@ -307,6 +374,40 @@ export default function SettingsPage({ params }: Props) {
                 >
                   <FileDown size={14} />
                   {exporting === "all" ? "Génération..." : "CSV"}
+                </button>
+              </div>
+            </Card>
+            <Card>
+              <p className="mb-3 text-sm font-semibold text-slate-100">Exporter en PDF</p>
+              <p className="mb-3 text-xs text-slate-500">
+                Exportez vos transactions pour une période donnée.
+              </p>
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex-1 min-w-[120px]">
+                  <label className="mb-1 block text-xs text-slate-400">Du</label>
+                  <input
+                    type="date"
+                    value={exportFrom}
+                    onChange={(e) => setExportFrom(e.target.value)}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
+                  />
+                </div>
+                <div className="flex-1 min-w-[120px]">
+                  <label className="mb-1 block text-xs text-slate-400">Au</label>
+                  <input
+                    type="date"
+                    value={exportTo}
+                    onChange={(e) => setExportTo(e.target.value)}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
+                  />
+                </div>
+                <button
+                  onClick={exportPDF}
+                  disabled={exportingPdf}
+                  className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+                >
+                  <FileDown size={14} />
+                  {exportingPdf ? "Génération..." : "Exporter en PDF"}
                 </button>
               </div>
             </Card>

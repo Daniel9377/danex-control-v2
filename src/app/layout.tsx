@@ -15,6 +15,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Danex Control",
   description: "Personal finance OS for DANEX",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Danex",
+  },
+  themeColor: "#C2550A",
 };
 
 export default function RootLayout({
