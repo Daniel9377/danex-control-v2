@@ -19,10 +19,13 @@ export function useAccounts() {
       return;
     }
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("accounts")
       .select("*")
       .order("created_at");
+    if (error) {
+      console.error("[useAccounts] load error:", error.code, error.message);
+    }
     if (data) {
       cacheSet(KEY, data);
       setAccounts(data);
@@ -41,13 +44,27 @@ export function useAccounts() {
     currency: string,
     balance: number,
     note: string | null,
-    availability?: AccountAvailability
+    availability: AccountAvailability = "immediate"
   ) {
     const supabase = createClient();
-    await supabase.from("accounts").insert({
-      user_id: userId, name, type, currency, balance, note,
-      ...(availability ? { availability } : {}),
-    });
+    const payload = {
+      user_id: userId,
+      name,
+      type,
+      currency,
+      balance,
+      note,
+      availability,
+    };
+
+    const { error } = await supabase.from("accounts").insert(payload);
+
+    if (error) {
+      console.error("[addAccount] Supabase error:", error.code, error.message);
+      console.error("[addAccount] Payload was:", JSON.stringify(payload));
+      return;
+    }
+
     cacheInvalidate(KEY);
     await load();
   }
@@ -57,14 +74,27 @@ export function useAccounts() {
     updates: Partial<Pick<Account, "name" | "type" | "currency" | "note" | "availability">>
   ) {
     const supabase = createClient();
-    await supabase.from("accounts").update(updates).eq("id", id);
+    const { error } = await supabase.from("accounts").update(updates).eq("id", id);
+
+    if (error) {
+      console.error("[updateAccount] Supabase error:", error.code, error.message);
+      console.error("[updateAccount] Updates were:", JSON.stringify(updates));
+      return;
+    }
+
     cacheInvalidate(KEY);
     await load();
   }
 
   async function deleteAccount(id: string) {
     const supabase = createClient();
-    await supabase.from("accounts").delete().eq("id", id);
+    const { error } = await supabase.from("accounts").delete().eq("id", id);
+
+    if (error) {
+      console.error("[deleteAccount] Supabase error:", error.code, error.message);
+      return;
+    }
+
     cacheInvalidate(KEY);
     await load();
   }
