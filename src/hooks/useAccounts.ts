@@ -3,18 +3,30 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Account, AccountType } from "@/lib/supabase/types";
+import { cacheGet, cacheSet, cacheInvalidate } from "@/lib/cache";
+
+const KEY = "accounts";
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    const cached = cacheGet<Account[]>(KEY);
+    if (cached) {
+      setAccounts(cached);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     const { data } = await supabase
       .from("accounts")
       .select("*")
       .order("created_at");
-    if (data) setAccounts(data);
+    if (data) {
+      cacheSet(KEY, data);
+      setAccounts(data);
+    }
     setLoading(false);
   }, []);
 
@@ -31,14 +43,8 @@ export function useAccounts() {
     note: string | null
   ) {
     const supabase = createClient();
-    await supabase.from("accounts").insert({
-      user_id: userId,
-      name,
-      type,
-      currency,
-      balance,
-      note,
-    });
+    await supabase.from("accounts").insert({ user_id: userId, name, type, currency, balance, note });
+    cacheInvalidate(KEY);
     await load();
   }
 
@@ -48,12 +54,14 @@ export function useAccounts() {
   ) {
     const supabase = createClient();
     await supabase.from("accounts").update(updates).eq("id", id);
+    cacheInvalidate(KEY);
     await load();
   }
 
   async function deleteAccount(id: string) {
     const supabase = createClient();
     await supabase.from("accounts").delete().eq("id", id);
+    cacheInvalidate(KEY);
     await load();
   }
 

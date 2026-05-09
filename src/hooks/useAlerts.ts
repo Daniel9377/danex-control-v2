@@ -3,18 +3,30 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Alert } from "@/lib/supabase/types";
+import { cacheGet, cacheSet, cacheInvalidate } from "@/lib/cache";
+
+const KEY = "alerts";
 
 export function useAlerts() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    const cached = cacheGet<Alert[]>(KEY);
+    if (cached) {
+      setAlerts(cached);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     const { data } = await supabase
       .from("alerts")
       .select("*")
       .order("triggered_at", { ascending: false });
-    if (data) setAlerts(data);
+    if (data) {
+      cacheSet(KEY, data);
+      setAlerts(data);
+    }
     setLoading(false);
   }, []);
 
@@ -25,17 +37,14 @@ export function useAlerts() {
   async function markRead(id: string) {
     const supabase = createClient();
     await supabase.from("alerts").update({ is_read: true }).eq("id", id);
-    setAlerts((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, is_read: true } : a))
-    );
+    cacheInvalidate(KEY);
+    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, is_read: true } : a)));
   }
 
   async function markAllRead() {
     const supabase = createClient();
-    await supabase
-      .from("alerts")
-      .update({ is_read: true })
-      .eq("is_read", false);
+    await supabase.from("alerts").update({ is_read: true }).eq("is_read", false);
+    cacheInvalidate(KEY);
     setAlerts((prev) => prev.map((a) => ({ ...a, is_read: true })));
   }
 

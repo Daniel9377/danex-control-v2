@@ -3,20 +3,30 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Order, OrderStatus } from "@/lib/supabase/types";
+import { cacheGet, cacheSet, cacheInvalidate, cacheInvalidatePrefix } from "@/lib/cache";
+
+const PREFIX = "orders";
 
 export function useOrders(clientId?: string) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    const key = clientId ? `${PREFIX}:${clientId}` : `${PREFIX}:all`;
+    const cached = cacheGet<Order[]>(key);
+    if (cached) {
+      setOrders(cached);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
-    let query = supabase
-      .from("orders")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("orders").select("*").order("created_at", { ascending: false });
     if (clientId) query = query.eq("client_id", clientId);
     const { data } = await query;
-    if (data) setOrders(data);
+    if (data) {
+      cacheSet(key, data);
+      setOrders(data);
+    }
     setLoading(false);
   }, [clientId]);
 
@@ -39,19 +49,12 @@ export function useOrders(clientId?: string) {
   ) {
     const supabase = createClient();
     await supabase.from("orders").insert({
-      user_id: userId,
-      client_id: clientId,
-      product_name: productName,
-      currency,
-      client_price: clientPrice,
-      supplier_price: supplierPrice,
-      advance_received: advanceReceived,
-      status,
-      tracking_code: trackingCode,
-      next_action: nextAction,
-      note,
-      last_update: new Date().toISOString().split("T")[0],
+      user_id: userId, client_id: clientId, product_name: productName, currency,
+      client_price: clientPrice, supplier_price: supplierPrice,
+      advance_received: advanceReceived, status, tracking_code: trackingCode,
+      next_action: nextAction, note, last_update: new Date().toISOString().split("T")[0],
     });
+    cacheInvalidatePrefix(PREFIX);
     await load();
   }
 
@@ -64,12 +67,14 @@ export function useOrders(clientId?: string) {
       .from("orders")
       .update({ ...updates, last_update: new Date().toISOString().split("T")[0] })
       .eq("id", id);
+    cacheInvalidatePrefix(PREFIX);
     await load();
   }
 
   async function deleteOrder(id: string) {
     const supabase = createClient();
     await supabase.from("orders").delete().eq("id", id);
+    cacheInvalidatePrefix(PREFIX);
     await load();
   }
 

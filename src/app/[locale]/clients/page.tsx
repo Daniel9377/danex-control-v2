@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -76,9 +76,12 @@ export default function ClientsPage({ params }: Props) {
     setShowForm(false);
   }
 
-  const filtered = clients.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.country ?? "").toLowerCase().includes(search.toLowerCase())
+  const filtered = useMemo(
+    () => clients.filter((c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.country ?? "").toLowerCase().includes(search.toLowerCase())
+    ),
+    [clients, search]
   );
 
   if (loading) return <PageWrapper locale={locale}><LoadingPage /></PageWrapper>;

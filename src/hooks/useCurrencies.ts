@@ -4,18 +4,27 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Currency } from "@/lib/supabase/types";
 import { DEFAULT_CURRENCIES } from "@/lib/currency";
+import { cacheGet, cacheSet, cacheInvalidate } from "@/lib/cache";
+
+const KEY = "currencies";
 
 export function useCurrencies() {
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    const cached = cacheGet<Currency[]>(KEY);
+    if (cached) {
+      setCurrencies(cached);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
-    const { data } = await supabase
-      .from("currencies")
-      .select("*")
-      .order("code");
-    if (data) setCurrencies(data);
+    const { data } = await supabase.from("currencies").select("*").order("code");
+    if (data) {
+      cacheSet(KEY, data);
+      setCurrencies(data);
+    }
     setLoading(false);
   }, []);
 
@@ -25,15 +34,10 @@ export function useCurrencies() {
 
   async function seedIfEmpty(userId: string) {
     const supabase = createClient();
-    const { data } = await supabase
-      .from("currencies")
-      .select("id")
-      .eq("user_id", userId)
-      .limit(1);
+    const { data } = await supabase.from("currencies").select("id").eq("user_id", userId).limit(1);
     if (data && data.length === 0) {
-      await supabase.from("currencies").insert(
-        DEFAULT_CURRENCIES.map((c) => ({ ...c, user_id: userId }))
-      );
+      await supabase.from("currencies").insert(DEFAULT_CURRENCIES.map((c) => ({ ...c, user_id: userId })));
+      cacheInvalidate(KEY);
       await load();
     }
   }
@@ -52,6 +56,7 @@ export function useCurrencies() {
         { user_id: userId, code, name, symbol, rate_to_usd, updated_at: new Date().toISOString() },
         { onConflict: "user_id,code" }
       );
+    cacheInvalidate(KEY);
     await load();
   }
 

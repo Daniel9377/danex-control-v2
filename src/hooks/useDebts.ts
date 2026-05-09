@@ -3,18 +3,30 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Debt, DebtDirection, DebtPayment } from "@/lib/supabase/types";
+import { cacheGet, cacheSet, cacheInvalidate } from "@/lib/cache";
+
+const KEY = "debts";
 
 export function useDebts() {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    const cached = cacheGet<Debt[]>(KEY);
+    if (cached) {
+      setDebts(cached);
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     const { data } = await supabase
       .from("debts")
       .select("*")
       .order("created_at", { ascending: false });
-    if (data) setDebts(data);
+    if (data) {
+      cacheSet(KEY, data);
+      setDebts(data);
+    }
     setLoading(false);
   }, []);
 
@@ -34,17 +46,10 @@ export function useDebts() {
   ) {
     const supabase = createClient();
     await supabase.from("debts").insert({
-      user_id: userId,
-      person_name: personName,
-      direction,
-      amount,
-      currency,
-      due_date: dueDate,
-      note,
-      linked_account_id: linkedAccountId,
-      paid_amount: 0,
-      status: "unpaid",
+      user_id: userId, person_name: personName, direction, amount, currency,
+      due_date: dueDate, note, linked_account_id: linkedAccountId, paid_amount: 0, status: "unpaid",
     });
+    cacheInvalidate(KEY);
     await load();
   }
 
@@ -58,50 +63,27 @@ export function useDebts() {
   ) {
     const supabase = createClient();
     await supabase.from("debt_payments").insert({
-      user_id: userId,
-      debt_id: debt.id,
-      account_id: accountId,
-      amount: paymentAmount,
-      payment_date: paymentDate,
-      note,
+      user_id: userId, debt_id: debt.id, account_id: accountId,
+      amount: paymentAmount, payment_date: paymentDate, note,
     });
-
     const newPaid = Number(debt.paid_amount) + paymentAmount;
-    const newStatus =
-      newPaid >= Number(debt.amount)
-        ? "paid"
-        : newPaid > 0
-        ? "partial"
-        : "unpaid";
-
-    await supabase
-      .from("debts")
-      .update({ paid_amount: newPaid, status: newStatus })
-      .eq("id", debt.id);
-
-    // Optionally adjust account balance
+    const newStatus = newPaid >= Number(debt.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
+    await supabase.from("debts").update({ paid_amount: newPaid, status: newStatus }).eq("id", debt.id);
     if (accountId) {
-      const { data: acc } = await supabase
-        .from("accounts")
-        .select("balance")
-        .eq("id", accountId)
-        .single();
+      const { data: acc } = await supabase.from("accounts").select("balance").eq("id", accountId).single();
       if (acc) {
-        const delta =
-          debt.direction === "i_owe" ? -paymentAmount : paymentAmount;
-        await supabase
-          .from("accounts")
-          .update({ balance: Number(acc.balance) + delta })
-          .eq("id", accountId);
+        const delta = debt.direction === "i_owe" ? -paymentAmount : paymentAmount;
+        await supabase.from("accounts").update({ balance: Number(acc.balance) + delta }).eq("id", accountId);
       }
     }
-
+    cacheInvalidate(KEY, "accounts");
     await load();
   }
 
   async function deleteDebt(id: string) {
     const supabase = createClient();
     await supabase.from("debts").delete().eq("id", id);
+    cacheInvalidate(KEY);
     await load();
   }
 

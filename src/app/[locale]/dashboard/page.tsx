@@ -15,7 +15,7 @@ import { ExpenseChart } from "@/components/charts/ExpenseChart";
 import { CategoryPie } from "@/components/charts/CategoryPie";
 import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES } from "@/lib/currency";
 import { formatDate, isOverdue } from "@/lib/utils";
-import { use } from "react";
+import { use, useMemo } from "react";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -63,32 +63,24 @@ export default function DashboardPage({ params }: Props) {
     </PageWrapper>
   );
 
-  const { total: totalUSD, hasMissing } = sumAccountsInCurrency(
-    accounts,
-    "USD",
-    ratesByCode
+  const { total: totalUSD, hasMissing } = useMemo(
+    () => sumAccountsInCurrency(accounts, "USD", ratesByCode),
+    [accounts, ratesByCode]
   );
 
-  // Balance by currency
-  const byCurrency = accounts.reduce<Record<string, number>>((acc, a) => {
-    acc[a.currency] = (acc[a.currency] ?? 0) + Number(a.balance);
-    return acc;
-  }, {});
+  const byCurrency = useMemo(
+    () => accounts.reduce<Record<string, number>>((acc, a) => {
+      acc[a.currency] = (acc[a.currency] ?? 0) + Number(a.balance);
+      return acc;
+    }, {}),
+    [accounts]
+  );
 
-  // Recent 5 transactions
-  const recent = transactions.slice(0, 5);
-
-  // Active debts (unpaid/partial)
-  const activeDebts = debts.filter((d) => d.status !== "paid").slice(0, 5);
-
-  // Unread alerts
-  const unreadAlerts = alerts.filter((a) => !a.is_read);
-
-  // Build expense chart data (last 6 months) — amounts converted to USD
-  const monthData = buildMonthData(transactions, ratesByCode);
-
-  // Category breakdown this month — amounts converted to USD
-  const categoryData = buildCategoryData(transactions, ratesByCode);
+  const recent = useMemo(() => transactions.slice(0, 5), [transactions]);
+  const activeDebts = useMemo(() => debts.filter((d) => d.status !== "paid").slice(0, 5), [debts]);
+  const unreadAlerts = useMemo(() => alerts.filter((a) => !a.is_read), [alerts]);
+  const monthData = useMemo(() => buildMonthData(transactions, ratesByCode), [transactions, ratesByCode]);
+  const categoryData = useMemo(() => buildCategoryData(transactions, ratesByCode), [transactions, ratesByCode]);
 
   return (
     <PageWrapper locale={locale}>

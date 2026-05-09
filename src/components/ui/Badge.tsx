@@ -1,12 +1,7 @@
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant =
-  | "default"
-  | "success"
-  | "warning"
-  | "danger"
-  | "info"
-  | "orange";
+type Variant = "default" | "success" | "warning" | "danger" | "info" | "orange";
 
 const variantStyles: Record<Variant, string> = {
   default: "bg-slate-700 text-slate-300",
@@ -23,7 +18,7 @@ type Props = {
   className?: string;
 };
 
-export function Badge({ children, variant = "default", className }: Props) {
+export const Badge = memo(function Badge({ children, variant = "default", className }: Props) {
   return (
     <span
       className={cn(
@@ -35,4 +30,4 @@ export function Badge({ children, variant = "default", className }: Props) {
       {children}
     </span>
   );
-}
+});

@@ -32,11 +32,10 @@ const navItems = [
 
 type Props = {
   locale: string;
-  open?: boolean;
   onClose?: () => void;
 };
 
-export function Sidebar({ locale, open, onClose }: Props) {
+export function Sidebar({ locale, onClose }: Props) {
   const t = useTranslations("nav");
   const pathname = usePathname();
   const [navigating, setNavigating] = useState(false);
@@ -45,27 +44,26 @@ export function Sidebar({ locale, open, onClose }: Props) {
     setNavigating(false);
   }, [pathname]);
 
-  const sidebarContent = (
+  return (
     <nav className="relative flex h-full flex-col">
-      {/* Navigation progress indicator */}
       {navigating && (
-        <div className="absolute left-0 top-0 h-0.5 w-full overflow-hidden z-10">
+        <div className="absolute left-0 top-0 z-10 h-0.5 w-full overflow-hidden">
           <div className="h-full animate-[progress_1.5s_ease-in-out_infinite] bg-orange-500" />
         </div>
       )}
+
       <div className="flex items-center justify-between px-4 py-5">
-        <span className="text-lg font-bold tracking-tight text-orange-500">
-          DANEX
-        </span>
+        <span className="text-lg font-bold tracking-tight text-orange-500">DANEX</span>
         {onClose && (
           <button
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] rounded-lg p-1 text-slate-400 hover:bg-slate-800 lg:hidden"
+            className="min-h-[44px] min-w-[44px] rounded-lg p-1 text-slate-400 hover:bg-slate-800"
           >
             <X size={18} />
           </button>
         )}
       </div>
+
       <ul className="flex-1 space-y-0.5 px-2">
         {navItems.map(({ key, href, icon: Icon }) => {
           const fullHref = `/${locale}${href}`;
@@ -76,7 +74,11 @@ export function Sidebar({ locale, open, onClose }: Props) {
             <li key={key}>
               <Link
                 href={fullHref}
-                onClick={() => { if (!isActive) setNavigating(true); onClose?.(); }}
+                prefetch={true}
+                onClick={() => {
+                  if (!isActive) setNavigating(true);
+                  onClose?.();
+                }}
                 className={cn(
                   "flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
                   isActive
@@ -91,29 +93,8 @@ export function Sidebar({ locale, open, onClose }: Props) {
           );
         })}
       </ul>
+
       <div className="px-4 py-4 text-xs text-slate-600">v2.0</div>
     </nav>
-  );
-
-  return (
-    <>
-      {/* Desktop sidebar */}
-      <aside className="hidden h-screen w-56 shrink-0 border-r border-slate-800 bg-slate-950 lg:block">
-        {sidebarContent}
-      </aside>
-
-      {/* Mobile sidebar overlay */}
-      {open && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/60"
-            onClick={onClose}
-          />
-          <aside className="relative z-50 h-full w-56 border-r border-slate-800 bg-slate-950">
-            {sidebarContent}
-          </aside>
-        </div>
-      )}
-    </>
   );
 }

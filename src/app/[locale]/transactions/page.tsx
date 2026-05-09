@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -59,14 +59,20 @@ export default function TransactionsPage({ params }: Props) {
   const [note, setNote] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
-  const filtered = transactions.filter((tx) => {
-    if (filterType && tx.type !== filterType) return false;
-    if (filterAccount && tx.account_id !== filterAccount) return false;
-    if (filterCategory && tx.category !== filterCategory) return false;
-    return true;
-  });
+  const filtered = useMemo(
+    () => transactions.filter((tx) => {
+      if (filterType && tx.type !== filterType) return false;
+      if (filterAccount && tx.account_id !== filterAccount) return false;
+      if (filterCategory && tx.category !== filterCategory) return false;
+      return true;
+    }),
+    [transactions, filterType, filterAccount, filterCategory]
+  );
 
-  const visible = showAll ? filtered : filtered.slice(0, PAGE_SIZE);
+  const visible = useMemo(
+    () => (showAll ? filtered : filtered.slice(0, PAGE_SIZE)),
+    [filtered, showAll]
+  );
   const hasMore = filtered.length > PAGE_SIZE;
 
   function openForm() {

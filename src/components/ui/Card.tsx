@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -5,15 +6,10 @@ type Props = {
   className?: string;
 };
 
-export function Card({ children, className }: Props) {
+export const Card = memo(function Card({ children, className }: Props) {
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-slate-800 bg-slate-900 p-4",
-        className
-      )}
-    >
+    <div className={cn("rounded-xl border border-slate-800 bg-slate-900 p-4", className)}>
       {children}
     </div>
   );
-}
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -50,8 +50,14 @@ export default function DebtsPage({ params }: Props) {
   const [payDate, setPayDate] = useState(new Date().toISOString().split("T")[0]);
   const [payNote, setPayNote] = useState("");
 
-  const filtered = debts.filter((d) => d.direction === tab && d.status !== "paid");
-  const paid = debts.filter((d) => d.direction === tab && d.status === "paid");
+  const filtered = useMemo(
+    () => debts.filter((d) => d.direction === tab && d.status !== "paid"),
+    [debts, tab]
+  );
+  const paid = useMemo(
+    () => debts.filter((d) => d.direction === tab && d.status === "paid"),
+    [debts, tab]
+  );
 
   async function handleAddDebt(e: React.FormEvent) {
     e.preventDefault();
