@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useDebts } from "@/hooks/useDebts";
@@ -12,15 +13,30 @@ import { MoneyAmount } from "@/components/ui/MoneyAmount";
 import { Badge } from "@/components/ui/Badge";
 import { ExpenseChart } from "@/components/charts/ExpenseChart";
 import { CategoryPie } from "@/components/charts/CategoryPie";
-import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES } from "@/lib/currency";
+import { BalanceDetailSheet, type DetailItem } from "@/components/ui/BalanceDetailSheet";
+import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES, formatMoney } from "@/lib/currency";
 import { formatDate, isOverdue } from "@/lib/utils";
 import { use, useMemo, useState } from "react";
+import { AccountAvailability } from "@/lib/supabase/types";
 
 type Props = {
   params: Promise<{ locale: string }>;
 };
 
 type ChartPeriod = "week" | "month" | "3months" | "6months" | "year";
+
+type DetailSheet = {
+  title: string;
+  items: DetailItem[];
+  total: number;
+};
+
+const AVAIL_LABELS: Record<AccountAvailability, string> = {
+  immediate: "Disponible maintenant",
+  close: "Accessible facilement",
+  distant: "Éloigné",
+  blocked: "Bloqué",
+};
 
 export default function DashboardPage({ params }: Props) {
   const { locale } = use(params);
@@ -33,42 +49,116 @@ export default function DashboardPage({ params }: Props) {
   const { debts, loading: debtsLoading } = useDebts();
   const { alerts } = useAlerts();
   const { ratesByCode, loading: currLoading } = useCurrencies();
-  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
 
-  // All hooks must run unconditionally — moved above the loading guard to
-  // satisfy the Rules of Hooks (hook count must not change between renders).
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
+  const [detailSheet, setDetailSheet] = useState<DetailSheet | null>(null);
+
+  // All useMemo must be above the loading guard (Rules of Hooks)
   const { total: totalUSD, hasMissing } = useMemo(
     () => sumAccountsInCurrency(accounts, "USD", ratesByCode),
     [accounts, ratesByCode]
   );
 
-  const byCurrency = useMemo(
-    () => accounts.reduce<Record<string, number>>((acc, a) => {
-      acc[a.currency] = (acc[a.currency] ?? 0) + Number(a.balance);
-      return acc;
-    }, {}),
-    [accounts]
-  );
+  const availableBalance = useMemo(() => {
+    const avAccounts = accounts.filter(
+      (a) => !a.availability || a.availability === "immediate"
+    );
+    return sumAccountsInCurrency(avAccounts, "USD", ratesByCode);
+  }, [accounts, ratesByCode]);
 
-  const recent = useMemo(() => transactions.slice(0, 5), [transactions]);
+  const distantBalance = useMemo(() => {
+    const distAccounts = accounts.filter(
+      (a) => a.availability === "distant" || a.availability === "blocked"
+    );
+    return sumAccountsInCurrency(distAccounts, "USD", ratesByCode);
+  }, [accounts, ratesByCode]);
+
+  const netDebtBalance = useMemo(() => {
+    const owesMe = debts
+      .filter((d) => d.direction === "owes_me" && d.status !== "paid")
+      .reduce((sum, d) => {
+        const remaining = Number(d.amount) - Number(d.paid_amount);
+        return sum + remaining * resolveRate(d.currency, ratesByCode);
+      }, 0);
+    const iOwe = debts
+      .filter((d) => d.direction === "i_owe" && d.status !== "paid")
+      .reduce((sum, d) => {
+        const remaining = Number(d.amount) - Number(d.paid_amount);
+        return sum + remaining * resolveRate(d.currency, ratesByCode);
+      }, 0);
+    return { owesMe, iOwe, net: owesMe - iOwe };
+  }, [debts, ratesByCode]);
+
+  const recent = useMemo(() => transactions.slice(0, 10), [transactions]);
   const activeDebts = useMemo(() => debts.filter((d) => d.status !== "paid").slice(0, 5), [debts]);
   const unreadAlerts = useMemo(() => alerts.filter((a) => !a.is_read), [alerts]);
-  const monthData = useMemo(() => buildPeriodChartData(transactions, ratesByCode, chartPeriod), [transactions, ratesByCode, chartPeriod]);
-  const categoryData = useMemo(() => buildCategoryData(transactions, ratesByCode), [transactions, ratesByCode]);
+  const monthData = useMemo(
+    () => buildPeriodChartData(transactions, ratesByCode, chartPeriod),
+    [transactions, ratesByCode, chartPeriod]
+  );
+  const categoryData = useMemo(
+    () => buildCategoryData(transactions, ratesByCode),
+    [transactions, ratesByCode]
+  );
+
+  function openDetail(type: "available" | "global" | "distant" | "debts") {
+    if (type === "debts") {
+      const items: DetailItem[] = debts
+        .filter((d) => d.status !== "paid")
+        .map((d) => ({
+          name: d.person_name,
+          subtitle: d.direction === "owes_me" ? "Me doit" : "Je dois",
+          originalAmount: Number(d.amount) - Number(d.paid_amount),
+          currency: d.currency,
+          convertedAmount: (Number(d.amount) - Number(d.paid_amount)) * resolveRate(d.currency, ratesByCode),
+          isPositive: d.direction === "owes_me",
+        }));
+      setDetailSheet({ title: "Dettes & Créances actives", items, total: netDebtBalance.net });
+      return;
+    }
+
+    const subset =
+      type === "available"
+        ? accounts.filter((a) => !a.availability || a.availability === "immediate")
+        : type === "distant"
+        ? accounts.filter((a) => a.availability === "distant" || a.availability === "blocked")
+        : accounts;
+
+    const items: DetailItem[] = subset.map((a) => ({
+      name: a.name,
+      subtitle: AVAIL_LABELS[a.availability ?? "immediate"],
+      originalAmount: Number(a.balance),
+      currency: a.currency,
+      convertedAmount: Number(a.balance) * resolveRate(a.currency, ratesByCode),
+      isPositive: Number(a.balance) >= 0,
+    }));
+
+    const total =
+      type === "available"
+        ? availableBalance.total
+        : type === "distant"
+        ? distantBalance.total
+        : totalUSD;
+
+    const title =
+      type === "available"
+        ? t("available_now")
+        : type === "distant"
+        ? t("distant_blocked")
+        : t("global_balance");
+
+    setDetailSheet({ title, items, total });
+  }
 
   if (accountsLoading || txLoading || debtsLoading || currLoading) return (
     <PageWrapper locale={locale}>
       <div className="space-y-6">
         <div className="h-7 w-40 animate-pulse rounded-lg bg-slate-800" />
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <div className="h-4 w-24 animate-pulse rounded bg-slate-800 mb-2" />
-          <div className="h-9 w-40 animate-pulse rounded bg-slate-800" />
-        </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex justify-between">
-              <div className="h-4 w-20 animate-pulse rounded bg-slate-800" />
-              <div className="h-4 w-24 animate-pulse rounded bg-slate-800" />
+        <div className="grid grid-cols-2 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+              <div className="h-3 w-20 animate-pulse rounded bg-slate-800 mb-2" />
+              <div className="h-7 w-28 animate-pulse rounded bg-slate-800" />
             </div>
           ))}
         </div>
@@ -91,46 +181,59 @@ export default function DashboardPage({ params }: Props) {
       <div className="space-y-6">
         <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
 
-        {/* Total balance */}
-        <Card>
-          <p className="text-sm text-slate-400">{t("total_balance")}</p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <MoneyAmount
-              amount={totalUSD}
-              currency="USD"
-              className="text-3xl font-bold text-slate-50"
-            />
-          </div>
-          {hasMissing && (
-            <p className="mt-1 text-xs text-amber-500">{tc("currency_missing")}</p>
-          )}
-        </Card>
-
-        {/* Balance by currency */}
-        <Card>
-          <p className="mb-3 text-sm font-medium text-slate-400">
-            {t("balance_by_currency")}
-          </p>
-          <div className="space-y-2">
-            {Object.entries(byCurrency).map(([currency, balance]) => (
-              <div key={currency} className="flex items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <span className="text-sm text-slate-300">{currency}</span>
-                </div>
-                <div className="shrink-0">
-                  <MoneyAmount
-                    amount={balance}
-                    currency={currency}
-                    className={`text-sm ${Number(balance) < 0 ? "text-red-400" : "text-slate-100"}`}
-                  />
-                </div>
-              </div>
-            ))}
-            {Object.keys(byCurrency).length === 0 && (
-              <p className="text-sm text-slate-500">{tc("empty")}</p>
+        {/* 4 summary cards */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Disponible */}
+          <button
+            onClick={() => openDetail("available")}
+            className="flex flex-col items-start rounded-xl border border-slate-800 bg-slate-900 p-4 text-left transition hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
+          >
+            <p className="mb-1 text-xs text-slate-400">{t("available_now")}</p>
+            <p className={`font-mono tabular-nums text-lg font-bold whitespace-nowrap ${availableBalance.total < 0 ? "text-red-400" : "text-emerald-400"}`}>
+              {formatMoney(availableBalance.total, "USD")}
+            </p>
+            {availableBalance.hasMissing && (
+              <p className="mt-0.5 text-xs text-amber-500">*</p>
             )}
-          </div>
-        </Card>
+          </button>
+
+          {/* Solde global */}
+          <button
+            onClick={() => openDetail("global")}
+            className="flex flex-col items-start rounded-xl border border-slate-800 bg-slate-900 p-4 text-left transition hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
+          >
+            <p className="mb-1 text-xs text-slate-400">{t("global_balance")}</p>
+            <p className={`font-mono tabular-nums text-lg font-bold whitespace-nowrap ${totalUSD < 0 ? "text-red-400" : "text-slate-50"}`}>
+              {formatMoney(totalUSD, "USD")}
+            </p>
+            {hasMissing && (
+              <p className="mt-0.5 text-xs text-amber-500">*</p>
+            )}
+          </button>
+
+          {/* Éloigné / Bloqué */}
+          <button
+            onClick={() => openDetail("distant")}
+            className="flex flex-col items-start rounded-xl border border-slate-800 bg-slate-900 p-4 text-left transition hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
+          >
+            <p className="mb-1 text-xs text-slate-400">{t("distant_blocked")}</p>
+            <p className="font-mono tabular-nums text-lg font-bold whitespace-nowrap text-amber-400">
+              {formatMoney(distantBalance.total, "USD")}
+            </p>
+          </button>
+
+          {/* Dettes nettes */}
+          <button
+            onClick={() => openDetail("debts")}
+            className="flex flex-col items-start rounded-xl border border-slate-800 bg-slate-900 p-4 text-left transition hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
+          >
+            <p className="mb-1 text-xs text-slate-400">{t("net_debts")}</p>
+            <p className={`font-mono tabular-nums text-lg font-bold whitespace-nowrap ${netDebtBalance.net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {netDebtBalance.net >= 0 ? "+" : ""}
+              {formatMoney(Math.abs(netDebtBalance.net), "USD")}
+            </p>
+          </button>
+        </div>
 
         {/* Charts row */}
         <div className="grid gap-4 lg:grid-cols-2">
@@ -167,7 +270,7 @@ export default function DashboardPage({ params }: Props) {
           </Card>
         </div>
 
-        {/* Recent transactions */}
+        {/* Recent transactions — limited to 10 */}
         <Card>
           <p className="mb-3 text-sm font-medium text-slate-400">
             {t("recent_transactions")}
@@ -175,27 +278,37 @@ export default function DashboardPage({ params }: Props) {
           {recent.length === 0 ? (
             <p className="py-4 text-center text-sm text-slate-500">{tc("empty")}</p>
           ) : (
-            <ul className="divide-y divide-slate-800">
-              {recent.map((tx) => (
-                <li key={tx.id} className="flex items-start justify-between gap-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-slate-200">
-                      {tx.category ?? tx.note ?? "—"}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {formatDate(tx.transaction_date)}
-                    </p>
-                  </div>
-                  <div className="shrink-0">
-                    <MoneyAmount
-                      amount={tx.type === "expense" ? -tx.amount : tx.amount}
-                      currency={tx.currency}
-                      className={`text-sm ${tx.type === "expense" ? "text-red-400" : "text-emerald-400"}`}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="divide-y divide-slate-800">
+                {recent.map((tx) => (
+                  <li key={tx.id} className="flex items-start justify-between gap-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-slate-200">
+                        {tx.category ?? tx.note ?? "—"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {formatDate(tx.transaction_date)}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <MoneyAmount
+                        amount={tx.type === "expense" ? -tx.amount : tx.amount}
+                        currency={tx.currency}
+                        className={`font-mono tabular-nums text-sm ${tx.type === "expense" ? "text-red-400" : "text-emerald-400"}`}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {transactions.length > 10 && (
+                <Link
+                  href={`/${locale}/transactions`}
+                  className="mt-3 flex w-full items-center justify-center rounded-lg border border-slate-700 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                >
+                  {tc("see_all")} ({transactions.length})
+                </Link>
+              )}
+            </>
           )}
         </Card>
 
@@ -225,7 +338,7 @@ export default function DashboardPage({ params }: Props) {
                     <MoneyAmount
                       amount={Number(debt.amount) - Number(debt.paid_amount)}
                       currency={debt.currency}
-                      className="text-sm text-slate-100"
+                      className="font-mono tabular-nums text-sm text-slate-100"
                     />
                   </div>
                 </li>
@@ -253,6 +366,16 @@ export default function DashboardPage({ params }: Props) {
           </Card>
         )}
       </div>
+
+      {/* Balance detail sheet */}
+      <BalanceDetailSheet
+        open={!!detailSheet}
+        title={detailSheet?.title ?? ""}
+        items={detailSheet?.items ?? []}
+        total={detailSheet?.total ?? 0}
+        displayCurrency="USD"
+        onClose={() => setDetailSheet(null)}
+      />
     </PageWrapper>
   );
 }
@@ -290,22 +413,8 @@ function buildPeriodChartData(
       if (tx.type === "income") buckets[key].income += usd;
       else buckets[key].expenses += usd;
     });
-  } else if (period === "month") {
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
-      buckets[key] = { income: 0, expenses: 0 };
-    }
-    transactions.forEach((tx) => {
-      const d = new Date(tx.transaction_date);
-      const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
-      if (!buckets[key]) return;
-      const usd = (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
-      if (tx.type === "income") buckets[key].income += usd;
-      else buckets[key].expenses += usd;
-    });
   } else {
-    const monthCount = period === "3months" ? 3 : period === "6months" ? 6 : 12;
+    const monthCount = period === "month" ? 6 : period === "3months" ? 3 : period === "6months" ? 6 : 12;
     for (let i = monthCount - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
@@ -339,7 +448,7 @@ function buildCategoryData(
       return tx.type === "expense" && d.getMonth() === thisMonth && d.getFullYear() === thisYear;
     })
     .forEach((tx) => {
-      const cat = tx.category ?? "Divers dépenses";
+      const cat = tx.category ?? "Divers";
       cats[cat] = (cats[cat] ?? 0) + (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
     });
   return Object.entries(cats).map(([name, value]) => ({ name, value }));

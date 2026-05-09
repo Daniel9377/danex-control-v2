@@ -38,3 +38,26 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Task 1 — Remove blue focus/outline from all Recharts SVG elements */
+.recharts-wrapper,
+.recharts-wrapper *,
+.recharts-surface,
+.recharts-sector,
+.recharts-pie-sector,
+.recharts-layer,
+.recharts-layer * {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.recharts-wrapper *:focus,
+.recharts-wrapper *:focus-visible,
+.recharts-wrapper *:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+svg *:focus {
+  outline: none !important;
+}

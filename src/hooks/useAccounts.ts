@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Account, AccountType } from "@/lib/supabase/types";
+import { Account, AccountType, AccountAvailability } from "@/lib/supabase/types";
 import { cacheGet, cacheSet, cacheInvalidate } from "@/lib/cache";
 
 const KEY = "accounts";
@@ -40,17 +40,21 @@ export function useAccounts() {
     type: AccountType,
     currency: string,
     balance: number,
-    note: string | null
+    note: string | null,
+    availability?: AccountAvailability
   ) {
     const supabase = createClient();
-    await supabase.from("accounts").insert({ user_id: userId, name, type, currency, balance, note });
+    await supabase.from("accounts").insert({
+      user_id: userId, name, type, currency, balance, note,
+      ...(availability ? { availability } : {}),
+    });
     cacheInvalidate(KEY);
     await load();
   }
 
   async function updateAccount(
     id: string,
-    updates: Partial<Pick<Account, "name" | "type" | "currency" | "note">>
+    updates: Partial<Pick<Account, "name" | "type" | "currency" | "note" | "availability">>
   ) {
     const supabase = createClient();
     await supabase.from("accounts").update(updates).eq("id", id);

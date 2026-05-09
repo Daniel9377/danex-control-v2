@@ -17,7 +17,12 @@ export type Currency = {
   updated_at: string;
 };
 
-export type AccountType = "personnel" | "professionnel" | "epargne" | "investissement" | "ecole" | "risque";
+export type AccountType =
+  | "personnel" | "professionnel" | "epargne" | "investissement" | "ecole" | "risque"
+  | "personal" | "business" | "client" | "savings" | "investment"
+  | "emergency" | "school" | "debt" | "held" | "other";
+
+export type AccountAvailability = "immediate" | "close" | "distant" | "blocked";
 
 export type Account = {
   id: string;
@@ -27,6 +32,7 @@ export type Account = {
   currency: string;
   balance: number;
   note: string | null;
+  availability?: AccountAvailability;
   created_at: string;
 };
 

@@ -18,15 +18,18 @@ import { formatDate } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 
 const EXPENSE_CATEGORIES = [
-  "Alimentation", "Transport", "Logement/Loyer", "Santé", "Vêtements",
-  "Éducation", "Loisirs", "Hôtel/Voyage", "Télécommunications", "Électronique",
-  "Frais bancaires", "Marketing", "Sourcing", "Salaire versé", "Commission payée",
-  "Investissement", "Épargne", "Remboursement dette", "Divers dépenses",
+  "Alimentation", "Transport", "Logement / Loyer", "Hôtel & Voyage",
+  "Santé", "Études / École", "Internet & Téléphone", "Abonnements",
+  "Shopping / Achats personnels", "Business / Sourcing", "Marketing",
+  "Frais bancaires", "Commission payée", "Salaire payé",
+  "Livraison / Transport colis", "Douane / Taxes", "Restaurant / Sorties",
+  "Cadeaux / Aide familiale", "Équipement / Matériel", "Urgence", "Autre",
 ];
 
 const INCOME_CATEGORIES = [
-  "Commission reçue", "Salaire reçu", "Vente produit", "Remboursement reçu",
-  "Transfert reçu", "Investissement retour", "Cadeau reçu", "Divers revenus",
+  "Salaire reçu", "Bénéfice business", "Commission reçue", "Paiement client",
+  "Remboursement", "Aide familiale", "Don reçu", "Investissement reçu",
+  "Vente produit", "Service vendu", "Bonus", "Autre",
 ];
 
 const ALL_CATEGORIES = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
@@ -302,7 +305,7 @@ export default function TransactionsPage({ params }: Props) {
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   required
-                  className="w-48 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
               </div>
               <div>

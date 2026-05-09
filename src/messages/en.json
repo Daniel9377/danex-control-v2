@@ -4,7 +4,7 @@
     "accounts": "Accounts",
     "transactions": "Transactions",
     "transfers": "Transfers",
-    "debts": "Debts",
+    "debts": "Debts & Receivables",
     "clients": "Clients",
     "orders": "Orders",
     "alerts": "Alerts",
@@ -23,7 +23,8 @@
     "search": "Search",
     "close": "Close",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "see_all": "See all transactions"
   },
   "auth": {
     "login": "Login",
@@ -40,6 +41,10 @@
   "dashboard": {
     "title": "Dashboard",
     "total_balance": "Total balance",
+    "available_now": "Available",
+    "global_balance": "Global balance",
+    "distant_blocked": "Distant / Blocked",
+    "net_debts": "Net debts",
     "balance_by_currency": "Balance by currency",
     "recent_transactions": "Recent transactions",
     "active_debts": "Active debts",
@@ -55,13 +60,30 @@
     "currency": "Currency",
     "balance": "Balance",
     "note": "Note",
+    "availability": "Availability",
     "types": {
       "personnel": "Personal",
       "professionnel": "Professional",
       "epargne": "Savings",
       "investissement": "Investment",
       "ecole": "School",
-      "risque": "Risk"
+      "risque": "Risk",
+      "personal": "Personal",
+      "business": "Business",
+      "client": "Client",
+      "savings": "Savings",
+      "investment": "Investment",
+      "emergency": "Emergency / Safety",
+      "school": "School / Tuition",
+      "debt": "Debt",
+      "held": "Money held for someone",
+      "other": "Other"
+    },
+    "availabilities": {
+      "immediate": "Available now",
+      "close": "Easily accessible",
+      "distant": "Distant (abroad, agent)",
+      "blocked": "Blocked / Hard to access"
     },
     "negative_warning": "Negative balance"
   },
@@ -94,8 +116,8 @@
     "note": "Note"
   },
   "debts": {
-    "title": "Debts",
-    "add": "New debt",
+    "title": "Debts & Receivables",
+    "add": "New entry",
     "i_owe": "My debts",
     "owes_me": "My receivables",
     "person": "Person",

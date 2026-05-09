@@ -33,46 +33,53 @@ type Props = {
 
 export function CategoryPie({ data, currency = "USD" }: Props) {
   return (
-    <div className="[&_svg]:outline-none [&_svg]:focus:outline-none">
-    <ResponsiveContainer width="100%" height={200}>
-      <PieChart style={{ outline: "none" }}>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={50}
-          outerRadius={80}
-          paddingAngle={2}
-          dataKey="value"
-          strokeWidth={0}
-          stroke="none"
-          isAnimationActive={false}
-        >
-          {data.map((_, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={COLORS[index % COLORS.length]}
-              stroke="none"
-            />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "#0f172a",
-            border: "1px solid #1e293b",
-            borderRadius: 8,
-            fontSize: 12,
-          }}
-          labelStyle={{ color: "#94a3b8" }}
-          formatter={(value) => [formatMoney(Number(value ?? 0), currency), "Montant"]}
-        />
-        <Legend
-          wrapperStyle={{ fontSize: 11, color: "#94a3b8" }}
-          iconType="circle"
-          iconSize={8}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+    <div
+      tabIndex={-1}
+      className="[&_svg]:outline-none [&_svg]:focus:outline-none focus:outline-none"
+      style={{ WebkitTapHighlightColor: "transparent" }}
+    >
+      <ResponsiveContainer width="100%" height={200}>
+        <PieChart style={{ outline: "none" }} tabIndex={-1}>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={50}
+            outerRadius={80}
+            paddingAngle={2}
+            dataKey="value"
+            strokeWidth={0}
+            stroke="none"
+            isAnimationActive={false}
+            /* Disable the default active/focus shape — keeps tooltip, removes outline */
+            activeShape={false as unknown as undefined}
+          >
+            {data.map((_, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[index % COLORS.length]}
+                stroke="none"
+                tabIndex={-1}
+              />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "#0f172a",
+              border: "1px solid #1e293b",
+              borderRadius: 8,
+              fontSize: 12,
+            }}
+            labelStyle={{ color: "#94a3b8" }}
+            formatter={(value) => [formatMoney(Number(value ?? 0), currency), "Montant"]}
+          />
+          <Legend
+            wrapperStyle={{ fontSize: 11, color: "#94a3b8" }}
+            iconType="circle"
+            iconSize={8}
+          />
+        </PieChart>
+      </ResponsiveContainer>
     </div>
   );
 }

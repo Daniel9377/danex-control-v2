@@ -13,10 +13,76 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { AccountType } from "@/lib/supabase/types";
+import { AccountType, AccountAvailability } from "@/lib/supabase/types";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
-const ACCOUNT_TYPES: AccountType[] = ["personnel", "professionnel", "epargne", "investissement", "ecole", "risque"];
+const ACCOUNT_TYPES: AccountType[] = [
+  "personal", "business", "client", "savings", "investment",
+  "emergency", "school", "debt", "held", "other",
+];
+
+const AVAILABILITY_OPTIONS: AccountAvailability[] = [
+  "immediate", "close", "distant", "blocked",
+];
+
+// Map legacy French DB values → current English keys
+const LEGACY_TYPE_MAP: Partial<Record<string, AccountType>> = {
+  personnel: "personal",
+  professionnel: "business",
+  epargne: "savings",
+  investissement: "investment",
+  ecole: "school",
+  risque: "emergency",
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  // English keys (current)
+  personal: "Personnel",
+  business: "Business",
+  client: "Client",
+  savings: "Épargne",
+  investment: "Investissement",
+  emergency: "Urgence",
+  school: "École",
+  debt: "Dette",
+  held: "Argent gardé",
+  other: "Autre",
+  // Legacy French keys (backward compat with existing DB records)
+  personnel: "Personnel",
+  professionnel: "Professionnel",
+  epargne: "Épargne",
+  investissement: "Investissement",
+  ecole: "École",
+  risque: "Risque",
+};
+
+const TYPE_VARIANT: Record<string, "default" | "info" | "success" | "warning" | "danger"> = {
+  personal: "default",    personnel: "default",
+  business: "info",       professionnel: "info",
+  client: "success",
+  savings: "success",     epargne: "success",
+  investment: "warning",  investissement: "warning",
+  emergency: "danger",
+  school: "info",         ecole: "info",
+  debt: "danger",
+  held: "warning",
+  other: "default",
+  risque: "danger",
+};
+
+const AVAIL_LABELS: Record<AccountAvailability, string> = {
+  immediate: "Disponible",
+  close: "Proche",
+  distant: "Éloigné",
+  blocked: "Bloqué",
+};
+
+const AVAIL_VARIANT: Record<AccountAvailability, "success" | "warning" | "danger" | "default"> = {
+  immediate: "success",
+  close: "warning",
+  distant: "warning",
+  blocked: "danger",
+};
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -32,15 +98,16 @@ export default function AccountsPage({ params }: Props) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
-  const [type, setType] = useState<AccountType>("personnel");
+  const [type, setType] = useState<AccountType>("personal");
   const [currency, setCurrency] = useState("USD");
   const [balance, setBalance] = useState("0");
   const [note, setNote] = useState("");
+  const [availability, setAvailability] = useState<AccountAvailability>("immediate");
 
   function openAdd() {
     setEditing(null);
-    setName(""); setType("personnel"); setCurrency("USD");
-    setBalance("0"); setNote("");
+    setName(""); setType("personal"); setCurrency("USD");
+    setBalance("0"); setNote(""); setAvailability("immediate");
     setShowForm(true);
   }
 
@@ -48,8 +115,12 @@ export default function AccountsPage({ params }: Props) {
     const acc = accounts.find((a) => a.id === id);
     if (!acc) return;
     setEditing(id);
-    setName(acc.name); setType(acc.type); setCurrency(acc.currency);
-    setBalance(String(acc.balance)); setNote(acc.note ?? "");
+    setName(acc.name);
+    setType(LEGACY_TYPE_MAP[acc.type] ?? acc.type);
+    setCurrency(acc.currency);
+    setBalance(String(acc.balance));
+    setNote(acc.note ?? "");
+    setAvailability(acc.availability ?? "immediate");
     setShowForm(true);
   }
 
@@ -60,21 +131,12 @@ export default function AccountsPage({ params }: Props) {
     if (!user) return;
 
     if (editing) {
-      await updateAccount(editing, { name, type, currency, note: note || null });
+      await updateAccount(editing, { name, type, currency, note: note || null, availability });
     } else {
-      await addAccount(user.id, name, type, currency, Number(balance), note || null);
+      await addAccount(user.id, name, type, currency, Number(balance), note || null, availability);
     }
     setShowForm(false);
   }
-
-  const typeVariant: Record<AccountType, "default" | "info" | "success" | "warning" | "danger"> = {
-    personnel: "default",
-    professionnel: "info",
-    epargne: "success",
-    investissement: "warning",
-    ecole: "info",
-    risque: "danger",
-  };
 
   if (loading) return (
     <PageWrapper locale={locale}>
@@ -110,13 +172,18 @@ export default function AccountsPage({ params }: Props) {
               <Card key={acc.id}>
                 <article className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="truncate text-base font-semibold text-slate-50">
                         {acc.name}
                       </h3>
-                      <Badge variant={typeVariant[acc.type]}>
-                        {t(`types.${acc.type}`)}
+                      <Badge variant={TYPE_VARIANT[acc.type] ?? "default"}>
+                        {TYPE_LABELS[acc.type] ?? acc.type}
                       </Badge>
+                      {acc.availability && (
+                        <Badge variant={AVAIL_VARIANT[acc.availability]}>
+                          {AVAIL_LABELS[acc.availability]}
+                        </Badge>
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-slate-500">{acc.currency}</p>
                     {acc.note && (
@@ -132,7 +199,7 @@ export default function AccountsPage({ params }: Props) {
                     <MoneyAmount
                       amount={acc.balance}
                       currency={acc.currency}
-                      className={`text-base font-semibold ${Number(acc.balance) < 0 ? "text-red-400" : "text-slate-50"}`}
+                      className={`font-mono tabular-nums text-base font-semibold ${Number(acc.balance) < 0 ? "text-red-400" : "text-slate-50"}`}
                     />
                     <div className="flex gap-1">
                       <button
@@ -158,8 +225,8 @@ export default function AccountsPage({ params }: Props) {
 
       {/* Form modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900 p-6">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 md:items-center md:p-4">
+          <div className="w-full max-w-sm rounded-t-2xl border border-slate-800 bg-slate-900 p-6 md:rounded-xl">
             <h2 className="mb-4 text-base font-semibold text-slate-50">
               {editing ? tc("edit") : t("add")}
             </h2>
@@ -181,7 +248,19 @@ export default function AccountsPage({ params }: Props) {
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
                 >
                   {ACCOUNT_TYPES.map((tp) => (
-                    <option key={tp} value={tp}>{t(`types.${tp}`)}</option>
+                    <option key={tp} value={tp}>{TYPE_LABELS[tp]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">{t("availability")}</label>
+                <select
+                  value={availability}
+                  onChange={(e) => setAvailability(e.target.value as AccountAvailability)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
+                >
+                  {AVAILABILITY_OPTIONS.map((av) => (
+                    <option key={av} value={av}>{t(`availabilities.${av}`)}</option>
                   ))}
                 </select>
               </div>

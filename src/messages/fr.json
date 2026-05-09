@@ -4,7 +4,7 @@
     "accounts": "Comptes",
     "transactions": "Transactions",
     "transfers": "Transferts",
-    "debts": "Dettes",
+    "debts": "Dettes & Créances",
     "clients": "Clients",
     "orders": "Commandes",
     "alerts": "Alertes",
@@ -23,7 +23,8 @@
     "search": "Rechercher",
     "close": "Fermer",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "see_all": "Voir toutes les transactions"
   },
   "auth": {
     "login": "Connexion",
@@ -40,6 +41,10 @@
   "dashboard": {
     "title": "Tableau de bord",
     "total_balance": "Solde total",
+    "available_now": "Disponible",
+    "global_balance": "Solde global",
+    "distant_blocked": "Éloigné / Bloqué",
+    "net_debts": "Dettes nettes",
     "balance_by_currency": "Solde par devise",
     "recent_transactions": "Transactions récentes",
     "active_debts": "Dettes actives",
@@ -55,13 +60,30 @@
     "currency": "Devise",
     "balance": "Solde",
     "note": "Note",
+    "availability": "Disponibilité",
     "types": {
       "personnel": "Personnel",
       "professionnel": "Professionnel",
       "epargne": "Épargne",
       "investissement": "Investissement",
       "ecole": "École",
-      "risque": "Risque"
+      "risque": "Risque",
+      "personal": "Personnel",
+      "business": "Business",
+      "client": "Client",
+      "savings": "Épargne",
+      "investment": "Investissement",
+      "emergency": "Urgence / Sécurité",
+      "school": "École / Frais universitaires",
+      "debt": "Dette",
+      "held": "Argent gardé",
+      "other": "Autre"
+    },
+    "availabilities": {
+      "immediate": "Disponible maintenant",
+      "close": "Accessible facilement",
+      "distant": "Éloigné (frère, pays, agent)",
+      "blocked": "Bloqué / Difficile d'accès"
     },
     "negative_warning": "Solde négatif"
   },
@@ -94,8 +116,8 @@
     "note": "Note"
   },
   "debts": {
-    "title": "Dettes",
-    "add": "Nouvelle dette",
+    "title": "Dettes & Créances",
+    "add": "Nouvelle entrée",
     "i_owe": "Mes dettes",
     "owes_me": "Mes créances",
     "person": "Personne",
