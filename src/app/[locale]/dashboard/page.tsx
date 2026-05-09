@@ -10,7 +10,6 @@ import { PageWrapper } from "@/components/layout/PageWrapper";
 import { Card } from "@/components/ui/Card";
 import { MoneyAmount } from "@/components/ui/MoneyAmount";
 import { Badge } from "@/components/ui/Badge";
-import { BalanceChart } from "@/components/charts/BalanceChart";
 import { ExpenseChart } from "@/components/charts/ExpenseChart";
 import { CategoryPie } from "@/components/charts/CategoryPie";
 import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES } from "@/lib/currency";
@@ -32,6 +31,27 @@ export default function DashboardPage({ params }: Props) {
   const { debts, loading: debtsLoading } = useDebts();
   const { alerts } = useAlerts();
   const { ratesByCode, loading: currLoading } = useCurrencies();
+
+  // All hooks must run unconditionally — moved above the loading guard to
+  // satisfy the Rules of Hooks (hook count must not change between renders).
+  const { total: totalUSD, hasMissing } = useMemo(
+    () => sumAccountsInCurrency(accounts, "USD", ratesByCode),
+    [accounts, ratesByCode]
+  );
+
+  const byCurrency = useMemo(
+    () => accounts.reduce<Record<string, number>>((acc, a) => {
+      acc[a.currency] = (acc[a.currency] ?? 0) + Number(a.balance);
+      return acc;
+    }, {}),
+    [accounts]
+  );
+
+  const recent = useMemo(() => transactions.slice(0, 5), [transactions]);
+  const activeDebts = useMemo(() => debts.filter((d) => d.status !== "paid").slice(0, 5), [debts]);
+  const unreadAlerts = useMemo(() => alerts.filter((a) => !a.is_read), [alerts]);
+  const monthData = useMemo(() => buildMonthData(transactions, ratesByCode), [transactions, ratesByCode]);
+  const categoryData = useMemo(() => buildCategoryData(transactions, ratesByCode), [transactions, ratesByCode]);
 
   if (accountsLoading || txLoading || debtsLoading || currLoading) return (
     <PageWrapper locale={locale}>
@@ -62,25 +82,6 @@ export default function DashboardPage({ params }: Props) {
       </div>
     </PageWrapper>
   );
-
-  const { total: totalUSD, hasMissing } = useMemo(
-    () => sumAccountsInCurrency(accounts, "USD", ratesByCode),
-    [accounts, ratesByCode]
-  );
-
-  const byCurrency = useMemo(
-    () => accounts.reduce<Record<string, number>>((acc, a) => {
-      acc[a.currency] = (acc[a.currency] ?? 0) + Number(a.balance);
-      return acc;
-    }, {}),
-    [accounts]
-  );
-
-  const recent = useMemo(() => transactions.slice(0, 5), [transactions]);
-  const activeDebts = useMemo(() => debts.filter((d) => d.status !== "paid").slice(0, 5), [debts]);
-  const unreadAlerts = useMemo(() => alerts.filter((a) => !a.is_read), [alerts]);
-  const monthData = useMemo(() => buildMonthData(transactions, ratesByCode), [transactions, ratesByCode]);
-  const categoryData = useMemo(() => buildCategoryData(transactions, ratesByCode), [transactions, ratesByCode]);
 
   return (
     <PageWrapper locale={locale}>
