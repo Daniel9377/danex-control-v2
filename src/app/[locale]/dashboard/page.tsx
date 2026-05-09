@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/Badge";
 import { BalanceChart } from "@/components/charts/BalanceChart";
 import { ExpenseChart } from "@/components/charts/ExpenseChart";
 import { CategoryPie } from "@/components/charts/CategoryPie";
-import { sumAccountsInCurrency, getValidRate } from "@/lib/currency";
+import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES } from "@/lib/currency";
 import { formatDate, isOverdue } from "@/lib/utils";
 import { use } from "react";
 
@@ -31,9 +31,9 @@ export default function DashboardPage({ params }: Props) {
   const { transactions, loading: txLoading } = useTransactions();
   const { debts, loading: debtsLoading } = useDebts();
   const { alerts } = useAlerts();
-  const { ratesByCode } = useCurrencies();
+  const { ratesByCode, loading: currLoading } = useCurrencies();
 
-  if (accountsLoading || txLoading || debtsLoading) return (
+  if (accountsLoading || txLoading || debtsLoading || currLoading) return (
     <PageWrapper locale={locale}>
       <div className="space-y-6">
         <div className="h-7 w-40 animate-pulse rounded-lg bg-slate-800" />
@@ -248,6 +248,14 @@ export default function DashboardPage({ params }: Props) {
   );
 }
 
+const DEFAULT_RATE_MAP: Record<string, number> = Object.fromEntries(
+  DEFAULT_CURRENCIES.map((c) => [c.code, c.rate_to_usd])
+);
+
+function resolveRate(currency: string, ratesByCode: Record<string, number | string | null>): number {
+  return getValidRate(ratesByCode[currency]) ?? DEFAULT_RATE_MAP[currency] ?? 1;
+}
+
 function buildMonthData(
   transactions: { type: string; amount: number; currency: string; transaction_date: string }[],
   ratesByCode: Record<string, number | string | null>
@@ -259,12 +267,12 @@ function buildMonthData(
     const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
     months[key] = { income: 0, expenses: 0 };
   }
+  const displayRate = resolveRate("USD", ratesByCode);
   transactions.forEach((tx) => {
     const d = new Date(tx.transaction_date);
     const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
     if (!months[key]) return;
-    const rate = getValidRate(ratesByCode[tx.currency]) ?? 1;
-    const usd = Number(tx.amount) * rate;
+    const usd = (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
     if (tx.type === "income") months[key].income += usd;
     else months[key].expenses += usd;
   });
@@ -279,6 +287,7 @@ function buildCategoryData(
   const thisMonth = now.getMonth();
   const thisYear = now.getFullYear();
   const cats: Record<string, number> = {};
+  const displayRate = resolveRate("USD", ratesByCode);
   transactions
     .filter((tx) => {
       const d = new Date(tx.transaction_date);
@@ -286,8 +295,7 @@ function buildCategoryData(
     })
     .forEach((tx) => {
       const cat = tx.category ?? "Divers dépenses";
-      const rate = getValidRate(ratesByCode[tx.currency]) ?? 1;
-      cats[cat] = (cats[cat] ?? 0) + Number(tx.amount) * rate;
+      cats[cat] = (cats[cat] ?? 0) + (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
     });
   return Object.entries(cats).map(([name, value]) => ({ name, value }));
 }

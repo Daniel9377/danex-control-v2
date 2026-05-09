@@ -22,15 +22,16 @@ export function TopBar({ onMenuClick, locale }: Props) {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950 px-4">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-950 px-4">
+      {/* Hamburger: visible only on mobile via CSS — no hydration dependency */}
       <button
         onClick={onMenuClick}
-        className="min-h-[44px] min-w-[44px] rounded-lg p-2 text-slate-400 hover:bg-slate-800 lg:hidden"
+        className="md:hidden min-h-[44px] min-w-[44px] rounded-lg p-2 text-slate-400 hover:bg-slate-800"
         aria-label="Menu"
       >
         <Menu size={20} />
       </button>
-      <span className="text-sm font-bold tracking-tight text-orange-500 lg:hidden">
+      <span className="text-sm font-bold tracking-tight text-orange-500 md:hidden">
         DANEX
       </span>
       <div className="ml-auto">

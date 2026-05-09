@@ -25,8 +25,9 @@ type Props = {
 
 export function ExpenseChart({ data, currency = "USD" }: Props) {
   return (
+    <div className="[&_svg]:outline-none [&_svg]:focus:outline-none">
     <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+      <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }} style={{ outline: "none" }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
         <XAxis
           dataKey="month"
@@ -42,6 +43,7 @@ export function ExpenseChart({ data, currency = "USD" }: Props) {
           width={80}
         />
         <Tooltip
+          cursor={false}
           contentStyle={{
             backgroundColor: "#0f172a",
             border: "1px solid #1e293b",
@@ -60,9 +62,10 @@ export function ExpenseChart({ data, currency = "USD" }: Props) {
             value === "income" ? "Revenus" : "Dépenses"
           }
         />
-        <Bar dataKey="income" fill="#10b981" radius={[3, 3, 0, 0]} />
-        <Bar dataKey="expenses" fill="#ef4444" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="income" fill="#10b981" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+        <Bar dataKey="expenses" fill="#ef4444" radius={[3, 3, 0, 0]} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
+    </div>
   );
 }

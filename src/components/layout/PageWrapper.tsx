@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
@@ -10,18 +11,36 @@ type Props = {
 };
 
 export function PageWrapper({ children, locale }: Props) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-950">
-      <Sidebar
-        locale={locale}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {/* Permanent sidebar: hidden on mobile, visible on md+ via CSS (no hydration flash) */}
+      <aside className="hidden md:flex h-screen w-56 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
+        <Sidebar locale={locale} />
+      </aside>
+
+      {/* Mobile: overlay sidebar toggled by hamburger */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <aside className="relative z-50 h-full w-56 border-r border-slate-800 bg-slate-950">
+            <Sidebar locale={locale} onClose={() => setMobileSidebarOpen(false)} />
+          </aside>
+        </div>
+      )}
+
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar
-          onMenuClick={() => setSidebarOpen(true)}
+          onMenuClick={() => setMobileSidebarOpen(true)}
           locale={locale}
         />
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">

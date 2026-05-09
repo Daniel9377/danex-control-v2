@@ -7,7 +7,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  Sector,
 } from "recharts";
 import { formatMoney } from "@/lib/currency";
 
@@ -32,15 +31,11 @@ type Props = {
   currency?: string;
 };
 
-// Render active sector identically to normal — suppresses the default blue/enlarged hover effect
-function renderActiveShape(props: any) {
-  return <Sector {...props} strokeWidth={0} />;
-}
-
 export function CategoryPie({ data, currency = "USD" }: Props) {
   return (
+    <div className="[&_svg]:outline-none [&_svg]:focus:outline-none">
     <ResponsiveContainer width="100%" height={200}>
-      <PieChart>
+      <PieChart style={{ outline: "none" }}>
         <Pie
           data={data}
           cx="50%"
@@ -50,7 +45,7 @@ export function CategoryPie({ data, currency = "USD" }: Props) {
           paddingAngle={2}
           dataKey="value"
           strokeWidth={0}
-          activeShape={renderActiveShape}
+          isAnimationActive={false}
         >
           {data.map((_, index) => (
             <Cell
@@ -77,5 +72,6 @@ export function CategoryPie({ data, currency = "USD" }: Props) {
         />
       </PieChart>
     </ResponsiveContainer>
+    </div>
   );
 }
