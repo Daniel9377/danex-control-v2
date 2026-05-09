@@ -10,8 +10,9 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { Card } from "@/components/ui/Card";
 import { LoadingPage } from "@/components/ui/LoadingSpinner";
-import { Profile, Transaction, Account } from "@/lib/supabase/types";
-import { Check, Save, Download } from "lucide-react";
+import { Profile } from "@/lib/supabase/types";
+import type { Transaction, Account } from "@/lib/supabase/types";
+import { Check, Save, FileDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -19,41 +20,31 @@ type Props = { params: Promise<{ locale: string }> };
 const TABS = ["profile", "currencies", "export", "integrations"] as const;
 type Tab = (typeof TABS)[number];
 
-function exportTransactionsPDF(transactions: Transaction[], accounts: Account[], title: string) {
-  import("jspdf").then(({ jsPDF }) => {
-    import("jspdf-autotable").then(() => {
-      const doc = new jsPDF({ orientation: "landscape" });
-      doc.setFontSize(14);
-      doc.text(title, 14, 18);
-      doc.setFontSize(10);
-      doc.text(`Généré le ${new Date().toLocaleDateString("fr-FR")}`, 14, 25);
+function exportTransactionsCSV(transactions: Transaction[], accounts: Account[], filename: string) {
+  const headers = ["Date", "Type", "Compte", "Catégorie", "Montant", "Devise", "Note"];
+  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
 
-      const rows = transactions.map((tx) => {
-        const acc = accounts.find((a) => a.id === tx.account_id);
-        return [
-          tx.transaction_date,
-          tx.type === "income" ? "Revenu" : "Dépense",
-          acc?.name ?? "—",
-          tx.category ?? "—",
-          Number(tx.amount).toFixed(2),
-          tx.currency,
-          tx.note ?? "",
-        ];
-      });
-
-      (doc as any).autoTable({
-        startY: 30,
-        head: [["Date", "Type", "Compte", "Catégorie", "Montant", "Devise", "Note"]],
-        body: rows,
-        styles: { fontSize: 9, cellPadding: 3 },
-        headStyles: { fillColor: [194, 85, 10], textColor: 255 },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
-      });
-
-      const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_");
-      doc.save(`${safeTitle}.pdf`);
-    });
+  const rows = transactions.map((tx) => {
+    const acc = accounts.find((a) => a.id === tx.account_id);
+    return [
+      tx.transaction_date,
+      tx.type === "income" ? "Revenu" : "Dépense",
+      acc?.name ?? "",
+      tx.category ?? "",
+      Number(tx.amount).toFixed(2),
+      tx.currency,
+      tx.note ?? "",
+    ].map(escape).join(",");
   });
+
+  const csv = "﻿" + [headers.map(escape).join(","), ...rows].join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function SettingsPage({ params }: Props) {
@@ -155,7 +146,7 @@ export default function SettingsPage({ params }: Props) {
       "Toutes les transactions";
 
     setExporting(period);
-    exportTransactionsPDF(filtered, accounts, displayTitle);
+    exportTransactionsCSV(filtered, accounts, title);
     setTimeout(() => setExporting(null), 1500);
   }
 
@@ -263,7 +254,7 @@ export default function SettingsPage({ params }: Props) {
         {tab === "export" && (
           <div className="space-y-3">
             <p className="text-sm text-slate-400">
-              Exportez vos transactions au format PDF.
+              Exportez vos transactions au format CSV.
             </p>
             <Card>
               <div className="flex items-center justify-between gap-4">
@@ -278,8 +269,8 @@ export default function SettingsPage({ params }: Props) {
                   disabled={exporting === "week"}
                   className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
                 >
-                  <Download size={14} />
-                  {exporting === "week" ? "Génération..." : "PDF"}
+                  <FileDown size={14} />
+                  {exporting === "week" ? "Génération..." : "CSV"}
                 </button>
               </div>
             </Card>
@@ -296,8 +287,8 @@ export default function SettingsPage({ params }: Props) {
                   disabled={exporting === "month"}
                   className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
                 >
-                  <Download size={14} />
-                  {exporting === "month" ? "Génération..." : "PDF"}
+                  <FileDown size={14} />
+                  {exporting === "month" ? "Génération..." : "CSV"}
                 </button>
               </div>
             </Card>
@@ -314,8 +305,8 @@ export default function SettingsPage({ params }: Props) {
                   disabled={exporting === "all"}
                   className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
                 >
-                  <Download size={14} />
-                  {exporting === "all" ? "Génération..." : "PDF"}
+                  <FileDown size={14} />
+                  {exporting === "all" ? "Génération..." : "CSV"}
                 </button>
               </div>
             </Card>
