@@ -32,7 +32,8 @@ const INCOME_CATEGORIES = [
   "Vente produit", "Service vendu", "Bonus", "Autre",
 ];
 
-const ALL_CATEGORIES = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
+// Deduplicate so shared labels like "Autre" don't produce duplicate option keys
+const ALL_CATEGORIES = [...new Set([...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES])];
 
 const PAGE_SIZE = 20;
 
@@ -164,7 +165,7 @@ export default function TransactionsPage({ params }: Props) {
           >
             <option value="">{t("filters.all_categories")}</option>
             {ALL_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={`filter-${c}`} value={c}>{c}</option>
             ))}
           </select>
         </div>
@@ -294,7 +295,7 @@ export default function TransactionsPage({ params }: Props) {
                 >
                   <option value="">—</option>
                   {formCategories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={`${txType}-${c}`} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
