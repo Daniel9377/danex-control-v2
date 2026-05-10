@@ -16,19 +16,12 @@ import { CategoryPie } from "@/components/charts/CategoryPie";
 import { BalanceDetailSheet, type DetailItem } from "@/components/ui/BalanceDetailSheet";
 import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES, formatMoney } from "@/lib/currency";
 import { formatDate, isOverdue } from "@/lib/utils";
-import { CATEGORY_DOMAIN, DOMAIN_LABELS, DOMAINS, type DomainType } from "@/lib/categories";
 import { use, useMemo, useState } from "react";
 import { AccountAvailability } from "@/lib/supabase/types";
 
 type Props = { params: Promise<{ locale: string }> };
-
 type ChartPeriod = "week" | "month" | "3months" | "6months" | "year";
-
-type DetailSheet = {
-  title: string;
-  items: DetailItem[];
-  total: number;
-};
+type DetailSheet = { title: string; items: DetailItem[]; total: number };
 
 const AVAIL_LABELS: Record<AccountAvailability, string> = {
   immediate: "Disponible maintenant",
@@ -57,16 +50,11 @@ export default function DashboardPage({ params }: Props) {
   const { alerts } = useAlerts();
   const { ratesByCode, loading: currLoading } = useCurrencies();
 
-  // Chart / analysis filters
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
-  const [filterAccount, setFilterAccount] = useState<string>("");
-  const [filterDomain, setFilterDomain] = useState<DomainType>("all");
-
-  // Balance detail sheet
+  const [filterAccount, setFilterAccount] = useState("");
   const [detailSheet, setDetailSheet] = useState<DetailSheet | null>(null);
 
-  // ─── Memos ────────────────────────────────────────────────────────────────
-  // All hooks/memos must be above any early return (Rules of Hooks)
+  // ── Memos (all above early return — Rules of Hooks) ───────────────────────
 
   const { total: totalUSD, hasMissing } = useMemo(
     () => sumAccountsInCurrency(accounts, "USD", ratesByCode),
@@ -74,48 +62,30 @@ export default function DashboardPage({ params }: Props) {
   );
 
   const availableBalance = useMemo(() => {
-    const avAccounts = accounts.filter(
-      (a) => !a.availability || a.availability === "immediate"
-    );
-    return sumAccountsInCurrency(avAccounts, "USD", ratesByCode);
+    const av = accounts.filter((a) => !a.availability || a.availability === "immediate");
+    return sumAccountsInCurrency(av, "USD", ratesByCode);
   }, [accounts, ratesByCode]);
 
   const distantBalance = useMemo(() => {
-    const distAccounts = accounts.filter(
-      (a) => a.availability === "distant" || a.availability === "blocked"
-    );
-    return sumAccountsInCurrency(distAccounts, "USD", ratesByCode);
+    const dist = accounts.filter((a) => a.availability === "distant" || a.availability === "blocked");
+    return sumAccountsInCurrency(dist, "USD", ratesByCode);
   }, [accounts, ratesByCode]);
 
   const netDebtBalance = useMemo(() => {
     const owesMe = debts
       .filter((d) => d.direction === "owes_me" && d.status !== "paid")
-      .reduce((sum, d) => {
-        const remaining = Number(d.amount) - Number(d.paid_amount);
-        return sum + remaining * resolveRate(d.currency, ratesByCode);
-      }, 0);
+      .reduce((s, d) => s + (Number(d.amount) - Number(d.paid_amount)) * resolveRate(d.currency, ratesByCode), 0);
     const iOwe = debts
       .filter((d) => d.direction === "i_owe" && d.status !== "paid")
-      .reduce((sum, d) => {
-        const remaining = Number(d.amount) - Number(d.paid_amount);
-        return sum + remaining * resolveRate(d.currency, ratesByCode);
-      }, 0);
+      .reduce((s, d) => s + (Number(d.amount) - Number(d.paid_amount)) * resolveRate(d.currency, ratesByCode), 0);
     return { owesMe, iOwe, net: owesMe - iOwe };
   }, [debts, ratesByCode]);
 
-  // Transactions filtered by account + domain — drives charts and recent list
-  const filteredTx = useMemo(() => {
-    return transactions.filter((tx) => {
-      if (filterAccount && tx.account_id !== filterAccount) return false;
-      if (filterDomain !== "all") {
-        const domain = tx.category
-          ? (CATEGORY_DOMAIN[tx.category] ?? "other")
-          : "other";
-        if (domain !== filterDomain) return false;
-      }
-      return true;
-    });
-  }, [transactions, filterAccount, filterDomain]);
+  // Transactions filtered by selected account — drives charts + recent list
+  const filteredTx = useMemo(
+    () => (filterAccount ? transactions.filter((tx) => tx.account_id === filterAccount) : transactions),
+    [transactions, filterAccount]
+  );
 
   const recent = useMemo(() => filteredTx.slice(0, 5), [filteredTx]);
 
@@ -124,10 +94,7 @@ export default function DashboardPage({ params }: Props) {
     [debts]
   );
 
-  const unreadAlerts = useMemo(
-    () => alerts.filter((a) => !a.is_read),
-    [alerts]
-  );
+  const unreadAlerts = useMemo(() => alerts.filter((a) => !a.is_read), [alerts]);
 
   const monthData = useMemo(
     () => buildPeriodChartData(filteredTx, ratesByCode, chartPeriod),
@@ -144,9 +111,7 @@ export default function DashboardPage({ params }: Props) {
     [monthData]
   );
 
-  const isFilterActive = filterAccount !== "" || filterDomain !== "all";
-
-  // ─── Helpers ──────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   function openDetail(type: "available" | "global" | "distant" | "debts") {
     if (type === "debts") {
@@ -157,22 +122,18 @@ export default function DashboardPage({ params }: Props) {
           subtitle: d.direction === "owes_me" ? "Me doit" : "Je dois",
           originalAmount: Number(d.amount) - Number(d.paid_amount),
           currency: d.currency,
-          convertedAmount:
-            (Number(d.amount) - Number(d.paid_amount)) *
-            resolveRate(d.currency, ratesByCode),
+          convertedAmount: (Number(d.amount) - Number(d.paid_amount)) * resolveRate(d.currency, ratesByCode),
           isPositive: d.direction === "owes_me",
         }));
       setDetailSheet({ title: "Dettes & Créances actives", items, total: netDebtBalance.net });
       return;
     }
-
     const subset =
       type === "available"
         ? accounts.filter((a) => !a.availability || a.availability === "immediate")
         : type === "distant"
         ? accounts.filter((a) => a.availability === "distant" || a.availability === "blocked")
         : accounts;
-
     const items: DetailItem[] = subset.map((a) => ({
       name: a.name,
       subtitle: AVAIL_LABELS[a.availability ?? "immediate"],
@@ -181,25 +142,18 @@ export default function DashboardPage({ params }: Props) {
       convertedAmount: Number(a.balance) * resolveRate(a.currency, ratesByCode),
       isPositive: Number(a.balance) >= 0,
     }));
-
     const total =
-      type === "available"
-        ? availableBalance.total
-        : type === "distant"
-        ? distantBalance.total
-        : totalUSD;
-
+      type === "available" ? availableBalance.total
+      : type === "distant" ? distantBalance.total
+      : totalUSD;
     const title =
-      type === "available"
-        ? t("available_now")
-        : type === "distant"
-        ? t("distant_blocked")
-        : t("global_balance");
-
+      type === "available" ? t("available_now")
+      : type === "distant" ? t("distant_blocked")
+      : t("global_balance");
     setDetailSheet({ title, items, total });
   }
 
-  // ─── Loading skeleton ──────────────────────────────────────────────────────
+  // ── Loading skeleton ───────────────────────────────────────────────────────
 
   if (accountsLoading || txLoading || debtsLoading || currLoading) {
     return (
@@ -214,7 +168,6 @@ export default function DashboardPage({ params }: Props) {
               </div>
             ))}
           </div>
-          <div className="h-12 animate-pulse rounded-xl bg-slate-800" />
           <div className="grid gap-4 lg:grid-cols-2">
             {[0, 1].map((i) => (
               <div key={i} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -228,7 +181,11 @@ export default function DashboardPage({ params }: Props) {
     );
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  const selectedAccountName = filterAccount
+    ? accounts.find((a) => a.id === filterAccount)?.name ?? ""
+    : "";
 
   return (
     <PageWrapper locale={locale}>
@@ -245,9 +202,7 @@ export default function DashboardPage({ params }: Props) {
             <p className={`whitespace-nowrap font-mono text-lg font-bold tabular-nums ${availableBalance.total < 0 ? "text-red-400" : "text-emerald-400"}`}>
               {formatMoney(availableBalance.total, "USD")}
             </p>
-            {availableBalance.hasMissing && (
-              <p className="mt-0.5 text-xs text-amber-500">*</p>
-            )}
+            {availableBalance.hasMissing && <p className="mt-0.5 text-xs text-amber-500">*</p>}
           </button>
 
           <button
@@ -258,9 +213,7 @@ export default function DashboardPage({ params }: Props) {
             <p className={`whitespace-nowrap font-mono text-lg font-bold tabular-nums ${totalUSD < 0 ? "text-red-400" : "text-slate-50"}`}>
               {formatMoney(totalUSD, "USD")}
             </p>
-            {hasMissing && (
-              <p className="mt-0.5 text-xs text-amber-500">*</p>
-            )}
+            {hasMissing && <p className="mt-0.5 text-xs text-amber-500">*</p>}
           </button>
 
           <button
@@ -285,81 +238,45 @@ export default function DashboardPage({ params }: Props) {
           </button>
         </div>
 
-        {/* ── Analysis filter bar ── */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 space-y-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="shrink-0 text-xs font-medium text-slate-500">Analyser :</span>
-            <select
-              value={filterAccount}
-              onChange={(e) => setFilterAccount(e.target.value)}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
-            >
-              <option value="">Tous les comptes</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.currency})
-                </option>
-              ))}
-            </select>
-            {isFilterActive && (
-              <button
-                onClick={() => { setFilterAccount(""); setFilterDomain("all"); }}
-                className="rounded-full border border-slate-700 px-2.5 py-1 text-xs text-slate-500 hover:border-slate-600 hover:text-slate-300"
-              >
-                ✕ Réinitialiser
-              </button>
-            )}
-          </div>
-          {/* Domain pills */}
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-            {DOMAINS.map((domain) => (
-              <button
-                key={domain}
-                onClick={() => setFilterDomain(domain)}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
-                  filterDomain === domain
-                    ? "bg-orange-600 text-white"
-                    : "border border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200"
-                }`}
-              >
-                {DOMAIN_LABELS[domain]}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* ── Charts row ── */}
         <div className="grid gap-4 lg:grid-cols-2">
-          {/* Revenus vs Dépenses */}
+
+          {/* Revenus vs Dépenses — account + period selectors inline */}
           <Card>
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-400">
-                  {t("income_vs_expenses")}
-                </p>
-                {isFilterActive && filterAccount && (
-                  <p className="mt-0.5 truncate text-xs text-orange-400">
-                    {accounts.find((a) => a.id === filterAccount)?.name ?? ""}
-                    {filterDomain !== "all" ? ` · ${DOMAIN_LABELS[filterDomain]}` : ""}
-                  </p>
-                )}
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-slate-400">
+                {t("income_vs_expenses")}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={filterAccount}
+                  onChange={(e) => setFilterAccount(e.target.value)}
+                  className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
+                >
+                  <option value="">Tous les comptes</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={chartPeriod}
+                  onChange={(e) => setChartPeriod(e.target.value as ChartPeriod)}
+                  className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
+                >
+                  <option value="week">Cette semaine</option>
+                  <option value="month">Ce mois</option>
+                  <option value="3months">3 mois</option>
+                  <option value="6months">6 mois</option>
+                  <option value="year">Cette année</option>
+                </select>
               </div>
-              <select
-                value={chartPeriod}
-                onChange={(e) => setChartPeriod(e.target.value as ChartPeriod)}
-                className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
-              >
-                <option value="week">Cette semaine</option>
-                <option value="month">Ce mois</option>
-                <option value="3months">3 derniers mois</option>
-                <option value="6months">6 derniers mois</option>
-                <option value="year">Cette année</option>
-              </select>
             </div>
             {isChartEmpty ? (
               <div className="flex h-[200px] items-center justify-center">
                 <p className="text-sm text-slate-600">
-                  Aucune transaction pour cette sélection
+                  {filterAccount
+                    ? `Aucune transaction — ${selectedAccountName}`
+                    : "Aucune transaction"}
                 </p>
               </div>
             ) : (
@@ -369,12 +286,12 @@ export default function DashboardPage({ params }: Props) {
 
           {/* Dépenses par catégorie */}
           <Card>
-            <div className="mb-3">
+            <div className="mb-3 flex items-center justify-between gap-2">
               <p className="text-sm font-medium text-slate-400">
                 {t("expenses_by_category")}
               </p>
-              {isFilterActive && (
-                <p className="mt-0.5 text-xs text-slate-600">Ce mois · sélection active</p>
+              {selectedAccountName && (
+                <p className="truncate text-xs text-slate-500">{selectedAccountName}</p>
               )}
             </div>
             {categoryData.length > 0 ? (
@@ -382,9 +299,9 @@ export default function DashboardPage({ params }: Props) {
             ) : (
               <div className="flex h-[200px] items-center justify-center">
                 <p className="text-sm text-slate-600">
-                  {isFilterActive
-                    ? "Aucune dépense pour cette sélection"
-                    : tc("empty")}
+                  {filterAccount
+                    ? "Aucune dépense pour ce compte"
+                    : "Aucune dépense ce mois"}
                 </p>
               </div>
             )}
@@ -393,21 +310,12 @@ export default function DashboardPage({ params }: Props) {
 
         {/* ── Transactions récentes ── */}
         <Card>
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="text-sm font-medium text-slate-400">
-              {t("recent_transactions")}
-            </p>
-            {isFilterActive && (
-              <span className="rounded-full bg-orange-900/30 px-2 py-0.5 text-xs text-orange-400">
-                filtre actif
-              </span>
-            )}
-          </div>
+          <p className="mb-3 text-sm font-medium text-slate-400">
+            {t("recent_transactions")}
+          </p>
           {recent.length === 0 ? (
             <p className="py-4 text-center text-sm text-slate-500">
-              {isFilterActive
-                ? "Aucune transaction pour cette sélection"
-                : tc("empty")}
+              {filterAccount ? "Aucune transaction pour ce compte" : tc("empty")}
             </p>
           ) : (
             <>
@@ -418,13 +326,7 @@ export default function DashboardPage({ params }: Props) {
                     <li key={tx.id} className="flex items-start justify-between gap-3 py-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span
-                            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                              tx.type === "expense"
-                                ? "bg-red-950/60 text-red-400"
-                                : "bg-emerald-950/60 text-emerald-400"
-                            }`}
-                          >
+                          <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tx.type === "expense" ? "bg-red-950/60 text-red-400" : "bg-emerald-950/60 text-emerald-400"}`}>
                             {tx.type === "expense" ? "−" : "+"}
                           </span>
                           <p className="truncate text-sm text-slate-200">
@@ -439,9 +341,7 @@ export default function DashboardPage({ params }: Props) {
                         <MoneyAmount
                           amount={tx.type === "expense" ? -tx.amount : tx.amount}
                           currency={tx.currency}
-                          className={`font-mono tabular-nums text-sm ${
-                            tx.type === "expense" ? "text-red-400" : "text-emerald-400"
-                          }`}
+                          className={`font-mono tabular-nums text-sm ${tx.type === "expense" ? "text-red-400" : "text-emerald-400"}`}
                         />
                       </div>
                     </li>
@@ -463,9 +363,7 @@ export default function DashboardPage({ params }: Props) {
         {/* ── Active debts ── */}
         {activeDebts.length > 0 && (
           <Card>
-            <p className="mb-3 text-sm font-medium text-slate-400">
-              {t("active_debts")}
-            </p>
+            <p className="mb-3 text-sm font-medium text-slate-400">{t("active_debts")}</p>
             <ul className="divide-y divide-slate-800">
               {activeDebts.map((debt) => (
                 <li key={debt.id} className="flex items-start justify-between gap-4 py-3">
@@ -504,16 +402,13 @@ export default function DashboardPage({ params }: Props) {
             </div>
             <ul className="mt-3 space-y-2">
               {unreadAlerts.slice(0, 3).map((alert) => (
-                <li key={alert.id} className="text-sm text-amber-300/80">
-                  {alert.title}
-                </li>
+                <li key={alert.id} className="text-sm text-amber-300/80">{alert.title}</li>
               ))}
             </ul>
           </Card>
         )}
       </div>
 
-      {/* ── Balance detail sheet ── */}
       <BalanceDetailSheet
         open={!!detailSheet}
         title={detailSheet?.title ?? ""}
@@ -526,7 +421,7 @@ export default function DashboardPage({ params }: Props) {
   );
 }
 
-// ─── Pure data builders (no side effects, safe to call in useMemo) ──────────
+// ── Pure data builders ────────────────────────────────────────────────────────
 
 function buildPeriodChartData(
   transactions: { type: string; amount: number; currency: string; transaction_date: string }[],
@@ -577,13 +472,7 @@ function buildPeriodChartData(
 }
 
 function buildCategoryData(
-  transactions: {
-    type: string;
-    amount: number;
-    currency: string;
-    category: string | null;
-    transaction_date: string;
-  }[],
+  transactions: { type: string; amount: number; currency: string; category: string | null; transaction_date: string }[],
   ratesByCode: Record<string, number | string | null>
 ) {
   const now = new Date();
@@ -595,17 +484,11 @@ function buildCategoryData(
   transactions
     .filter((tx) => {
       const d = new Date(tx.transaction_date);
-      return (
-        tx.type === "expense" &&
-        d.getMonth() === thisMonth &&
-        d.getFullYear() === thisYear
-      );
+      return tx.type === "expense" && d.getMonth() === thisMonth && d.getFullYear() === thisYear;
     })
     .forEach((tx) => {
       const cat = tx.category ?? "Divers";
-      cats[cat] =
-        (cats[cat] ?? 0) +
-        (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
+      cats[cat] = (cats[cat] ?? 0) + (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
     });
 
   return Object.entries(cats).map(([name, value]) => ({ name, value }));
