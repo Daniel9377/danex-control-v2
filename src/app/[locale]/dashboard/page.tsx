@@ -16,12 +16,11 @@ import { CategoryPie } from "@/components/charts/CategoryPie";
 import { BalanceDetailSheet, type DetailItem } from "@/components/ui/BalanceDetailSheet";
 import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES, formatMoney } from "@/lib/currency";
 import { formatDate, isOverdue } from "@/lib/utils";
+import { CATEGORY_DOMAIN, DOMAIN_LABELS, DOMAINS, type DomainType } from "@/lib/categories";
 import { use, useMemo, useState } from "react";
 import { AccountAvailability } from "@/lib/supabase/types";
 
-type Props = {
-  params: Promise<{ locale: string }>;
-};
+type Props = { params: Promise<{ locale: string }> };
 
 type ChartPeriod = "week" | "month" | "3months" | "6months" | "year";
 
@@ -38,6 +37,14 @@ const AVAIL_LABELS: Record<AccountAvailability, string> = {
   blocked: "Bloqué",
 };
 
+const DEFAULT_RATE_MAP: Record<string, number> = Object.fromEntries(
+  DEFAULT_CURRENCIES.map((c) => [c.code, c.rate_to_usd])
+);
+
+function resolveRate(currency: string, ratesByCode: Record<string, number | string | null>): number {
+  return getValidRate(ratesByCode[currency]) ?? DEFAULT_RATE_MAP[currency] ?? 1;
+}
+
 export default function DashboardPage({ params }: Props) {
   const { locale } = use(params);
   const t = useTranslations("dashboard");
@@ -50,10 +57,17 @@ export default function DashboardPage({ params }: Props) {
   const { alerts } = useAlerts();
   const { ratesByCode, loading: currLoading } = useCurrencies();
 
+  // Chart / analysis filters
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
+  const [filterAccount, setFilterAccount] = useState<string>("");
+  const [filterDomain, setFilterDomain] = useState<DomainType>("all");
+
+  // Balance detail sheet
   const [detailSheet, setDetailSheet] = useState<DetailSheet | null>(null);
 
-  // All useMemo must be above the loading guard (Rules of Hooks)
+  // ─── Memos ────────────────────────────────────────────────────────────────
+  // All hooks/memos must be above any early return (Rules of Hooks)
+
   const { total: totalUSD, hasMissing } = useMemo(
     () => sumAccountsInCurrency(accounts, "USD", ratesByCode),
     [accounts, ratesByCode]
@@ -89,17 +103,50 @@ export default function DashboardPage({ params }: Props) {
     return { owesMe, iOwe, net: owesMe - iOwe };
   }, [debts, ratesByCode]);
 
-  const recent = useMemo(() => transactions.slice(0, 5), [transactions]);
-  const activeDebts = useMemo(() => debts.filter((d) => d.status !== "paid").slice(0, 5), [debts]);
-  const unreadAlerts = useMemo(() => alerts.filter((a) => !a.is_read), [alerts]);
+  // Transactions filtered by account + domain — drives charts and recent list
+  const filteredTx = useMemo(() => {
+    return transactions.filter((tx) => {
+      if (filterAccount && tx.account_id !== filterAccount) return false;
+      if (filterDomain !== "all") {
+        const domain = tx.category
+          ? (CATEGORY_DOMAIN[tx.category] ?? "other")
+          : "other";
+        if (domain !== filterDomain) return false;
+      }
+      return true;
+    });
+  }, [transactions, filterAccount, filterDomain]);
+
+  const recent = useMemo(() => filteredTx.slice(0, 5), [filteredTx]);
+
+  const activeDebts = useMemo(
+    () => debts.filter((d) => d.status !== "paid").slice(0, 5),
+    [debts]
+  );
+
+  const unreadAlerts = useMemo(
+    () => alerts.filter((a) => !a.is_read),
+    [alerts]
+  );
+
   const monthData = useMemo(
-    () => buildPeriodChartData(transactions, ratesByCode, chartPeriod),
-    [transactions, ratesByCode, chartPeriod]
+    () => buildPeriodChartData(filteredTx, ratesByCode, chartPeriod),
+    [filteredTx, ratesByCode, chartPeriod]
   );
+
   const categoryData = useMemo(
-    () => buildCategoryData(transactions, ratesByCode),
-    [transactions, ratesByCode]
+    () => buildCategoryData(filteredTx, ratesByCode),
+    [filteredTx, ratesByCode]
   );
+
+  const isChartEmpty = useMemo(
+    () => monthData.every((d) => d.income === 0 && d.expenses === 0),
+    [monthData]
+  );
+
+  const isFilterActive = filterAccount !== "" || filterDomain !== "all";
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
 
   function openDetail(type: "available" | "global" | "distant" | "debts") {
     if (type === "debts") {
@@ -110,7 +157,9 @@ export default function DashboardPage({ params }: Props) {
           subtitle: d.direction === "owes_me" ? "Me doit" : "Je dois",
           originalAmount: Number(d.amount) - Number(d.paid_amount),
           currency: d.currency,
-          convertedAmount: (Number(d.amount) - Number(d.paid_amount)) * resolveRate(d.currency, ratesByCode),
+          convertedAmount:
+            (Number(d.amount) - Number(d.paid_amount)) *
+            resolveRate(d.currency, ratesByCode),
           isPositive: d.direction === "owes_me",
         }));
       setDetailSheet({ title: "Dettes & Créances actives", items, total: netDebtBalance.net });
@@ -150,46 +199,50 @@ export default function DashboardPage({ params }: Props) {
     setDetailSheet({ title, items, total });
   }
 
-  if (accountsLoading || txLoading || debtsLoading || currLoading) return (
-    <PageWrapper locale={locale}>
-      <div className="space-y-6">
-        <div className="h-7 w-40 animate-pulse rounded-lg bg-slate-800" />
-        <div className="grid grid-cols-2 gap-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <div className="h-3 w-20 animate-pulse rounded bg-slate-800 mb-2" />
-              <div className="h-7 w-28 animate-pulse rounded bg-slate-800" />
-            </div>
-          ))}
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <div className="h-4 w-32 animate-pulse rounded bg-slate-800 mb-3" />
-            <div className="h-48 animate-pulse rounded bg-slate-800" />
+  // ─── Loading skeleton ──────────────────────────────────────────────────────
+
+  if (accountsLoading || txLoading || debtsLoading || currLoading) {
+    return (
+      <PageWrapper locale={locale}>
+        <div className="space-y-6">
+          <div className="h-7 w-40 animate-pulse rounded-lg bg-slate-800" />
+          <div className="grid grid-cols-2 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <div className="mb-2 h-3 w-20 animate-pulse rounded bg-slate-800" />
+                <div className="h-7 w-28 animate-pulse rounded bg-slate-800" />
+              </div>
+            ))}
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <div className="h-4 w-36 animate-pulse rounded bg-slate-800 mb-3" />
-            <div className="h-48 animate-pulse rounded bg-slate-800" />
+          <div className="h-12 animate-pulse rounded-xl bg-slate-800" />
+          <div className="grid gap-4 lg:grid-cols-2">
+            {[0, 1].map((i) => (
+              <div key={i} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <div className="mb-3 h-4 w-32 animate-pulse rounded bg-slate-800" />
+                <div className="h-48 animate-pulse rounded bg-slate-800" />
+              </div>
+            ))}
           </div>
         </div>
-      </div>
-    </PageWrapper>
-  );
+      </PageWrapper>
+    );
+  }
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <PageWrapper locale={locale}>
       <div className="space-y-6">
         <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
 
-        {/* 4 summary cards */}
+        {/* ── 4 balance summary cards ── */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Disponible */}
           <button
             onClick={() => openDetail("available")}
             className="flex flex-col items-start rounded-xl border border-slate-800 bg-slate-900 p-4 text-left transition hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
           >
             <p className="mb-1 text-xs text-slate-400">{t("available_now")}</p>
-            <p className={`font-mono tabular-nums text-lg font-bold whitespace-nowrap ${availableBalance.total < 0 ? "text-red-400" : "text-emerald-400"}`}>
+            <p className={`whitespace-nowrap font-mono text-lg font-bold tabular-nums ${availableBalance.total < 0 ? "text-red-400" : "text-emerald-400"}`}>
               {formatMoney(availableBalance.total, "USD")}
             </p>
             {availableBalance.hasMissing && (
@@ -197,13 +250,12 @@ export default function DashboardPage({ params }: Props) {
             )}
           </button>
 
-          {/* Solde global */}
           <button
             onClick={() => openDetail("global")}
             className="flex flex-col items-start rounded-xl border border-slate-800 bg-slate-900 p-4 text-left transition hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
           >
             <p className="mb-1 text-xs text-slate-400">{t("global_balance")}</p>
-            <p className={`font-mono tabular-nums text-lg font-bold whitespace-nowrap ${totalUSD < 0 ? "text-red-400" : "text-slate-50"}`}>
+            <p className={`whitespace-nowrap font-mono text-lg font-bold tabular-nums ${totalUSD < 0 ? "text-red-400" : "text-slate-50"}`}>
               {formatMoney(totalUSD, "USD")}
             </p>
             {hasMissing && (
@@ -211,41 +263,91 @@ export default function DashboardPage({ params }: Props) {
             )}
           </button>
 
-          {/* Éloigné / Bloqué */}
           <button
             onClick={() => openDetail("distant")}
             className="flex flex-col items-start rounded-xl border border-slate-800 bg-slate-900 p-4 text-left transition hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
           >
             <p className="mb-1 text-xs text-slate-400">{t("distant_blocked")}</p>
-            <p className="font-mono tabular-nums text-lg font-bold whitespace-nowrap text-amber-400">
+            <p className="whitespace-nowrap font-mono text-lg font-bold tabular-nums text-amber-400">
               {formatMoney(distantBalance.total, "USD")}
             </p>
           </button>
 
-          {/* Dettes nettes */}
           <button
             onClick={() => openDetail("debts")}
             className="flex flex-col items-start rounded-xl border border-slate-800 bg-slate-900 p-4 text-left transition hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
           >
             <p className="mb-1 text-xs text-slate-400">{t("net_debts")}</p>
-            <p className={`font-mono tabular-nums text-lg font-bold whitespace-nowrap ${netDebtBalance.net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+            <p className={`whitespace-nowrap font-mono text-lg font-bold tabular-nums ${netDebtBalance.net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
               {netDebtBalance.net >= 0 ? "+" : ""}
               {formatMoney(Math.abs(netDebtBalance.net), "USD")}
             </p>
           </button>
         </div>
 
-        {/* Charts row */}
+        {/* ── Analysis filter bar ── */}
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 space-y-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="shrink-0 text-xs font-medium text-slate-500">Analyser :</span>
+            <select
+              value={filterAccount}
+              onChange={(e) => setFilterAccount(e.target.value)}
+              className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
+            >
+              <option value="">Tous les comptes</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.currency})
+                </option>
+              ))}
+            </select>
+            {isFilterActive && (
+              <button
+                onClick={() => { setFilterAccount(""); setFilterDomain("all"); }}
+                className="rounded-full border border-slate-700 px-2.5 py-1 text-xs text-slate-500 hover:border-slate-600 hover:text-slate-300"
+              >
+                ✕ Réinitialiser
+              </button>
+            )}
+          </div>
+          {/* Domain pills */}
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {DOMAINS.map((domain) => (
+              <button
+                key={domain}
+                onClick={() => setFilterDomain(domain)}
+                className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
+                  filterDomain === domain
+                    ? "bg-orange-600 text-white"
+                    : "border border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                }`}
+              >
+                {DOMAIN_LABELS[domain]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Charts row ── */}
         <div className="grid gap-4 lg:grid-cols-2">
+          {/* Revenus vs Dépenses */}
           <Card>
             <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-slate-400">
-                {t("income_vs_expenses")}
-              </p>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-400">
+                  {t("income_vs_expenses")}
+                </p>
+                {isFilterActive && filterAccount && (
+                  <p className="mt-0.5 truncate text-xs text-orange-400">
+                    {accounts.find((a) => a.id === filterAccount)?.name ?? ""}
+                    {filterDomain !== "all" ? ` · ${DOMAIN_LABELS[filterDomain]}` : ""}
+                  </p>
+                )}
+              </div>
               <select
                 value={chartPeriod}
                 onChange={(e) => setChartPeriod(e.target.value as ChartPeriod)}
-                className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
+                className="shrink-0 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
               >
                 <option value="week">Cette semaine</option>
                 <option value="month">Ce mois</option>
@@ -254,29 +356,59 @@ export default function DashboardPage({ params }: Props) {
                 <option value="year">Cette année</option>
               </select>
             </div>
-            <ExpenseChart data={monthData} currency="USD" />
+            {isChartEmpty ? (
+              <div className="flex h-[200px] items-center justify-center">
+                <p className="text-sm text-slate-600">
+                  Aucune transaction pour cette sélection
+                </p>
+              </div>
+            ) : (
+              <ExpenseChart data={monthData} currency="USD" />
+            )}
           </Card>
+
+          {/* Dépenses par catégorie */}
           <Card>
-            <p className="mb-3 text-sm font-medium text-slate-400">
-              {t("expenses_by_category")}
-            </p>
+            <div className="mb-3">
+              <p className="text-sm font-medium text-slate-400">
+                {t("expenses_by_category")}
+              </p>
+              {isFilterActive && (
+                <p className="mt-0.5 text-xs text-slate-600">Ce mois · sélection active</p>
+              )}
+            </div>
             {categoryData.length > 0 ? (
               <CategoryPie data={categoryData} currency="USD" />
             ) : (
-              <p className="py-12 text-center text-sm text-slate-500">
-                {tc("empty")}
-              </p>
+              <div className="flex h-[200px] items-center justify-center">
+                <p className="text-sm text-slate-600">
+                  {isFilterActive
+                    ? "Aucune dépense pour cette sélection"
+                    : tc("empty")}
+                </p>
+              </div>
             )}
           </Card>
         </div>
 
-        {/* Recent transactions — limited to 10 */}
+        {/* ── Transactions récentes ── */}
         <Card>
-          <p className="mb-3 text-sm font-medium text-slate-400">
-            {t("recent_transactions")}
-          </p>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-sm font-medium text-slate-400">
+              {t("recent_transactions")}
+            </p>
+            {isFilterActive && (
+              <span className="rounded-full bg-orange-900/30 px-2 py-0.5 text-xs text-orange-400">
+                filtre actif
+              </span>
+            )}
+          </div>
           {recent.length === 0 ? (
-            <p className="py-4 text-center text-sm text-slate-500">{tc("empty")}</p>
+            <p className="py-4 text-center text-sm text-slate-500">
+              {isFilterActive
+                ? "Aucune transaction pour cette sélection"
+                : tc("empty")}
+            </p>
           ) : (
             <>
               <ul className="divide-y divide-slate-800">
@@ -286,7 +418,13 @@ export default function DashboardPage({ params }: Props) {
                     <li key={tx.id} className="flex items-start justify-between gap-3 py-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tx.type === "expense" ? "bg-red-950/60 text-red-400" : "bg-emerald-950/60 text-emerald-400"}`}>
+                          <span
+                            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                              tx.type === "expense"
+                                ? "bg-red-950/60 text-red-400"
+                                : "bg-emerald-950/60 text-emerald-400"
+                            }`}
+                          >
                             {tx.type === "expense" ? "−" : "+"}
                           </span>
                           <p className="truncate text-sm text-slate-200">
@@ -301,7 +439,9 @@ export default function DashboardPage({ params }: Props) {
                         <MoneyAmount
                           amount={tx.type === "expense" ? -tx.amount : tx.amount}
                           currency={tx.currency}
-                          className={`font-mono tabular-nums text-sm ${tx.type === "expense" ? "text-red-400" : "text-emerald-400"}`}
+                          className={`font-mono tabular-nums text-sm ${
+                            tx.type === "expense" ? "text-red-400" : "text-emerald-400"
+                          }`}
                         />
                       </div>
                     </li>
@@ -320,7 +460,7 @@ export default function DashboardPage({ params }: Props) {
           )}
         </Card>
 
-        {/* Active debts */}
+        {/* ── Active debts ── */}
         {activeDebts.length > 0 && (
           <Card>
             <p className="mb-3 text-sm font-medium text-slate-400">
@@ -330,9 +470,7 @@ export default function DashboardPage({ params }: Props) {
               {activeDebts.map((debt) => (
                 <li key={debt.id} className="flex items-start justify-between gap-4 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-slate-200">
-                      {debt.person_name}
-                    </p>
+                    <p className="truncate text-sm text-slate-200">{debt.person_name}</p>
                     <div className="mt-0.5 flex items-center gap-2">
                       <Badge variant={debt.direction === "i_owe" ? "danger" : "success"}>
                         {debt.direction === "i_owe" ? td("i_owe") : td("owes_me")}
@@ -355,7 +493,7 @@ export default function DashboardPage({ params }: Props) {
           </Card>
         )}
 
-        {/* Unread alerts */}
+        {/* ── Unread alerts ── */}
         {unreadAlerts.length > 0 && (
           <Card className="border-amber-800/40 bg-amber-950/20">
             <div className="flex items-center gap-2">
@@ -375,7 +513,7 @@ export default function DashboardPage({ params }: Props) {
         )}
       </div>
 
-      {/* Balance detail sheet */}
+      {/* ── Balance detail sheet ── */}
       <BalanceDetailSheet
         open={!!detailSheet}
         title={detailSheet?.title ?? ""}
@@ -388,13 +526,7 @@ export default function DashboardPage({ params }: Props) {
   );
 }
 
-const DEFAULT_RATE_MAP: Record<string, number> = Object.fromEntries(
-  DEFAULT_CURRENCIES.map((c) => [c.code, c.rate_to_usd])
-);
-
-function resolveRate(currency: string, ratesByCode: Record<string, number | string | null>): number {
-  return getValidRate(ratesByCode[currency]) ?? DEFAULT_RATE_MAP[currency] ?? 1;
-}
+// ─── Pure data builders (no side effects, safe to call in useMemo) ──────────
 
 function buildPeriodChartData(
   transactions: { type: string; amount: number; currency: string; transaction_date: string }[],
@@ -413,8 +545,7 @@ function buildPeriodChartData(
     }
     transactions.forEach((tx) => {
       const d = new Date(tx.transaction_date);
-      const msAgo = now.getTime() - d.getTime();
-      if (msAgo > 7 * 24 * 60 * 60 * 1000) return;
+      if (now.getTime() - d.getTime() > 7 * 24 * 60 * 60 * 1000) return;
       const key = d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
       if (!buckets[key]) return;
       const usd = (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
@@ -422,7 +553,11 @@ function buildPeriodChartData(
       else buckets[key].expenses += usd;
     });
   } else {
-    const monthCount = period === "month" ? 6 : period === "3months" ? 3 : period === "6months" ? 6 : 12;
+    const monthCount =
+      period === "month" ? 6
+      : period === "3months" ? 3
+      : period === "6months" ? 6
+      : 12;
     for (let i = monthCount - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
@@ -442,7 +577,13 @@ function buildPeriodChartData(
 }
 
 function buildCategoryData(
-  transactions: { type: string; amount: number; currency: string; category: string | null; transaction_date: string }[],
+  transactions: {
+    type: string;
+    amount: number;
+    currency: string;
+    category: string | null;
+    transaction_date: string;
+  }[],
   ratesByCode: Record<string, number | string | null>
 ) {
   const now = new Date();
@@ -450,14 +591,22 @@ function buildCategoryData(
   const thisYear = now.getFullYear();
   const cats: Record<string, number> = {};
   const displayRate = resolveRate("USD", ratesByCode);
+
   transactions
     .filter((tx) => {
       const d = new Date(tx.transaction_date);
-      return tx.type === "expense" && d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+      return (
+        tx.type === "expense" &&
+        d.getMonth() === thisMonth &&
+        d.getFullYear() === thisYear
+      );
     })
     .forEach((tx) => {
       const cat = tx.category ?? "Divers";
-      cats[cat] = (cats[cat] ?? 0) + (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
+      cats[cat] =
+        (cats[cat] ?? 0) +
+        (Number(tx.amount) * resolveRate(tx.currency, ratesByCode)) / displayRate;
     });
+
   return Object.entries(cats).map(([name, value]) => ({ name, value }));
 }

@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TransactionType } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
 import { formatMoney, getValidRate, DEFAULT_CURRENCIES } from "@/lib/currency";
+import { CATEGORY_DOMAIN, DOMAIN_LABELS, DOMAINS, type DomainType } from "@/lib/categories";
 import { Plus, Trash2 } from "lucide-react";
 
 const EXPENSE_CATEGORIES = [
@@ -33,51 +34,6 @@ const INCOME_CATEGORIES = [
   "Remboursement", "Aide familiale", "Don reçu", "Investissement reçu",
   "Vente produit", "Service vendu", "Bonus", "Autre",
 ];
-
-type DomainType = "all" | "personal" | "business" | "investment" | "debt" | "client" | "other";
-
-const CATEGORY_DOMAIN: Record<string, DomainType> = {
-  // Personnel - dépenses
-  "Alimentation": "personal",
-  "Transport": "personal",
-  "Logement / Loyer": "personal",
-  "Hôtel & Voyage": "personal",
-  "Santé": "personal",
-  "Études / École": "personal",
-  "Internet & Téléphone": "personal",
-  "Abonnements": "personal",
-  "Shopping / Achats personnels": "personal",
-  "Restaurant / Sorties": "personal",
-  "Cadeaux / Aide familiale": "personal",
-  "Urgence": "personal",
-  // Personnel - revenus
-  "Salaire reçu": "personal",
-  "Aide familiale": "personal",
-  "Don reçu": "personal",
-  // Business - dépenses
-  "Business / Sourcing": "business",
-  "Marketing": "business",
-  "Frais bancaires": "business",
-  "Commission payée": "business",
-  "Salaire payé": "business",
-  "Livraison / Transport colis": "business",
-  "Douane / Taxes": "business",
-  "Équipement / Matériel": "business",
-  // Business - revenus
-  "Bénéfice business": "business",
-  "Commission reçue": "business",
-  "Vente produit": "business",
-  "Service vendu": "business",
-  "Bonus": "business",
-  // Investissement
-  "Investissement reçu": "investment",
-  // Dette / remboursement
-  "Remboursement": "debt",
-  // Client / commande
-  "Paiement client": "client",
-  // Autre
-  "Autre": "other",
-};
 
 const PERSONAL_SUBCATEGORY_MAP: Record<string, string> = {
   "Alimentation": "Nourriture",
@@ -102,17 +58,6 @@ const PERSONAL_SUBCATEGORIES = [
   "Santé", "Études", "Abonnements", "Loisirs", "Voyage", "Salaire", "Autre",
 ];
 
-const DOMAIN_LABELS: Record<DomainType, string> = {
-  all: "Tous",
-  personal: "Personnel",
-  business: "Business",
-  investment: "Investissement",
-  debt: "Dette",
-  client: "Client",
-  other: "Autre",
-};
-
-const DOMAINS: DomainType[] = ["all", "personal", "business", "investment", "debt", "client", "other"];
 
 const PAGE_SIZE = 20;
 

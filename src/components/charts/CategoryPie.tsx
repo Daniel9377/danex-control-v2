@@ -6,20 +6,36 @@ import {
   Cell,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import { formatMoney } from "@/lib/currency";
 
-const COLORS = [
-  "#C2550A",
-  "#f97316",
-  "#10b981",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
-  "#f59e0b",
+// 15 visually distinct colors — all vibrant on dark background
+const PALETTE = [
+  "#f97316", // orange
+  "#10b981", // emerald
+  "#3b82f6", // blue
+  "#ec4899", // pink
+  "#8b5cf6", // purple
+  "#f59e0b", // amber
+  "#14b8a6", // teal
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#84cc16", // lime
+  "#a78bfa", // light purple
+  "#fb923c", // light orange
+  "#34d399", // light green
+  "#60a5fa", // light blue
+  "#f472b6", // light pink
 ];
+
+// Deterministic color from category name — same name always gets same color
+function stableColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  return PALETTE[h % PALETTE.length];
+}
 
 type DataPoint = {
   name: string;
@@ -32,32 +48,37 @@ type Props = {
 };
 
 export function CategoryPie({ data, currency = "USD" }: Props) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+
+  // Sort by value descending for a cleaner donut layout
+  const sorted = [...data].sort((a, b) => b.value - a.value);
+
   return (
     <div
       tabIndex={-1}
       className="[&_svg]:outline-none [&_svg]:focus:outline-none focus:outline-none"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      <ResponsiveContainer width="100%" height={200}>
+      {/* Donut chart */}
+      <ResponsiveContainer width="100%" height={160}>
         <PieChart style={{ outline: "none" }} tabIndex={-1}>
           <Pie
-            data={data}
+            data={sorted}
             cx="50%"
             cy="50%"
-            innerRadius={50}
-            outerRadius={80}
+            innerRadius={45}
+            outerRadius={72}
             paddingAngle={2}
             dataKey="value"
             strokeWidth={0}
             stroke="none"
             isAnimationActive={false}
-            /* Disable the default active/focus shape — keeps tooltip, removes outline */
             activeShape={false as unknown as undefined}
           >
-            {data.map((_, index) => (
+            {sorted.map((entry) => (
               <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
+                key={`cell-${entry.name}`}
+                fill={stableColor(entry.name)}
                 stroke="none"
                 tabIndex={-1}
               />
@@ -71,15 +92,32 @@ export function CategoryPie({ data, currency = "USD" }: Props) {
               fontSize: 12,
             }}
             labelStyle={{ color: "#94a3b8" }}
-            formatter={(value) => [formatMoney(Number(value ?? 0), currency), "Montant"]}
-          />
-          <Legend
-            wrapperStyle={{ fontSize: 11, color: "#94a3b8" }}
-            iconType="circle"
-            iconSize={8}
+            formatter={(value, name) => [
+              formatMoney(Number(value ?? 0), currency),
+              String(name),
+            ]}
           />
         </PieChart>
       </ResponsiveContainer>
+
+      {/* Custom legend — 2-column grid, shows name + percentage */}
+      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
+        {sorted.map((entry) => {
+          const pct = total > 0 ? Math.round((entry.value / total) * 100) : 0;
+          return (
+            <div key={entry.name} className="flex min-w-0 items-center gap-1.5">
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: stableColor(entry.name) }}
+              />
+              <span className="truncate text-xs text-slate-400">{entry.name}</span>
+              <span className="ml-auto shrink-0 text-xs tabular-nums text-slate-500">
+                {pct}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
