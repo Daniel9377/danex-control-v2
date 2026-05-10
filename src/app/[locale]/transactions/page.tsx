@@ -17,7 +17,6 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TransactionType } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
 import { formatMoney, getValidRate, DEFAULT_CURRENCIES } from "@/lib/currency";
-import { CATEGORY_DOMAIN, DOMAIN_LABELS, DOMAINS, type DomainType } from "@/lib/categories";
 import { Plus, Trash2 } from "lucide-react";
 
 const EXPENSE_CATEGORIES = [
@@ -34,30 +33,6 @@ const INCOME_CATEGORIES = [
   "Remboursement", "Aide familiale", "Don reçu", "Investissement reçu",
   "Vente produit", "Service vendu", "Bonus", "Autre",
 ];
-
-const PERSONAL_SUBCATEGORY_MAP: Record<string, string> = {
-  "Alimentation": "Nourriture",
-  "Restaurant / Sorties": "Loisirs",
-  "Transport": "Transport",
-  "Logement / Loyer": "Logement",
-  "Hôtel & Voyage": "Voyage",
-  "Santé": "Santé",
-  "Études / École": "Études",
-  "Internet & Téléphone": "Abonnements",
-  "Abonnements": "Abonnements",
-  "Shopping / Achats personnels": "Shopping",
-  "Cadeaux / Aide familiale": "Autre",
-  "Urgence": "Autre",
-  "Salaire reçu": "Salaire",
-  "Aide familiale": "Autre",
-  "Don reçu": "Autre",
-};
-
-const PERSONAL_SUBCATEGORIES = [
-  "Tout", "Nourriture", "Transport", "Logement", "Shopping",
-  "Santé", "Études", "Abonnements", "Loisirs", "Voyage", "Salaire", "Autre",
-];
-
 
 const PAGE_SIZE = 20;
 
@@ -84,8 +59,6 @@ export default function TransactionsPage({ params }: Props) {
   // Filters
   const [filterType, setFilterType] = useState<"" | "income" | "expense">("");
   const [filterAccount, setFilterAccount] = useState("");
-  const [filterDomain, setFilterDomain] = useState<DomainType>("all");
-  const [filterSubcategory, setFilterSubcategory] = useState("Tout");
 
   // Form state
   const [txType, setTxType] = useState<TransactionType>("expense");
@@ -103,17 +76,9 @@ export default function TransactionsPage({ params }: Props) {
     () => transactions.filter((tx) => {
       if (filterType && tx.type !== filterType) return false;
       if (filterAccount && tx.account_id !== filterAccount) return false;
-      if (filterDomain !== "all") {
-        const domain = tx.category ? (CATEGORY_DOMAIN[tx.category] ?? "other") : "other";
-        if (domain !== filterDomain) return false;
-      }
-      if (filterDomain === "personal" && filterSubcategory !== "Tout") {
-        const sub = tx.category ? (PERSONAL_SUBCATEGORY_MAP[tx.category] ?? "Autre") : "Autre";
-        if (sub !== filterSubcategory) return false;
-      }
       return true;
     }),
-    [transactions, filterType, filterAccount, filterDomain, filterSubcategory]
+    [transactions, filterType, filterAccount]
   );
 
   const totals = useMemo(() => {
@@ -156,12 +121,6 @@ export default function TransactionsPage({ params }: Props) {
     setAmount(""); setNote(""); setCategory("");
   }
 
-  function handleDomainChange(domain: DomainType) {
-    setFilterDomain(domain);
-    setFilterSubcategory("Tout");
-    setShowAll(false);
-  }
-
   const formCategories = txType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   if (txLoading || accLoading) return (
@@ -170,11 +129,6 @@ export default function TransactionsPage({ params }: Props) {
         <div className="flex items-center justify-between gap-4">
           <div className="h-7 w-32 animate-pulse rounded-lg bg-slate-800" />
           <div className="h-9 w-44 animate-pulse rounded-lg bg-slate-800" />
-        </div>
-        <div className="flex gap-2 overflow-x-auto">
-          {[60, 70, 80, 90, 60, 70, 60].map((w, i) => (
-            <div key={i} style={{ width: `${w}px`, flexShrink: 0 }} className="h-8 animate-pulse rounded-full bg-slate-800" />
-          ))}
         </div>
         <SkeletonList count={5} />
       </div>
@@ -194,42 +148,6 @@ export default function TransactionsPage({ params }: Props) {
             {t("add")}
           </button>
         </div>
-
-        {/* Domain filter pills */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {DOMAINS.map((domain) => (
-            <button
-              key={domain}
-              onClick={() => handleDomainChange(domain)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                filterDomain === domain
-                  ? "bg-orange-600 text-white"
-                  : "border border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-200"
-              }`}
-            >
-              {DOMAIN_LABELS[domain]}
-            </button>
-          ))}
-        </div>
-
-        {/* Subcategory pills — only for Personal */}
-        {filterDomain === "personal" && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            {PERSONAL_SUBCATEGORIES.map((sub) => (
-              <button
-                key={sub}
-                onClick={() => { setFilterSubcategory(sub); setShowAll(false); }}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                  filterSubcategory === sub
-                    ? "bg-slate-200 text-slate-900"
-                    : "border border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
-                }`}
-              >
-                {sub}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Type + account dropdowns */}
         <div className="flex flex-wrap gap-2">

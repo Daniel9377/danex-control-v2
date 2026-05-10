@@ -50,8 +50,10 @@ type Props = {
 export function CategoryPie({ data, currency = "USD" }: Props) {
   const total = data.reduce((s, d) => s + d.value, 0);
 
-  // Sort by value descending for a cleaner donut layout
-  const sorted = [...data].sort((a, b) => b.value - a.value);
+  // Sort by value descending, drop entries that round to 0%
+  const sorted = [...data]
+    .sort((a, b) => b.value - a.value)
+    .filter((d) => total === 0 || Math.round((d.value / total) * 100) > 0);
 
   return (
     <div

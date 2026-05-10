@@ -263,8 +263,8 @@ export default function AccountsPage({ params }: Props) {
 
       {/* Account detail panel */}
       {detailAccount && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 md:items-center">
-          <div className="w-full max-w-md overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 p-6 md:rounded-xl" style={{ maxHeight: "90vh" }}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 md:items-center" onClick={closeDetail}>
+          <div className="w-full max-w-md overflow-y-auto rounded-t-2xl border border-slate-800 bg-slate-900 p-6 md:rounded-xl" style={{ maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
