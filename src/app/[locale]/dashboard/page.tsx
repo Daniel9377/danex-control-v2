@@ -18,6 +18,7 @@ import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES, formatMoney } 
 import { formatDate, isOverdue } from "@/lib/utils";
 import { use, useMemo, useState } from "react";
 import { AccountAvailability } from "@/lib/supabase/types";
+import { CATEGORY_DOMAIN, DOMAIN_LABELS, DOMAINS, type DomainType } from "@/lib/categories";
 
 type Props = { params: Promise<{ locale: string }> };
 type ChartPeriod = "week" | "month" | "3months" | "6months" | "year";
@@ -51,7 +52,7 @@ export default function DashboardPage({ params }: Props) {
   const { ratesByCode, loading: currLoading } = useCurrencies();
 
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("month");
-  const [filterAccount, setFilterAccount] = useState("");
+  const [filterDomain, setFilterDomain] = useState<DomainType>("all");
   const [detailSheet, setDetailSheet] = useState<DetailSheet | null>(null);
 
   // ── Memos (all above early return — Rules of Hooks) ───────────────────────
@@ -81,10 +82,16 @@ export default function DashboardPage({ params }: Props) {
     return { owesMe, iOwe, net: owesMe - iOwe };
   }, [debts, ratesByCode]);
 
-  // Transactions filtered by selected account — drives charts + recent list
+  // Transactions filtered by domain — drives charts + recent list
   const filteredTx = useMemo(
-    () => (filterAccount ? transactions.filter((tx) => tx.account_id === filterAccount) : transactions),
-    [transactions, filterAccount]
+    () =>
+      filterDomain === "all"
+        ? transactions
+        : transactions.filter((tx) => {
+            const domain = tx.category ? (CATEGORY_DOMAIN[tx.category] ?? "other") : "other";
+            return domain === filterDomain;
+          }),
+    [transactions, filterDomain]
   );
 
   const recent = useMemo(() => filteredTx.slice(0, 5), [filteredTx]);
@@ -183,9 +190,7 @@ export default function DashboardPage({ params }: Props) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const selectedAccountName = filterAccount
-    ? accounts.find((a) => a.id === filterAccount)?.name ?? ""
-    : "";
+  const selectedDomainLabel = filterDomain !== "all" ? DOMAIN_LABELS[filterDomain] : "";
 
   return (
     <PageWrapper locale={locale}>
@@ -241,7 +246,7 @@ export default function DashboardPage({ params }: Props) {
         {/* ── Charts row ── */}
         <div className="grid gap-4 lg:grid-cols-2">
 
-          {/* Revenus vs Dépenses — account + period selectors inline */}
+          {/* Revenus vs Dépenses — domain + period selectors inline */}
           <Card>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium text-slate-400">
@@ -249,13 +254,12 @@ export default function DashboardPage({ params }: Props) {
               </p>
               <div className="flex items-center gap-1.5">
                 <select
-                  value={filterAccount}
-                  onChange={(e) => setFilterAccount(e.target.value)}
+                  value={filterDomain}
+                  onChange={(e) => setFilterDomain(e.target.value as DomainType)}
                   className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
                 >
-                  <option value="">Tous les comptes</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
+                  {DOMAINS.map((d) => (
+                    <option key={d} value={d}>{DOMAIN_LABELS[d]}</option>
                   ))}
                 </select>
                 <select
@@ -274,8 +278,8 @@ export default function DashboardPage({ params }: Props) {
             {isChartEmpty ? (
               <div className="flex h-[200px] items-center justify-center">
                 <p className="text-sm text-slate-600">
-                  {filterAccount
-                    ? `Aucune transaction — ${selectedAccountName}`
+                  {selectedDomainLabel
+                    ? `Aucune transaction — ${selectedDomainLabel}`
                     : "Aucune transaction"}
                 </p>
               </div>
@@ -290,8 +294,8 @@ export default function DashboardPage({ params }: Props) {
               <p className="text-sm font-medium text-slate-400">
                 {t("expenses_by_category")}
               </p>
-              {selectedAccountName && (
-                <p className="truncate text-xs text-slate-500">{selectedAccountName}</p>
+              {selectedDomainLabel && (
+                <p className="truncate text-xs text-slate-500">{selectedDomainLabel}</p>
               )}
             </div>
             {categoryData.length > 0 ? (
@@ -299,8 +303,8 @@ export default function DashboardPage({ params }: Props) {
             ) : (
               <div className="flex h-[200px] items-center justify-center">
                 <p className="text-sm text-slate-600">
-                  {filterAccount
-                    ? "Aucune dépense pour ce compte"
+                  {selectedDomainLabel
+                    ? `Aucune dépense — ${selectedDomainLabel}`
                     : "Aucune dépense ce mois"}
                 </p>
               </div>
@@ -315,7 +319,7 @@ export default function DashboardPage({ params }: Props) {
           </p>
           {recent.length === 0 ? (
             <p className="py-4 text-center text-sm text-slate-500">
-              {filterAccount ? "Aucune transaction pour ce compte" : tc("empty")}
+              {selectedDomainLabel ? `Aucune transaction — ${selectedDomainLabel}` : tc("empty")}
             </p>
           ) : (
             <>
