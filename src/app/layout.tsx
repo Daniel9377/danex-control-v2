@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -21,6 +21,9 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Danex",
   },
+};
+
+export const viewport: Viewport = {
   themeColor: "#C2550A",
 };
 
