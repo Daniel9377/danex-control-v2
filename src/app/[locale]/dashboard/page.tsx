@@ -89,7 +89,7 @@ export default function DashboardPage({ params }: Props) {
     return { owesMe, iOwe, net: owesMe - iOwe };
   }, [debts, ratesByCode]);
 
-  const recent = useMemo(() => transactions.slice(0, 10), [transactions]);
+  const recent = useMemo(() => transactions.slice(0, 5), [transactions]);
   const activeDebts = useMemo(() => debts.filter((d) => d.status !== "paid").slice(0, 5), [debts]);
   const unreadAlerts = useMemo(() => alerts.filter((a) => !a.is_read), [alerts]);
   const monthData = useMemo(
@@ -280,27 +280,35 @@ export default function DashboardPage({ params }: Props) {
           ) : (
             <>
               <ul className="divide-y divide-slate-800">
-                {recent.map((tx) => (
-                  <li key={tx.id} className="flex items-start justify-between gap-4 py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-slate-200">
-                        {tx.category ?? tx.note ?? "—"}
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {formatDate(tx.transaction_date)}
-                      </p>
-                    </div>
-                    <div className="shrink-0">
-                      <MoneyAmount
-                        amount={tx.type === "expense" ? -tx.amount : tx.amount}
-                        currency={tx.currency}
-                        className={`font-mono tabular-nums text-sm ${tx.type === "expense" ? "text-red-400" : "text-emerald-400"}`}
-                      />
-                    </div>
-                  </li>
-                ))}
+                {recent.map((tx) => {
+                  const acc = accounts.find((a) => a.id === tx.account_id);
+                  return (
+                    <li key={tx.id} className="flex items-start justify-between gap-3 py-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${tx.type === "expense" ? "bg-red-950/60 text-red-400" : "bg-emerald-950/60 text-emerald-400"}`}>
+                            {tx.type === "expense" ? "−" : "+"}
+                          </span>
+                          <p className="truncate text-sm text-slate-200">
+                            {tx.category ?? tx.note ?? "—"}
+                          </p>
+                        </div>
+                        <p className="mt-0.5 truncate text-xs text-slate-500">
+                          {acc?.name ?? "—"} · {formatDate(tx.transaction_date)}
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        <MoneyAmount
+                          amount={tx.type === "expense" ? -tx.amount : tx.amount}
+                          currency={tx.currency}
+                          className={`font-mono tabular-nums text-sm ${tx.type === "expense" ? "text-red-400" : "text-emerald-400"}`}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
-              {transactions.length > 10 && (
+              {transactions.length > 5 && (
                 <Link
                   href={`/${locale}/transactions`}
                   className="mt-3 flex w-full items-center justify-center rounded-lg border border-slate-700 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"

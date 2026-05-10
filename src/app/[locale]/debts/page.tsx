@@ -16,6 +16,7 @@ import { SkeletonList } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DebtDirection, DebtPayment } from "@/lib/supabase/types";
 import { formatDate, isOverdue } from "@/lib/utils";
+import { formatMoney } from "@/lib/currency";
 import { Plus, Trash2, CreditCard, ChevronDown, ChevronUp } from "lucide-react";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -59,6 +60,21 @@ export default function DebtsPage({ params }: Props) {
     [debts, tab]
   );
 
+  // Debt currently open in payment form
+  const currentDebt = useMemo(
+    () => debts.find((d) => d.id === showPaymentForm) ?? null,
+    [debts, showPaymentForm]
+  );
+  const currentRemaining = currentDebt
+    ? Math.max(0, Number(currentDebt.amount) - Number(currentDebt.paid_amount))
+    : 0;
+
+  // Debt being deleted — used to show conditional warning message
+  const debtToDelete = useMemo(
+    () => debts.find((d) => d.id === deleteId) ?? null,
+    [debts, deleteId]
+  );
+
   async function handleAddDebt(e: React.FormEvent) {
     e.preventDefault();
     const supabase = createClient();
@@ -90,6 +106,14 @@ export default function DebtsPage({ params }: Props) {
     const p = await getPayments(debtId);
     setPayments(p);
     setExpandedId(debtId);
+  }
+
+  function openPaymentForm(debtId: string) {
+    setShowPaymentForm(debtId);
+    setPayAmount("");
+    setPayNote("");
+    setPayAccountId("");
+    setPayDate(new Date().toISOString().split("T")[0]);
   }
 
   const statusVariant: Record<string, "danger" | "warning" | "success"> = {
@@ -130,9 +154,7 @@ export default function DebtsPage({ params }: Props) {
               key={dir}
               onClick={() => setTab(dir)}
               className={`flex-1 rounded-md py-1.5 text-sm font-medium transition ${
-                tab === dir
-                  ? "bg-orange-600 text-white"
-                  : "text-slate-400 hover:text-slate-200"
+                tab === dir ? "bg-orange-600 text-white" : "text-slate-400 hover:text-slate-200"
               }`}
             >
               {t(dir)}
@@ -175,8 +197,8 @@ export default function DebtsPage({ params }: Props) {
                       {/* Progress bar */}
                       <div className="mt-2">
                         <div className="mb-1 flex justify-between text-xs text-slate-500">
-                          <span>{t("paid")}: <span className="font-mono">{Number(debt.paid_amount).toFixed(2)}</span></span>
-                          <span>{t("remaining")}: <span className="font-mono">{remaining.toFixed(2)}</span></span>
+                          <span>{t("paid")}: <span className="font-mono tabular-nums">{Number(debt.paid_amount).toFixed(2)}</span></span>
+                          <span>{t("remaining")}: <span className="font-mono tabular-nums">{remaining.toFixed(2)}</span></span>
                         </div>
                         <div className="h-1.5 w-full rounded-full bg-slate-800">
                           <div
@@ -187,11 +209,15 @@ export default function DebtsPage({ params }: Props) {
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <MoneyAmount amount={debt.amount} currency={debt.currency} className="text-sm font-semibold text-slate-100" />
+                      <MoneyAmount
+                        amount={debt.amount}
+                        currency={debt.currency}
+                        className="text-sm font-semibold text-slate-100 tabular-nums"
+                      />
                       <div className="flex gap-1">
                         {debt.status !== "paid" && (
                           <button
-                            onClick={() => { setShowPaymentForm(debt.id); setPayAmount(""); setPayNote(""); }}
+                            onClick={() => openPaymentForm(debt.id)}
                             className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800 hover:text-orange-400"
                             title={t("add_payment")}
                           >
@@ -222,15 +248,27 @@ export default function DebtsPage({ params }: Props) {
                         <p className="text-xs text-slate-600">—</p>
                       ) : (
                         <ul className="space-y-1.5">
-                          {payments.map((p) => (
-                            <li key={p.id} className="flex items-center justify-between gap-4">
-                              <div className="min-w-0 flex-1">
-                                <span className="text-xs text-slate-400">{formatDate(p.payment_date)}</span>
-                                {p.note && <span className="ml-2 text-xs text-slate-600">{p.note}</span>}
-                              </div>
-                              <MoneyAmount amount={p.amount} currency={debt.currency} className="shrink-0 text-xs text-emerald-400" />
-                            </li>
-                          ))}
+                          {payments.map((p) => {
+                            const payAcc = accounts.find((a) => a.id === p.account_id);
+                            return (
+                              <li key={p.id} className="flex items-center justify-between gap-4">
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-xs text-slate-400">{formatDate(p.payment_date)}</span>
+                                  {payAcc && (
+                                    <span className="ml-2 text-xs text-slate-500">· {payAcc.name}</span>
+                                  )}
+                                  {p.note && (
+                                    <span className="ml-2 text-xs text-slate-600">{p.note}</span>
+                                  )}
+                                </div>
+                                <MoneyAmount
+                                  amount={p.amount}
+                                  currency={debt.currency}
+                                  className="shrink-0 text-xs text-emerald-400 tabular-nums"
+                                />
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>
@@ -308,22 +346,39 @@ export default function DebtsPage({ params }: Props) {
       )}
 
       {/* Payment modal */}
-      {showPaymentForm && (
+      {showPaymentForm && currentDebt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900 p-6">
-            <h2 className="mb-4 text-base font-semibold text-slate-50">{t("add_payment")}</h2>
+            <div className="mb-4">
+              <h2 className="text-base font-semibold text-slate-50">{t("add_payment")}</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {currentDebt.person_name} · Restant : <span className="font-mono tabular-nums text-slate-300">{formatMoney(currentRemaining, currentDebt.currency)}</span>
+              </p>
+            </div>
             <form onSubmit={(e) => handlePayment(e, showPaymentForm)} className="space-y-3">
               <div>
                 <label className="mb-1 block text-xs text-slate-400">{t("amount")}</label>
-                <input type="number" step="0.01" min="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} required
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none" />
+                <div className="flex gap-2">
+                  <input
+                    type="number" step="0.01" min="0.01" value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)} required
+                    className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPayAmount(currentRemaining.toFixed(2))}
+                    className="shrink-0 rounded-lg border border-orange-700 bg-orange-900/30 px-3 py-2 text-xs font-medium text-orange-400 hover:bg-orange-900/50"
+                  >
+                    Tout payer
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-xs text-slate-400">{t("linked_account")}</label>
                 <select value={payAccountId} onChange={(e) => setPayAccountId(e.target.value)}
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none">
                   <option value="">— (sans compte)</option>
-                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
                 </select>
               </div>
               <div>
@@ -350,11 +405,18 @@ export default function DebtsPage({ params }: Props) {
       <ConfirmDialog
         open={!!deleteId}
         title={tc("confirm_delete")}
-        message="Supprimer cette dette ?"
+        message={
+          debtToDelete && Number(debtToDelete.paid_amount) > 0
+            ? `Cette dette a ${formatMoney(debtToDelete.paid_amount, debtToDelete.currency)} de paiements enregistrés. La supprimer ne remettra pas à jour les soldes des comptes. Continuer ?`
+            : "Supprimer cette dette ?"
+        }
         confirmLabel={tc("delete")}
         cancelLabel={tc("cancel")}
         danger
-        onConfirm={async () => { if (deleteId) await deleteDebt(deleteId); setDeleteId(null); }}
+        onConfirm={async () => {
+          if (deleteId) await deleteDebt(deleteId);
+          setDeleteId(null);
+        }}
         onCancel={() => setDeleteId(null)}
       />
     </PageWrapper>
