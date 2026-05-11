@@ -13,22 +13,31 @@ import { LoadingPage } from "@/components/ui/LoadingSpinner";
 import { Profile } from "@/lib/supabase/types";
 import type { Transaction, Account } from "@/lib/supabase/types";
 import { Check, Save, FileDown } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 type Props = { params: Promise<{ locale: string }> };
 
 const TABS = ["profile", "currencies", "export", "integrations"] as const;
 type Tab = (typeof TABS)[number];
 
-function exportTransactionsCSV(transactions: Transaction[], accounts: Account[], filename: string) {
-  const headers = ["Date", "Type", "Compte", "Catégorie", "Montant", "Devise", "Note"];
+interface ExportLabels {
+  headers: string[];
+  incomeLabel: string;
+  expenseLabel: string;
+}
+
+function exportTransactionsCSV(
+  transactions: Transaction[],
+  accounts: Account[],
+  filename: string,
+  labels: ExportLabels,
+) {
   const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
 
   const rows = transactions.map((tx) => {
     const acc = accounts.find((a) => a.id === tx.account_id);
     return [
       tx.transaction_date,
-      tx.type === "income" ? "Revenu" : "Dépense",
+      tx.type === "income" ? labels.incomeLabel : labels.expenseLabel,
       acc?.name ?? "",
       tx.category ?? "",
       Number(tx.amount).toFixed(2),
@@ -37,7 +46,7 @@ function exportTransactionsCSV(transactions: Transaction[], accounts: Account[],
     ].map(escape).join(",");
   });
 
-  const csv = "﻿" + [headers.map(escape).join(","), ...rows].join("\r\n");
+  const csv = "﻿" + [labels.headers.map(escape).join(","), ...rows].join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -51,7 +60,6 @@ export default function SettingsPage({ params }: Props) {
   const { locale } = use(params);
   const t = useTranslations("settings");
   const tc = useTranslations("common");
-  const router = useRouter();
   const { currencies, upsertCurrency, loading: currLoading } = useCurrencies();
   const { transactions } = useTransactions();
   const { accounts } = useAccounts();
@@ -78,8 +86,9 @@ export default function SettingsPage({ params }: Props) {
   useEffect(() => {
     async function loadProfile() {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const user = session.user;
       const { data } = await supabase
         .from("profiles")
         .select("*")
@@ -97,23 +106,25 @@ export default function SettingsPage({ params }: Props) {
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
     await supabase
       .from("profiles")
       .update({ full_name: fullName, preferred_language: language })
-      .eq("id", user.id);
+      .eq("id", session.user.id);
     setProfileSaved(true);
-    setTimeout(() => setProfileSaved(false), 2000);
     if (language !== locale) {
-      router.push(`/${language}/settings`);
+      window.location.href = `/${language}/settings`;
+    } else {
+      setTimeout(() => setProfileSaved(false), 2000);
     }
   }
 
   async function saveCurrencyRate(code: string) {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const user = session.user;
     const currency = currencies.find((c) => c.code === code);
     if (!currency) return;
     await upsertCurrency(user.id, code, currency.name, currency.symbol, Number(rates[code]));
@@ -130,26 +141,29 @@ export default function SettingsPage({ params }: Props) {
       const weekAgo = new Date(now);
       weekAgo.setDate(weekAgo.getDate() - 7);
       filtered = transactions.filter((tx) => new Date(tx.transaction_date) >= weekAgo);
-      title = `Transactions_semaine_${now.toLocaleDateString("fr-FR").replace(/\//g, "-")}`;
+      title = `Transactions_week_${now.toISOString().slice(0, 10)}`;
     } else if (period === "month") {
       filtered = transactions.filter((tx) => {
         const d = new Date(tx.transaction_date);
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       });
-      const monthLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-      title = `Transactions_${monthLabel.replace(/ /g, "_")}`;
+      title = `Transactions_month_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     } else {
       filtered = transactions;
-      title = `Toutes_les_transactions_${now.toLocaleDateString("fr-FR").replace(/\//g, "-")}`;
+      title = `Transactions_all_${now.toISOString().slice(0, 10)}`;
     }
 
-    const displayTitle =
-      period === "week" ? "Transactions — Cette semaine" :
-      period === "month" ? `Transactions — ${now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}` :
-      "Toutes les transactions";
+    const csvLabels: ExportLabels = {
+      headers: [
+        t("col_date"), t("col_type"), t("col_account"),
+        t("col_category"), t("col_amount"), t("col_currency"), t("col_note"),
+      ],
+      incomeLabel: t("income_type"),
+      expenseLabel: t("expense_type"),
+    };
 
     setExporting(period);
-    exportTransactionsCSV(filtered, accounts, title);
+    exportTransactionsCSV(filtered, accounts, title, csvLabels);
     setTimeout(() => setExporting(null), 1500);
   }
 
@@ -162,6 +176,13 @@ export default function SettingsPage({ params }: Props) {
       if (to && d > to) return false;
       return true;
     });
+    const pdfHeaders = [
+      t("col_date"), t("col_type"), t("col_account"),
+      t("col_category"), t("col_amount"), t("col_currency"), t("col_note"),
+    ];
+    const incomeLabel = t("income_type");
+    const expenseLabel = t("expense_type");
+    const periodLabel = t("period_label");
     setExportingPdf(true);
     try {
       const { jsPDF } = await import("jspdf");
@@ -171,17 +192,16 @@ export default function SettingsPage({ params }: Props) {
       if (from || to) {
         doc.setFontSize(10);
         doc.text(
-          `Période : ${from ? from.toLocaleDateString("fr-FR") : "—"} → ${to ? to.toLocaleDateString("fr-FR") : "—"}`,
+          `${periodLabel} : ${from ? exportFrom : "—"} → ${to ? exportTo : "—"}`,
           14,
           22
         );
       }
-      const headers = ["Date", "Type", "Compte", "Catégorie", "Montant", "Devise", "Note"];
       const rows = filtered.map((tx) => {
         const acc = accounts.find((a) => a.id === tx.account_id);
         return [
           tx.transaction_date,
-          tx.type === "income" ? "Revenu" : "Dépense",
+          tx.type === "income" ? incomeLabel : expenseLabel,
           acc?.name ?? "",
           tx.category ?? "",
           Number(tx.amount).toFixed(2),
@@ -197,7 +217,7 @@ export default function SettingsPage({ params }: Props) {
       }, []);
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
-      headers.forEach((h, i) => doc.text(h, colX[i], y));
+      pdfHeaders.forEach((h, i) => doc.text(h, colX[i], y));
       y += 6;
       doc.setFont("helvetica", "normal");
       rows.forEach((row) => {
@@ -209,8 +229,8 @@ export default function SettingsPage({ params }: Props) {
         y += 6;
       });
       const label = from || to
-        ? `Transactions_${exportFrom || "debut"}_${exportTo || "fin"}`
-        : `Toutes_transactions`;
+        ? `Transactions_${exportFrom || "start"}_${exportTo || "end"}`
+        : `Transactions_all`;
       doc.save(`${label}.pdf`);
     } finally {
       setExportingPdf(false);
@@ -262,6 +282,8 @@ export default function SettingsPage({ params }: Props) {
                 >
                   <option value="fr">Français</option>
                   <option value="en">English</option>
+                  <option value="th">ไทย</option>
+                  <option value="pt">Português</option>
                 </select>
               </div>
               <div>
@@ -277,7 +299,7 @@ export default function SettingsPage({ params }: Props) {
                 className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
               >
                 {profileSaved ? <Check size={14} /> : <Save size={14} />}
-                {profileSaved ? "Sauvegardé !" : tc("save")}
+                {profileSaved ? t("saved") : tc("save")}
               </button>
             </form>
           </Card>
@@ -320,16 +342,12 @@ export default function SettingsPage({ params }: Props) {
         {/* Export tab */}
         {tab === "export" && (
           <div className="space-y-3">
-            <p className="text-sm text-slate-400">
-              Exportez vos transactions au format CSV.
-            </p>
+            <p className="text-sm text-slate-400">{t("export_csv_desc")}</p>
             <Card>
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-100">Cette semaine</p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Transactions des 7 derniers jours
-                  </p>
+                  <p className="text-sm font-semibold text-slate-100">{t("this_week")}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{t("this_week_desc")}</p>
                 </div>
                 <button
                   onClick={() => handleExport("week")}
@@ -337,17 +355,15 @@ export default function SettingsPage({ params }: Props) {
                   className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
                 >
                   <FileDown size={14} />
-                  {exporting === "week" ? "Génération..." : "CSV"}
+                  {exporting === "week" ? t("generating") : "CSV"}
                 </button>
               </div>
             </Card>
             <Card>
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-100">Ce mois</p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Transactions du mois en cours
-                  </p>
+                  <p className="text-sm font-semibold text-slate-100">{t("this_month")}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{t("this_month_desc")}</p>
                 </div>
                 <button
                   onClick={() => handleExport("month")}
@@ -355,17 +371,15 @@ export default function SettingsPage({ params }: Props) {
                   className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
                 >
                   <FileDown size={14} />
-                  {exporting === "month" ? "Génération..." : "CSV"}
+                  {exporting === "month" ? t("generating") : "CSV"}
                 </button>
               </div>
             </Card>
             <Card>
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-100">Toutes les données</p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Export complet de toutes vos transactions
-                  </p>
+                  <p className="text-sm font-semibold text-slate-100">{t("all_data")}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{t("all_data_desc")}</p>
                 </div>
                 <button
                   onClick={() => handleExport("all")}
@@ -373,18 +387,16 @@ export default function SettingsPage({ params }: Props) {
                   className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
                 >
                   <FileDown size={14} />
-                  {exporting === "all" ? "Génération..." : "CSV"}
+                  {exporting === "all" ? t("generating") : "CSV"}
                 </button>
               </div>
             </Card>
             <Card>
-              <p className="mb-3 text-sm font-semibold text-slate-100">Exporter en PDF</p>
-              <p className="mb-3 text-xs text-slate-500">
-                Exportez vos transactions pour une période donnée.
-              </p>
+              <p className="mb-3 text-sm font-semibold text-slate-100">{t("export_pdf_title")}</p>
+              <p className="mb-3 text-xs text-slate-500">{t("export_pdf_desc")}</p>
               <div className="flex flex-wrap items-end gap-3">
                 <div className="flex-1 min-w-[120px]">
-                  <label className="mb-1 block text-xs text-slate-400">Du</label>
+                  <label className="mb-1 block text-xs text-slate-400">{t("from_date")}</label>
                   <input
                     type="date"
                     value={exportFrom}
@@ -393,7 +405,7 @@ export default function SettingsPage({ params }: Props) {
                   />
                 </div>
                 <div className="flex-1 min-w-[120px]">
-                  <label className="mb-1 block text-xs text-slate-400">Au</label>
+                  <label className="mb-1 block text-xs text-slate-400">{t("to_date")}</label>
                   <input
                     type="date"
                     value={exportTo}
@@ -407,13 +419,13 @@ export default function SettingsPage({ params }: Props) {
                   className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
                 >
                   <FileDown size={14} />
-                  {exportingPdf ? "Génération..." : "Exporter en PDF"}
+                  {exportingPdf ? t("generating") : t("export_pdf_title")}
                 </button>
               </div>
             </Card>
             {transactions.length === 0 && (
               <p className="text-center text-sm text-slate-500 py-4">
-                Aucune transaction à exporter.
+                {t("no_transactions")}
               </p>
             )}
           </div>

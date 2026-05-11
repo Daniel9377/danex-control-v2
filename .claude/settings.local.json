@@ -35,7 +35,11 @@
       "Bash(Format-Table)",
       "Bash(npx next *)",
       "Bash(Get-ChildItem -Filter \".env*\" -Force)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(findstr -i middleware)",
+      "Bash(node -e \"const pkg = require\\('./node_modules/next-intl/package.json'\\); console.log\\('next-intl version:', pkg.version\\);\")",
+      "Bash(node -e ' *)",
+      "Bash(del *)"
     ]
   }
 }

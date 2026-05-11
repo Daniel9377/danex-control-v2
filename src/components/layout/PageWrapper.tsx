@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
@@ -12,11 +13,23 @@ type Props = {
 
 export function PageWrapper({ children, locale }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     setMobileSidebarOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace(`/${locale}/login`);
+      }
+    }
+    checkAuth();
+  }, [locale, router]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-950">

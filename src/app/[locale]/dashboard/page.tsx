@@ -17,19 +17,12 @@ import { BalanceDetailSheet, type DetailItem } from "@/components/ui/BalanceDeta
 import { sumAccountsInCurrency, getValidRate, DEFAULT_CURRENCIES, formatMoney } from "@/lib/currency";
 import { formatDate, isOverdue } from "@/lib/utils";
 import { use, useMemo, useState } from "react";
-import { AccountAvailability } from "@/lib/supabase/types";
 import { CATEGORY_DOMAIN, DOMAIN_LABELS, DOMAINS, type DomainType } from "@/lib/categories";
 
 type Props = { params: Promise<{ locale: string }> };
 type ChartPeriod = "week" | "month" | "3months" | "6months" | "year";
 type DetailSheet = { title: string; items: DetailItem[]; total: number };
 
-const AVAIL_LABELS: Record<AccountAvailability, string> = {
-  immediate: "Disponible maintenant",
-  close: "Accessible facilement",
-  distant: "Éloigné",
-  blocked: "Bloqué",
-};
 
 const DEFAULT_RATE_MAP: Record<string, number> = Object.fromEntries(
   DEFAULT_CURRENCIES.map((c) => [c.code, c.rate_to_usd])
@@ -44,6 +37,7 @@ export default function DashboardPage({ params }: Props) {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
   const td = useTranslations("debts");
+  const ta = useTranslations("accounts");
 
   const { accounts, loading: accountsLoading } = useAccounts();
   const { transactions, loading: txLoading } = useTransactions();
@@ -126,13 +120,13 @@ export default function DashboardPage({ params }: Props) {
         .filter((d) => d.status !== "paid")
         .map((d) => ({
           name: d.person_name,
-          subtitle: d.direction === "owes_me" ? "Me doit" : "Je dois",
+          subtitle: d.direction === "owes_me" ? t("direction_owes_me") : t("direction_i_owe"),
           originalAmount: Number(d.amount) - Number(d.paid_amount),
           currency: d.currency,
           convertedAmount: (Number(d.amount) - Number(d.paid_amount)) * resolveRate(d.currency, ratesByCode),
           isPositive: d.direction === "owes_me",
         }));
-      setDetailSheet({ title: "Dettes & Créances actives", items, total: netDebtBalance.net });
+      setDetailSheet({ title: t("active_debts"), items, total: netDebtBalance.net });
       return;
     }
     const subset =
@@ -143,7 +137,7 @@ export default function DashboardPage({ params }: Props) {
         : accounts;
     const items: DetailItem[] = subset.map((a) => ({
       name: a.name,
-      subtitle: AVAIL_LABELS[a.availability ?? "immediate"],
+      subtitle: ta(`availabilities.${a.availability ?? "immediate"}` as "availabilities.immediate"),
       originalAmount: Number(a.balance),
       currency: a.currency,
       convertedAmount: Number(a.balance) * resolveRate(a.currency, ratesByCode),
@@ -267,11 +261,11 @@ export default function DashboardPage({ params }: Props) {
                   onChange={(e) => setChartPeriod(e.target.value as ChartPeriod)}
                   className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
                 >
-                  <option value="week">Cette semaine</option>
-                  <option value="month">Ce mois</option>
-                  <option value="3months">3 mois</option>
-                  <option value="6months">6 mois</option>
-                  <option value="year">Cette année</option>
+                  <option value="week">{t("period_week")}</option>
+                  <option value="month">{t("period_month")}</option>
+                  <option value="3months">{t("period_3months")}</option>
+                  <option value="6months">{t("period_6months")}</option>
+                  <option value="year">{t("period_year")}</option>
                 </select>
               </div>
             </div>
@@ -279,8 +273,8 @@ export default function DashboardPage({ params }: Props) {
               <div className="flex h-[200px] items-center justify-center">
                 <p className="text-sm text-slate-600">
                   {selectedDomainLabel
-                    ? `Aucune transaction — ${selectedDomainLabel}`
-                    : "Aucune transaction"}
+                    ? `${t("no_transactions")} — ${selectedDomainLabel}`
+                    : t("no_transactions")}
                 </p>
               </div>
             ) : (
@@ -304,8 +298,8 @@ export default function DashboardPage({ params }: Props) {
               <div className="flex h-[200px] items-center justify-center">
                 <p className="text-sm text-slate-600">
                   {selectedDomainLabel
-                    ? `Aucune dépense — ${selectedDomainLabel}`
-                    : "Aucune dépense ce mois"}
+                    ? `${t("no_expenses_month")} — ${selectedDomainLabel}`
+                    : t("no_expenses_month")}
                 </p>
               </div>
             )}
@@ -319,7 +313,7 @@ export default function DashboardPage({ params }: Props) {
           </p>
           {recent.length === 0 ? (
             <p className="py-4 text-center text-sm text-slate-500">
-              {selectedDomainLabel ? `Aucune transaction — ${selectedDomainLabel}` : tc("empty")}
+              {selectedDomainLabel ? `${t("no_transactions")} — ${selectedDomainLabel}` : tc("empty")}
             </p>
           ) : (
             <>

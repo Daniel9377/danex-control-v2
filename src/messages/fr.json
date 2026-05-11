@@ -36,7 +36,19 @@
     "signup_button": "Créer un compte",
     "logout": "Déconnexion",
     "no_account": "Pas encore de compte ?",
-    "has_account": "Déjà un compte ?"
+    "has_account": "Déjà un compte ?",
+    "confirm_password": "Confirmer le mot de passe",
+    "passwords_do_not_match": "Les mots de passe ne correspondent pas",
+    "show_password": "Afficher le mot de passe",
+    "hide_password": "Masquer le mot de passe",
+    "password_too_short": "Le mot de passe doit contenir au moins 8 caractères",
+    "password_requirements": "Minimum 8 caractères",
+    "password_strength_weak": "Faible",
+    "password_strength_medium": "Moyen",
+    "password_strength_strong": "Fort",
+    "check_email_title": "Vérifiez votre email",
+    "check_email_message": "Compte créé. Vérifiez votre email pour confirmer votre inscription avant de vous connecter.",
+    "choose_language": "Choisir la langue"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -50,7 +62,16 @@
     "active_debts": "Dettes actives",
     "balance_over_time": "Évolution du solde",
     "expenses_by_category": "Dépenses par catégorie",
-    "income_vs_expenses": "Revenus vs Dépenses"
+    "income_vs_expenses": "Revenus vs Dépenses",
+    "period_week": "Cette semaine",
+    "period_month": "Ce mois",
+    "period_3months": "3 mois",
+    "period_6months": "6 mois",
+    "period_year": "Cette année",
+    "direction_owes_me": "Me doit",
+    "direction_i_owe": "Je dois",
+    "no_transactions": "Aucune transaction",
+    "no_expenses_month": "Aucune dépense ce mois"
   },
   "accounts": {
     "title": "Comptes",
@@ -85,7 +106,15 @@
       "distant": "Éloigné (frère, pays, agent)",
       "blocked": "Bloqué / Difficile d'accès"
     },
-    "negative_warning": "Solde négatif"
+    "negative_warning": "Solde négatif",
+    "current_balance": "Solde actuel",
+    "this_month_detail": "Ce mois-ci",
+    "income_in": "Entrées",
+    "expense_out": "Sorties",
+    "net": "Net",
+    "recent_ops": "Dernières opérations",
+    "no_ops": "Aucune opération enregistrée",
+    "delete_confirm": "Supprimer ce compte ?"
   },
   "transactions": {
     "title": "Transactions",
@@ -203,6 +232,30 @@
     "google_calendar": "Google Agenda",
     "notion": "Notion",
     "calendar_desc": "Synchronisez les délais de commandes avec votre agenda",
-    "notion_desc": "Synchronisez les clients et commandes avec Notion"
+    "notion_desc": "Synchronisez les clients et commandes avec Notion",
+    "export_csv_desc": "Exportez vos transactions au format CSV.",
+    "this_week": "Cette semaine",
+    "this_week_desc": "Transactions des 7 derniers jours",
+    "this_month": "Ce mois",
+    "this_month_desc": "Transactions du mois en cours",
+    "all_data": "Toutes les données",
+    "all_data_desc": "Export complet de toutes vos transactions",
+    "export_pdf_title": "Exporter en PDF",
+    "export_pdf_desc": "Exportez vos transactions pour une période donnée.",
+    "from_date": "Du",
+    "to_date": "Au",
+    "generating": "Génération...",
+    "no_transactions": "Aucune transaction à exporter.",
+    "saved": "Sauvegardé !",
+    "col_date": "Date",
+    "col_type": "Type",
+    "col_account": "Compte",
+    "col_category": "Catégorie",
+    "col_amount": "Montant",
+    "col_currency": "Devise",
+    "col_note": "Note",
+    "income_type": "Revenu",
+    "expense_type": "Dépense",
+    "period_label": "Période"
   }
 }

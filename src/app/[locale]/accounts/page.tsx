@@ -36,20 +36,6 @@ const LEGACY_TYPE_MAP: Partial<Record<string, AccountType>> = {
   risque: "emergency",
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  personal: "Personnel",    personnel: "Personnel",
-  business: "Business",     professionnel: "Professionnel",
-  client: "Client",
-  savings: "Épargne",       epargne: "Épargne",
-  investment: "Investissement", investissement: "Investissement",
-  emergency: "Urgence",
-  school: "École",          ecole: "École",
-  debt: "Dette",
-  held: "Argent gardé",
-  other: "Autre",
-  risque: "Risque",
-};
-
 const TYPE_VARIANT: Record<string, "default" | "info" | "success" | "warning" | "danger"> = {
   personal: "default",    personnel: "default",
   business: "info",       professionnel: "info",
@@ -62,13 +48,6 @@ const TYPE_VARIANT: Record<string, "default" | "info" | "success" | "warning" | 
   held: "warning",
   other: "default",
   risque: "danger",
-};
-
-const AVAIL_LABELS: Record<AccountAvailability, string> = {
-  immediate: "Disponible",
-  close: "Proche",
-  distant: "Éloigné",
-  blocked: "Bloqué",
 };
 
 const AVAIL_VARIANT: Record<AccountAvailability, "success" | "warning" | "danger" | "default"> = {
@@ -84,6 +63,33 @@ export default function AccountsPage({ params }: Props) {
   const { locale } = use(params);
   const t = useTranslations("accounts");
   const tc = useTranslations("common");
+
+  const typeLabels = useMemo((): Record<string, string> => ({
+    personal: t("types.personal"),
+    business: t("types.business"),
+    client: t("types.client"),
+    savings: t("types.savings"),
+    investment: t("types.investment"),
+    emergency: t("types.emergency"),
+    school: t("types.school"),
+    debt: t("types.debt"),
+    held: t("types.held"),
+    other: t("types.other"),
+    personnel: t("types.personnel"),
+    professionnel: t("types.professionnel"),
+    epargne: t("types.epargne"),
+    investissement: t("types.investissement"),
+    ecole: t("types.ecole"),
+    risque: t("types.risque"),
+  }), [t]);
+
+  const availLabels = useMemo((): Record<string, string> => ({
+    immediate: t("availabilities.immediate"),
+    close: t("availabilities.close"),
+    distant: t("availabilities.distant"),
+    blocked: t("availabilities.blocked"),
+  }), [t]);
+
   const { accounts, loading, addAccount, updateAccount, deleteAccount } = useAccounts();
   const { currencies } = useCurrencies();
 
@@ -145,8 +151,9 @@ export default function AccountsPage({ params }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const user = session.user;
     if (editing) {
       await updateAccount(editing, { name, type, currency, note: note || null, availability });
     } else {
@@ -171,21 +178,19 @@ export default function AccountsPage({ params }: Props) {
     return { income, expense, net: income - expense };
   }, [detailAccount, detailTxs]);
 
-  if (loading) return (
-    <PageWrapper locale={locale}>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="h-7 w-24 animate-pulse rounded-lg bg-slate-800" />
-          <div className="h-9 w-36 animate-pulse rounded-lg bg-slate-800" />
-        </div>
-        <SkeletonList count={3} />
-      </div>
-    </PageWrapper>
-  );
-
   return (
     <PageWrapper locale={locale}>
       <div className="space-y-4">
+        {loading ? (
+          <>
+            <div className="flex items-center justify-between gap-4">
+              <div className="h-7 w-24 animate-pulse rounded-lg bg-slate-800" />
+              <div className="h-9 w-36 animate-pulse rounded-lg bg-slate-800" />
+            </div>
+            <SkeletonList count={3} />
+          </>
+        ) : (
+          <>
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
           <button
@@ -214,11 +219,11 @@ export default function AccountsPage({ params }: Props) {
                         {acc.name}
                       </h3>
                       <Badge variant={TYPE_VARIANT[acc.type] ?? "default"}>
-                        {TYPE_LABELS[acc.type] ?? acc.type}
+                        {typeLabels[acc.type] ?? acc.type}
                       </Badge>
                       {acc.availability && (
                         <Badge variant={AVAIL_VARIANT[acc.availability]}>
-                          {AVAIL_LABELS[acc.availability]}
+                          {availLabels[acc.availability]}
                         </Badge>
                       )}
                     </div>
@@ -259,6 +264,8 @@ export default function AccountsPage({ params }: Props) {
             ))}
           </div>
         )}
+          </>
+        )}
       </div>
 
       {/* Account detail panel */}
@@ -270,8 +277,8 @@ export default function AccountsPage({ params }: Props) {
               <div>
                 <h2 className="text-lg font-bold text-slate-50">{detailAccount.name}</h2>
                 <p className="text-xs text-slate-500">
-                  {detailAccount.currency} · {TYPE_LABELS[detailAccount.type] ?? detailAccount.type}
-                  {detailAccount.availability ? ` · ${AVAIL_LABELS[detailAccount.availability]}` : ""}
+                  {detailAccount.currency} · {typeLabels[detailAccount.type] ?? detailAccount.type}
+                  {detailAccount.availability ? ` · ${availLabels[detailAccount.availability]}` : ""}
                 </p>
               </div>
               <button
@@ -284,7 +291,7 @@ export default function AccountsPage({ params }: Props) {
 
             {/* Balance */}
             <div className="mb-4 rounded-xl bg-slate-800 p-4">
-              <p className="mb-1 text-xs text-slate-400">Solde actuel</p>
+              <p className="mb-1 text-xs text-slate-400">{t("current_balance")}</p>
               <p className={`font-mono text-2xl font-bold tabular-nums ${Number(detailAccount.balance) < 0 ? "text-red-400" : "text-slate-50"}`}>
                 {formatMoney(detailAccount.balance, detailAccount.currency)}
               </p>
@@ -293,12 +300,12 @@ export default function AccountsPage({ params }: Props) {
             {/* Monthly summary */}
             {monthlySummary && (
               <div className="mb-4">
-                <p className="mb-2 text-xs font-medium text-slate-400">Ce mois-ci</p>
+                <p className="mb-2 text-xs font-medium text-slate-400">{t("this_month_detail")}</p>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-lg bg-slate-800/60 p-2.5">
                     <div className="mb-1 flex items-center gap-1">
                       <TrendingUp size={10} className="text-emerald-500" />
-                      <p className="text-xs text-slate-500">Entrées</p>
+                      <p className="text-xs text-slate-500">{t("income_in")}</p>
                     </div>
                     <p className="font-mono text-sm font-semibold text-emerald-400 tabular-nums">
                       +{formatMoney(monthlySummary.income, detailAccount.currency)}
@@ -307,14 +314,14 @@ export default function AccountsPage({ params }: Props) {
                   <div className="rounded-lg bg-slate-800/60 p-2.5">
                     <div className="mb-1 flex items-center gap-1">
                       <TrendingDown size={10} className="text-red-500" />
-                      <p className="text-xs text-slate-500">Sorties</p>
+                      <p className="text-xs text-slate-500">{t("expense_out")}</p>
                     </div>
                     <p className="font-mono text-sm font-semibold text-red-400 tabular-nums">
                       -{formatMoney(monthlySummary.expense, detailAccount.currency)}
                     </p>
                   </div>
                   <div className="rounded-lg bg-slate-800/60 p-2.5">
-                    <p className="mb-1 text-xs text-slate-500">Net</p>
+                    <p className="mb-1 text-xs text-slate-500">{t("net")}</p>
                     <p className={`font-mono text-sm font-semibold tabular-nums ${monthlySummary.net >= 0 ? "text-slate-100" : "text-red-400"}`}>
                       {monthlySummary.net >= 0 ? "+" : ""}{formatMoney(Math.abs(monthlySummary.net), detailAccount.currency)}
                     </p>
@@ -325,7 +332,7 @@ export default function AccountsPage({ params }: Props) {
 
             {/* Recent transactions */}
             <div>
-              <p className="mb-2 text-xs font-medium text-slate-400">Dernières opérations</p>
+              <p className="mb-2 text-xs font-medium text-slate-400">{t("recent_ops")}</p>
               {detailLoading ? (
                 <div className="space-y-2">
                   {[...Array(4)].map((_, i) => (
@@ -333,7 +340,7 @@ export default function AccountsPage({ params }: Props) {
                   ))}
                 </div>
               ) : detailTxs.length === 0 ? (
-                <p className="text-sm text-slate-600">Aucune opération enregistrée</p>
+                <p className="text-sm text-slate-600">{t("no_ops")}</p>
               ) : (
                 <ul className="divide-y divide-slate-800">
                   {detailTxs.slice(0, 5).map((tx) => (
@@ -378,7 +385,7 @@ export default function AccountsPage({ params }: Props) {
                   className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
                 >
                   {ACCOUNT_TYPES.map((tp) => (
-                    <option key={tp} value={tp}>{TYPE_LABELS[tp]}</option>
+                    <option key={tp} value={tp}>{typeLabels[tp]}</option>
                   ))}
                 </select>
               </div>
@@ -439,7 +446,7 @@ export default function AccountsPage({ params }: Props) {
       <ConfirmDialog
         open={!!deleteId}
         title={tc("confirm_delete")}
-        message="Supprimer ce compte ?"
+        message={t("delete_confirm")}
         confirmLabel={tc("delete")}
         cancelLabel={tc("cancel")}
         danger

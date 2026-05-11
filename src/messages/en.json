@@ -36,7 +36,19 @@
     "signup_button": "Create account",
     "logout": "Logout",
     "no_account": "No account yet?",
-    "has_account": "Already have an account?"
+    "has_account": "Already have an account?",
+    "confirm_password": "Confirm password",
+    "passwords_do_not_match": "Passwords do not match",
+    "show_password": "Show password",
+    "hide_password": "Hide password",
+    "password_too_short": "Password must be at least 8 characters",
+    "password_requirements": "Minimum 8 characters",
+    "password_strength_weak": "Weak",
+    "password_strength_medium": "Medium",
+    "password_strength_strong": "Strong",
+    "check_email_title": "Check your email",
+    "check_email_message": "Account created. Please check your email to confirm your signup before signing in.",
+    "choose_language": "Choose language"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -50,7 +62,16 @@
     "active_debts": "Active debts",
     "balance_over_time": "Balance over time",
     "expenses_by_category": "Expenses by category",
-    "income_vs_expenses": "Income vs Expenses"
+    "income_vs_expenses": "Income vs Expenses",
+    "period_week": "This week",
+    "period_month": "This month",
+    "period_3months": "3 months",
+    "period_6months": "6 months",
+    "period_year": "This year",
+    "direction_owes_me": "Owes me",
+    "direction_i_owe": "I owe",
+    "no_transactions": "No transactions",
+    "no_expenses_month": "No expenses this month"
   },
   "accounts": {
     "title": "Accounts",
@@ -85,7 +106,15 @@
       "distant": "Distant (abroad, agent)",
       "blocked": "Blocked / Hard to access"
     },
-    "negative_warning": "Negative balance"
+    "negative_warning": "Negative balance",
+    "current_balance": "Current balance",
+    "this_month_detail": "This month",
+    "income_in": "Income",
+    "expense_out": "Expenses",
+    "net": "Net",
+    "recent_ops": "Recent transactions",
+    "no_ops": "No transactions recorded",
+    "delete_confirm": "Delete this account?"
   },
   "transactions": {
     "title": "Transactions",
@@ -203,6 +232,30 @@
     "google_calendar": "Google Calendar",
     "notion": "Notion",
     "calendar_desc": "Sync order deadlines with your calendar",
-    "notion_desc": "Sync clients and orders with Notion"
+    "notion_desc": "Sync clients and orders with Notion",
+    "export_csv_desc": "Export your transactions as CSV.",
+    "this_week": "This week",
+    "this_week_desc": "Transactions from the last 7 days",
+    "this_month": "This month",
+    "this_month_desc": "Transactions from the current month",
+    "all_data": "All data",
+    "all_data_desc": "Complete export of all your transactions",
+    "export_pdf_title": "Export as PDF",
+    "export_pdf_desc": "Export your transactions for a specific period.",
+    "from_date": "From",
+    "to_date": "To",
+    "generating": "Generating...",
+    "no_transactions": "No transactions to export.",
+    "saved": "Saved!",
+    "col_date": "Date",
+    "col_type": "Type",
+    "col_account": "Account",
+    "col_category": "Category",
+    "col_amount": "Amount",
+    "col_currency": "Currency",
+    "col_note": "Note",
+    "income_type": "Income",
+    "expense_type": "Expense",
+    "period_label": "Period"
   }
 }

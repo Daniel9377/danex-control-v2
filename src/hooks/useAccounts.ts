@@ -60,8 +60,7 @@ export function useAccounts() {
     const { error } = await supabase.from("accounts").insert(payload);
 
     if (error) {
-      console.error("[addAccount] Supabase error:", error.code, error.message);
-      console.error("[addAccount] Payload was:", JSON.stringify(payload));
+      console.error("[addAccount] error:", error.code);
       return;
     }
 
@@ -77,8 +76,7 @@ export function useAccounts() {
     const { error } = await supabase.from("accounts").update(updates).eq("id", id);
 
     if (error) {
-      console.error("[updateAccount] Supabase error:", error.code, error.message);
-      console.error("[updateAccount] Updates were:", JSON.stringify(updates));
+      console.error("[updateAccount] error:", error.code);
       return;
     }
 

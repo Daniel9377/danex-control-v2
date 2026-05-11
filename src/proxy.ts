@@ -16,7 +16,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Strip locale prefix to determine if the path is public
-  const pathnameWithoutLocale = pathname.replace(/^\/(fr|en)/, "") || "/";
+  const pathnameWithoutLocale = pathname.replace(/^\/(fr|en|th|pt)/, "") || "/";
   const isPublic = PUBLIC_PATHS.some(
     (p) => pathnameWithoutLocale === p || pathnameWithoutLocale.startsWith(p + "/")
   );
