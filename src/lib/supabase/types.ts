@@ -38,6 +38,25 @@ export type Account = {
 
 export type TransactionType = "income" | "expense";
 
+/**
+ * Classifies what a transaction *means* financially.
+ * Used to separate real income/expense from flows that just move money.
+ *
+ * real_income        — genuine revenue (salary, commission, profit)
+ * non_income_inflow  — money received but NOT revenue (loan repayment, client advance,
+ *                      compensation received, positive balance correction)
+ * real_expense       — genuine personal or business expense
+ * non_expense_outflow — money out but NOT a real expense (loan given, client purchase,
+ *                       debt repaid, negative balance correction)
+ * adjustment         — balance reconciliation entry (not income, not expense)
+ */
+export type AccountingType =
+  | "real_income"
+  | "non_income_inflow"
+  | "real_expense"
+  | "non_expense_outflow"
+  | "adjustment";
+
 export type Transaction = {
   id: string;
   user_id: string;
@@ -48,6 +67,8 @@ export type Transaction = {
   category: string | null;
   note: string | null;
   transaction_date: string;
+  accounting_type: AccountingType | null;
+  balance_after: number | null;
   created_at: string;
 };
 
@@ -81,8 +102,23 @@ export type Debt = {
   due_date: string | null;
   note: string | null;
   linked_account_id: string | null;
+  /**
+   * Only relevant for direction === "owes_me".
+   * TRUE means the money physically left the linked account when the debt was created.
+   * The account was already debited, so repayment will credit it back.
+   */
+  affects_balance: boolean;
   created_at: string;
 };
+
+/**
+ * How a debt payment was settled.
+ *
+ * real_payment       — money actually moved out of (i_owe) or into (owes_me) an account
+ * compensation       — settled via an existing flow; no new account movement
+ * linked_transaction — settled by linking to an existing transaction record
+ */
+export type SettlementMethod = "real_payment" | "compensation" | "linked_transaction";
 
 export type DebtPayment = {
   id: string;
@@ -92,6 +128,8 @@ export type DebtPayment = {
   amount: number;
   payment_date: string;
   note: string | null;
+  settlement_method: SettlementMethod;
+  linked_transaction_id: string | null;
   created_at: string;
 };
 

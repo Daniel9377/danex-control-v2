@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Debt, DebtDirection, DebtPayment } from "@/lib/supabase/types";
+import { Debt, DebtDirection, DebtPayment, SettlementMethod } from "@/lib/supabase/types";
 import { cacheGet, cacheSet, cacheInvalidate } from "@/lib/cache";
 
 const KEY = "debts";
@@ -34,6 +34,17 @@ export function useDebts() {
     load();
   }, [load]);
 
+  /**
+   * Create a debt record.
+   *
+   * For direction === "owes_me" (I lent money):
+   *   - If affectsBalance === true AND linkedAccountId is set, the linked account is
+   *     debited immediately (the money physically left that account).
+   *   - If affectsBalance === false, only a declaration is created — no account changes.
+   *
+   * For direction === "i_owe" (someone lent me / holds money for me):
+   *   - Creation never changes account balances (the money is already somewhere).
+   */
   async function addDebt(
     userId: string,
     personName: string,
@@ -42,48 +53,195 @@ export function useDebts() {
     currency: string,
     dueDate: string | null,
     note: string | null,
-    linkedAccountId: string | null
+    linkedAccountId: string | null,
+    affectsBalance: boolean = false
   ) {
     const supabase = createClient();
+
     await supabase.from("debts").insert({
-      user_id: userId, person_name: personName, direction, amount, currency,
-      due_date: dueDate, note, linked_account_id: linkedAccountId, paid_amount: 0, status: "unpaid",
+      user_id: userId,
+      person_name: personName,
+      direction,
+      amount,
+      currency,
+      due_date: dueDate,
+      note,
+      linked_account_id: linkedAccountId,
+      paid_amount: 0,
+      status: "unpaid",
+      affects_balance: affectsBalance,
     });
+
+    // Debit account only when money actually left (owes_me + affectsBalance)
+    if (direction === "owes_me" && affectsBalance && linkedAccountId) {
+      const { data: acc } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", linkedAccountId)
+        .single();
+      if (acc) {
+        await supabase
+          .from("accounts")
+          .update({ balance: Number(acc.balance) - amount })
+          .eq("id", linkedAccountId);
+      }
+      cacheInvalidate("accounts");
+    }
+
     cacheInvalidate(KEY);
     await load();
   }
 
+  /**
+   * Record a payment against a debt.
+   *
+   * settlement_method controls whether an account balance is touched:
+   *   - "real_payment"       — money actually moved; account is debited/credited
+   *   - "compensation"       — settled via an existing transaction; NO new account movement
+   *   - "linked_transaction" — settled by referencing an existing tx; NO new account movement
+   *
+   * Guards:
+   *   - Cannot pay more than the remaining amount (throws)
+   *   - Silently no-ops if debt is already paid
+   */
   async function addPayment(
     userId: string,
     debt: Debt,
     paymentAmount: number,
     accountId: string | null,
     paymentDate: string,
-    note: string | null
+    note: string | null,
+    settlementMethod: SettlementMethod = "real_payment",
+    linkedTransactionId: string | null = null
   ) {
-    const supabase = createClient();
-    await supabase.from("debt_payments").insert({
-      user_id: userId, debt_id: debt.id, account_id: accountId,
-      amount: paymentAmount, payment_date: paymentDate, note,
-    });
-    const newPaid = Number(debt.paid_amount) + paymentAmount;
-    const newStatus = newPaid >= Number(debt.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
-    await supabase.from("debts").update({ paid_amount: newPaid, status: newStatus }).eq("id", debt.id);
-    if (accountId) {
-      const { data: acc } = await supabase.from("accounts").select("balance").eq("id", accountId).single();
-      if (acc) {
-        const delta = debt.direction === "i_owe" ? -paymentAmount : paymentAmount;
-        await supabase.from("accounts").update({ balance: Number(acc.balance) + delta }).eq("id", accountId);
-      }
+    if (debt.status === "paid") {
+      throw new Error("Cette dette est déjà entièrement réglée.");
     }
-    cacheInvalidate(KEY, "accounts");
+
+    const remaining = Number(debt.amount) - Number(debt.paid_amount);
+    if (paymentAmount > remaining + 0.001) {
+      throw new Error(
+        `Le montant (${paymentAmount}) dépasse le solde restant (${remaining.toFixed(2)}).`
+      );
+    }
+
+    const supabase = createClient();
+
+    await supabase.from("debt_payments").insert({
+      user_id: userId,
+      debt_id: debt.id,
+      account_id: accountId,
+      amount: paymentAmount,
+      payment_date: paymentDate,
+      note,
+      settlement_method: settlementMethod,
+      linked_transaction_id: linkedTransactionId,
+    });
+
+    const newPaid = Number(debt.paid_amount) + paymentAmount;
+    const newStatus =
+      newPaid >= Number(debt.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
+
+    await supabase
+      .from("debts")
+      .update({ paid_amount: newPaid, status: newStatus })
+      .eq("id", debt.id);
+
+    // Only move account money for real payments
+    if (accountId && settlementMethod === "real_payment") {
+      const { data: acc } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", accountId)
+        .single();
+      if (acc) {
+        // i_owe: I pay out → account decreases
+        // owes_me: I receive repayment → account increases
+        const delta = debt.direction === "i_owe" ? -paymentAmount : paymentAmount;
+        await supabase
+          .from("accounts")
+          .update({ balance: Number(acc.balance) + delta })
+          .eq("id", accountId);
+      }
+      cacheInvalidate("accounts");
+    }
+
+    cacheInvalidate(KEY);
     await load();
   }
 
+  /**
+   * Delete a debt, reversing all account balance changes caused by:
+   *   1. Real payments recorded against this debt
+   *   2. The initial account debit (if direction === "owes_me" && affects_balance)
+   *
+   * Debt records with payments are cascade-deleted in the DB.
+   */
   async function deleteDebt(id: string) {
     const supabase = createClient();
+
+    // Fetch the debt before deletion
+    const { data: debt } = await supabase
+      .from("debts")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (!debt) {
+      await supabase.from("debts").delete().eq("id", id);
+      cacheInvalidate(KEY);
+      await load();
+      return;
+    }
+
+    // Fetch all payments
+    const { data: payments } = await supabase
+      .from("debt_payments")
+      .select("*")
+      .eq("debt_id", id);
+
+    // Reverse each real_payment's account effect
+    if (payments) {
+      for (const p of payments) {
+        if (p.account_id && p.settlement_method === "real_payment") {
+          const { data: acc } = await supabase
+            .from("accounts")
+            .select("balance")
+            .eq("id", p.account_id)
+            .single();
+          if (acc) {
+            // Reverse: if i_owe, payment debited account → credit back; if owes_me, credited → debit back
+            const reversal = debt.direction === "i_owe" ? p.amount : -p.amount;
+            await supabase
+              .from("accounts")
+              .update({ balance: Number(acc.balance) + reversal })
+              .eq("id", p.account_id);
+          }
+        }
+      }
+    }
+
+    // Reverse initial debit if owes_me + affects_balance
+    if (debt.direction === "owes_me" && debt.affects_balance && debt.linked_account_id) {
+      const { data: acc } = await supabase
+        .from("accounts")
+        .select("balance")
+        .eq("id", debt.linked_account_id)
+        .single();
+      if (acc) {
+        // We had debited the account when creating the debt → add back
+        await supabase
+          .from("accounts")
+          .update({ balance: Number(acc.balance) + Number(debt.amount) })
+          .eq("id", debt.linked_account_id);
+      }
+    }
+
+    // Delete the debt (cascade deletes payments)
     await supabase.from("debts").delete().eq("id", id);
+
     cacheInvalidate(KEY);
+    cacheInvalidate("accounts");
     await load();
   }
 
