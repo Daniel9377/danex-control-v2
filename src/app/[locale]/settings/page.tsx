@@ -12,7 +12,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Profile } from "@/lib/supabase/types";
 import {
   Check, Save, ExternalLink, Globe, DollarSign,
-  Plug, Lock, User,
+  Plug, Lock, User, AlertTriangle,
 } from "lucide-react";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import Link from "next/link";
@@ -302,6 +302,38 @@ export default function SettingsPage({ params }: Props) {
                     href={`/${locale}/export`}
                     aria-label="Ouvrir la page d'export"
                     className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-700 px-3 py-1.5 text-sm text-slate-300 transition-colors hover:bg-slate-800 hover:text-slate-100"
+                  >
+                    <ExternalLink size={13} />
+                    Ouvrir
+                  </Link>
+                </div>
+              </Card>
+            </div>
+
+            {/* Advanced tools */}
+            <div>
+              <SectionHeader label="Outils avancés" />
+              <Card>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={14} className="shrink-0 text-red-400" />
+                      <h3 className="text-sm font-semibold text-slate-100">
+                        Réinitialisation &amp; reprise historique
+                      </h3>
+                      <span className="rounded-full border border-red-800/50 bg-red-950/30 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+                        Avancé
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Outil avancé pour sauvegarder, réinitialiser les transactions et reconstruire
+                      un historique. À utiliser avec prudence.
+                    </p>
+                  </div>
+                  <Link
+                    href={`/${locale}/recovery`}
+                    aria-label="Ouvrir l'outil de réinitialisation et reprise historique"
+                    className="flex shrink-0 items-center gap-1.5 rounded-xl border border-red-900/50 px-3 py-1.5 text-sm text-red-400/80 transition-colors hover:border-red-800 hover:bg-red-950/20 hover:text-red-300"
                   >
                     <ExternalLink size={13} />
                     Ouvrir
