@@ -4,92 +4,103 @@ import { useState, useMemo, useCallback } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
-import { useTransactions } from "@/hooks/useTransactions";
+import { useTransactions, CreateOperationInput } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useClients } from "@/hooks/useClients";
+import { useOrders } from "@/hooks/useOrders";
+import { useDebts } from "@/hooks/useDebts";
 import { useCurrencies } from "@/hooks/useCurrencies";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { Card } from "@/components/ui/Card";
-import { MoneyAmount } from "@/components/ui/MoneyAmount";
-import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { AccountingType, TransactionType } from "@/lib/supabase/types";
+import { TransactionFormModal } from "@/components/transactions/TransactionFormModal";
+import { AccountingType, TransactionType, TransactionSubType } from "@/lib/supabase/types";
+import { SUB_TYPE_META } from "@/lib/transaction-types";
 import { formatDate } from "@/lib/utils";
 import { formatMoney, getValidRate, DEFAULT_CURRENCIES } from "@/lib/currency";
-import {
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
-  CATEGORY_ACCOUNTING_TYPE,
-} from "@/lib/categories";
-import { Plus, Trash2, Scale } from "lucide-react";
+import { Plus, Scale, X, ChevronDown, Trash2, RefreshCw, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { useReclassify } from "@/hooks/useReclassify";
+import { SUB_TYPE_GROUPS } from "@/lib/transaction-types";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 30;
 
 const DEFAULT_RATE_MAP: Record<string, number> = Object.fromEntries(
   DEFAULT_CURRENCIES.map((c) => [c.code, c.rate_to_usd])
 );
 
-// Labels for accounting_type badge
-const ACCOUNTING_LABELS: Record<AccountingType, string> = {
-  real_income: "Revenu réel",
-  non_income_inflow: "Entrée non-revenu",
-  real_expense: "Dépense réelle",
-  non_expense_outflow: "Sortie temporaire",
-  adjustment: "Correction",
+const ACCOUNTING_IMPACT: Record<AccountingType, { label: string; color: string }> = {
+  real_income:           { label: "Compté comme revenu réel",            color: "text-emerald-400" },
+  non_income_inflow:     { label: "Entrée non comptée comme revenu",     color: "text-sky-400" },
+  real_expense:          { label: "Comptée comme dépense réelle",        color: "text-red-400" },
+  non_expense_outflow:   { label: "Sortie non comptée comme dépense",    color: "text-amber-400" },
+  adjustment:            { label: "Correction de solde uniquement",      color: "text-amber-400" },
 };
 
+const SUBTYPE_FILTER_GROUPS = [
+  {
+    label: "Client",
+    items: [
+      "client_money_received", "client_product_purchase", "client_shipping_fee",
+      "shared_client_fee", "client_refund", "profit_validated",
+    ] as TransactionSubType[],
+  },
+  {
+    label: "Dette / Créance",
+    items: [
+      "debt_received", "debt_repayment", "receivable_created", "receivable_repaid",
+    ] as TransactionSubType[],
+  },
+];
+
 type Props = { params: Promise<{ locale: string }> };
-
-// ── Modal type ────────────────────────────────────────────────────────────────
-
-type FormMode = "transaction" | "adjustment";
 
 export default function TransactionsPage({ params }: Props) {
   const { locale } = use(params);
   const t = useTranslations("transactions");
   const tc = useTranslations("common");
+
   const {
     transactions,
     loading: txLoading,
-    addTransaction,
+    createOperation,
     deleteTransaction,
     addAdjustment,
   } = useTransactions();
+  const { reclassify, loading: reclassifying } = useReclassify();
   const { accounts, loading: accLoading } = useAccounts();
+  const { clients } = useClients();
+  const { orders } = useOrders();
+  const { debts } = useDebts();
   const { ratesByCode } = useCurrencies();
 
-  // ── Modal state ──────────────────────────────────────────────────────────────
-  const [formMode, setFormMode] = useState<FormMode>("transaction");
-  const [showForm, setShowForm] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: string;
-    accountId: string;
-    type: TransactionType;
-    amount: number;
+  const [showNewForm, setShowNewForm]         = useState(false);
+  const [showLegacyForm, setShowLegacyForm]   = useState(false);
+  const [showTechStats, setShowTechStats]     = useState(false);
+  const [showAll, setShowAll]                 = useState(false);
+  const [openDropdown, setOpenDropdown]       = useState<"account" | "subtype" | null>(null);
+  const [detailTxId, setDetailTxId]           = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget]       = useState<{
+    id: string; accountId: string | null; type: TransactionType; amount: number;
   } | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [showReclassify, setShowReclassify]   = useState(false);
+  const [reclassifySubType, setReclassifySubType] = useState<TransactionSubType | "">("");
 
-  // ── Filters ──────────────────────────────────────────────────────────────────
-  const [filterType, setFilterType] = useState<"" | "income" | "expense">("");
-  const [filterAccount, setFilterAccount] = useState("");
-  const [excludeAdjustments, setExcludeAdjustments] = useState(true);
+  // Filters
+  const [filterType, setFilterType]         = useState<"" | "income" | "expense">("");
+  const [filterAccount, setFilterAccount]   = useState("");
+  const [filterSubType, setFilterSubType]   = useState<"" | TransactionSubType>("");
 
-  // ── Transaction form state ───────────────────────────────────────────────────
-  const [txType, setTxType] = useState<TransactionType>("expense");
-  const [amount, setAmount] = useState("");
-  const [accountId, setAccountId] = useState("");
-  const [category, setCategory] = useState("");
-  const [note, setNote] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-
-  // ── Adjustment form state ────────────────────────────────────────────────────
-  const [adjAccountId, setAdjAccountId] = useState("");
+  // Reconciliation form
+  const [adjAccountId, setAdjAccountId]         = useState("");
   const [adjTargetBalance, setAdjTargetBalance] = useState("");
-  const [adjNote, setAdjNote] = useState("");
-  const [adjDate, setAdjDate] = useState(new Date().toISOString().split("T")[0]);
+  const [adjNote, setAdjNote]                   = useState("");
+  const [adjDate, setAdjDate]                   = useState(new Date().toISOString().split("T")[0]);
+  const [isSubmitting, setIsSubmitting]         = useState(false);
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────────
 
   const resolveRate = useCallback(
     (currency: string): number =>
@@ -97,63 +108,37 @@ export default function TransactionsPage({ params }: Props) {
     [ratesByCode]
   );
 
-  const formCategories = txType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-
-  // Auto-suggest accounting_type from category (used on submit, not stored in state)
-  function accountingTypeForCategory(cat: string): AccountingType | null {
-    return CATEGORY_ACCOUNTING_TYPE[cat] ?? null;
-  }
-
-  // ── Filtered transactions ────────────────────────────────────────────────────
+  // ── Derived ───────────────────────────────────────────────────────────────────
 
   const filtered = useMemo(
     () =>
       transactions.filter((tx) => {
         if (filterType && tx.type !== filterType) return false;
         if (filterAccount && tx.account_id !== filterAccount) return false;
+        if (filterSubType && tx.sub_type !== filterSubType) return false;
         return true;
       }),
-    [transactions, filterType, filterAccount]
+    [transactions, filterType, filterAccount, filterSubType]
   );
 
-  // ── Totals (respects excludeAdjustments toggle) ──────────────────────────────
-
   const totals = useMemo(() => {
-    let realIncome = 0;
-    let realExpense = 0;
-    let inflows = 0; // non-revenue inflows
-    let outflows = 0; // non-expense outflows
-    let adjustments = 0;
-
+    let realIncome = 0, realExpense = 0, inflows = 0, outflows = 0, adjustments = 0;
     for (const tx of filtered) {
       const usd = Number(tx.amount) * resolveRate(tx.currency);
       const at = tx.accounting_type;
-
-      if (at === "adjustment") {
-        adjustments += tx.type === "income" ? usd : -usd;
-      } else if (at === "non_income_inflow") {
-        inflows += usd;
-      } else if (at === "non_expense_outflow") {
-        outflows += usd;
-      } else if (at === "real_income" || (!at && tx.type === "income")) {
-        realIncome += usd;
-      } else if (at === "real_expense" || (!at && tx.type === "expense")) {
-        realExpense += usd;
-      }
+      if (at === "adjustment")               adjustments += tx.type === "income" ? usd : -usd;
+      else if (at === "non_income_inflow")   inflows += usd;
+      else if (at === "non_expense_outflow") outflows += usd;
+      else if (at === "real_income"  || (!at && tx.type === "income"))  realIncome += usd;
+      else if (at === "real_expense" || (!at && tx.type === "expense")) realExpense += usd;
     }
-
-    const netReal = realIncome - realExpense;
-    const netAll = realIncome + inflows - realExpense - outflows + adjustments;
-
-    return { realIncome, realExpense, inflows, outflows, adjustments, netReal, netAll };
+    return { realIncome, realExpense, inflows, outflows, adjustments, netReal: realIncome - realExpense };
   }, [filtered, resolveRate]);
 
   const visible = useMemo(
     () => (showAll ? filtered : filtered.slice(0, PAGE_SIZE)),
     [filtered, showAll]
   );
-
-  // ── Adjustment preview ───────────────────────────────────────────────────────
 
   const adjAccount = useMemo(
     () => accounts.find((a) => a.id === adjAccountId) ?? null,
@@ -162,82 +147,65 @@ export default function TransactionsPage({ params }: Props) {
 
   const adjDifference = useMemo(() => {
     if (!adjAccount || adjTargetBalance === "") return null;
-    const target = Number(adjTargetBalance);
-    return target - Number(adjAccount.balance);
+    return Number(adjTargetBalance) - Number(adjAccount.balance);
   }, [adjAccount, adjTargetBalance]);
 
-  // ── Actions ──────────────────────────────────────────────────────────────────
+  const detailTx = useMemo(
+    () => transactions.find((t) => t.id === detailTxId) ?? null,
+    [transactions, detailTxId]
+  );
 
-  function openTransactionForm() {
-    setFormMode("transaction");
-    setAccountId(accounts[0]?.id ?? "");
-    setTxType("expense");
-    setCategory("");
-    setAmount("");
-    setNote("");
-    setDate(new Date().toISOString().split("T")[0]);
-    setShowForm(true);
-  }
+  // ── Actions ───────────────────────────────────────────────────────────────────
 
-  function openAdjustmentForm() {
-    setFormMode("adjustment");
-    setAdjAccountId(accounts[0]?.id ?? "");
-    setAdjTargetBalance(
-      accounts[0] ? String(Number(accounts[0].balance).toFixed(2)) : ""
-    );
-    setAdjNote("");
-    setAdjDate(new Date().toISOString().split("T")[0]);
-    setShowForm(true);
-  }
-
-  async function handleSubmitTransaction(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleCreateOperation(input: CreateOperationInput) {
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !accountId) return;
-    const acc = accounts.find((a) => a.id === accountId);
-    const accountingType = accountingTypeForCategory(category);
-    await addTransaction(
-      user.id,
-      accountId,
-      txType,
-      Number(amount),
-      acc?.currency ?? "USD",
-      category || null,
-      note || null,
-      date,
-      accountingType
-    );
-    setShowForm(false);
-    setAmount("");
-    setNote("");
-    setCategory("");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await createOperation(user.id, input);
   }
 
   async function handleSubmitAdjustment(e: React.FormEvent) {
     e.preventDefault();
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user || !adjAccountId || adjTargetBalance === "") return;
-    const acc = accounts.find((a) => a.id === adjAccountId);
-    await addAdjustment(
-      user.id,
-      adjAccountId,
-      acc?.currency ?? "USD",
-      Number(adjTargetBalance),
-      adjNote || null,
-      adjDate
-    );
-    setShowForm(false);
-    setAdjTargetBalance("");
-    setAdjNote("");
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !adjAccountId || adjTargetBalance === "") return;
+      const acc = accounts.find((a) => a.id === adjAccountId);
+      await addAdjustment(user.id, adjAccountId, acc?.currency ?? "USD",
+        Number(adjTargetBalance), adjNote || null, adjDate);
+      setShowLegacyForm(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  // ── Loading ──────────────────────────────────────────────────────────────────
+  function openReconcile() {
+    setAdjAccountId(accounts[0]?.id ?? "");
+    setAdjTargetBalance(accounts[0] ? String(Number(accounts[0].balance).toFixed(2)) : "");
+    setAdjNote("");
+    setAdjDate(new Date().toISOString().split("T")[0]);
+    setShowLegacyForm(true);
+  }
+
+  async function handleReclassify() {
+    if (!detailTxId || !reclassifySubType) return;
+    const ok = await reclassify({ transactionId: detailTxId, subType: reclassifySubType as TransactionSubType });
+    if (ok) {
+      setDetailTxId(null);
+      setShowReclassify(false);
+      setReclassifySubType("");
+    }
+  }
+
+  function closeDrawer() {
+    setDetailTxId(null);
+    setShowReclassify(false);
+    setReclassifySubType("");
+  }
+
+  // ── Loading ───────────────────────────────────────────────────────────────────
 
   if (txLoading || accLoading) {
     return (
@@ -253,222 +221,289 @@ export default function TransactionsPage({ params }: Props) {
     );
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Derived labels for dropdowns ──────────────────────────────────────────────
+
+  const activeAccountLabel = filterAccount
+    ? (accounts.find((a) => a.id === filterAccount)?.name ?? t("filters.all_accounts"))
+    : t("filters.all_accounts");
+  const activeSubTypeLabel = filterSubType
+    ? (SUB_TYPE_META[filterSubType]?.label ?? "Sous-type")
+    : "Tous sous-types";
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <PageWrapper locale={locale}>
       <div className="space-y-4">
 
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
-              onClick={openAdjustmentForm}
+              onClick={openReconcile}
+              aria-label="Réconcilier un solde"
               title="Réconcilier un solde"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-2 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
             >
               <Scale size={14} />
               <span className="hidden sm:inline">Réconcilier</span>
             </button>
             <button
-              onClick={openTransactionForm}
-              className="flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white hover:bg-orange-700"
+              onClick={() => setShowNewForm(true)}
+              aria-label={t("add")}
+              className="flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
             >
               <Plus size={15} />
-              {t("add")}
+              <span className="hidden sm:inline">{t("add")}</span>
             </button>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2">
-          <select
-            value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value as "" | "income" | "expense");
-              setShowAll(false);
-            }}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 focus:border-orange-500 focus:outline-none"
-          >
-            <option value="">{t("filters.all_types")}</option>
-            <option value="income">{t("income")}</option>
-            <option value="expense">{t("expense")}</option>
-          </select>
-          <select
-            value={filterAccount}
-            onChange={(e) => {
-              setFilterAccount(e.target.value);
-              setShowAll(false);
-            }}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 focus:border-orange-500 focus:outline-none"
-          >
-            <option value="">{t("filters.all_accounts")}</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* ── Dropdown backdrop ── */}
+        {openDropdown && (
+          <div className="fixed inset-0 z-30" onClick={() => setOpenDropdown(null)} />
+        )}
 
-        {/* Statistics */}
-        {filtered.length > 0 && (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3 space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <p className="text-xs text-slate-500">Revenu réel</p>
-                <p className="font-mono text-sm font-semibold text-emerald-400 tabular-nums">
-                  +{formatMoney(totals.realIncome, "USD")}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">Dépense réelle</p>
-                <p className="font-mono text-sm font-semibold text-red-400 tabular-nums">
-                  -{formatMoney(totals.realExpense, "USD")}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500">Net réel</p>
-                <p
-                  className={`font-mono text-sm font-semibold tabular-nums ${
-                    totals.netReal >= 0 ? "text-slate-100" : "text-red-400"
-                  }`}
-                >
-                  {totals.netReal >= 0 ? "+" : ""}
-                  {formatMoney(Math.abs(totals.netReal), "USD")}
-                </p>
-              </div>
-            </div>
-            {/* Secondary stats — only show if there's something non-trivial */}
-            {(totals.inflows > 0 || totals.outflows > 0 || totals.adjustments !== 0) && (
-              <div className="grid grid-cols-3 gap-2 border-t border-slate-800 pt-2">
-                {totals.inflows > 0 && (
-                  <div>
-                    <p className="text-xs text-slate-600">Entrées non-revenu</p>
-                    <p className="font-mono text-xs text-slate-400 tabular-nums">
-                      +{formatMoney(totals.inflows, "USD")}
-                    </p>
-                  </div>
-                )}
-                {totals.outflows > 0 && (
-                  <div>
-                    <p className="text-xs text-slate-600">Sorties temp.</p>
-                    <p className="font-mono text-xs text-slate-400 tabular-nums">
-                      -{formatMoney(totals.outflows, "USD")}
-                    </p>
-                  </div>
-                )}
-                {totals.adjustments !== 0 && (
-                  <div>
-                    <p className="text-xs text-slate-600">Corrections</p>
-                    <p className="font-mono text-xs text-amber-500 tabular-nums">
-                      {totals.adjustments >= 0 ? "+" : ""}
-                      {formatMoney(Math.abs(totals.adjustments), "USD")}
-                    </p>
-                  </div>
-                )}
+        {/* ── Filters ── */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {/* Type pills */}
+          {(["", "income", "expense"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => { setFilterType(v); setShowAll(false); }}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                filterType === v
+                  ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                  : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+              }`}
+            >
+              {v === "" ? t("filters.all_types") : v === "income" ? t("income") : t("expense")}
+            </button>
+          ))}
+
+          <div className="h-4 w-px self-center bg-slate-800" />
+
+          {/* Account custom dropdown */}
+          <div className="relative z-40">
+            <button
+              onClick={() => setOpenDropdown(openDropdown === "account" ? null : "account")}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                filterAccount
+                  ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                  : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+              }`}
+            >
+              <span className="max-w-[100px] truncate">{activeAccountLabel}</span>
+              <ChevronDown
+                size={10}
+                className={`shrink-0 transition-transform ${openDropdown === "account" ? "rotate-180" : ""}`}
+              />
+            </button>
+            {openDropdown === "account" && (
+              <div className="absolute left-0 top-full z-40 mt-1.5 max-h-[55vh] min-w-[180px] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl">
+                {[
+                  { id: "", label: t("filters.all_accounts") },
+                  ...accounts.map((a) => ({ id: a.id, label: a.name })),
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => { setFilterAccount(opt.id); setShowAll(false); setOpenDropdown(null); }}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
+                      filterAccount === opt.id ? "text-orange-300" : "text-slate-300"
+                    }`}
+                  >
+                    {filterAccount === opt.id && (
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </button>
+                ))}
               </div>
             )}
           </div>
+
+          {/* Sub-type custom dropdown */}
+          <div className="relative z-40">
+            <button
+              onClick={() => setOpenDropdown(openDropdown === "subtype" ? null : "subtype")}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                filterSubType
+                  ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                  : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+              }`}
+            >
+              <span className="max-w-[110px] truncate">{activeSubTypeLabel}</span>
+              <ChevronDown
+                size={10}
+                className={`shrink-0 transition-transform ${openDropdown === "subtype" ? "rotate-180" : ""}`}
+              />
+            </button>
+            {openDropdown === "subtype" && (
+              <div className="absolute right-0 top-full z-40 mt-1.5 max-h-[55vh] w-56 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl">
+                <button
+                  onClick={() => { setFilterSubType(""); setShowAll(false); setOpenDropdown(null); }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
+                    !filterSubType ? "text-orange-300" : "text-slate-300"
+                  }`}
+                >
+                  {!filterSubType && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />}
+                  Tous sous-types
+                </button>
+                {SUBTYPE_FILTER_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <p className="px-3 pb-0.5 pt-2 text-[9px] font-semibold uppercase tracking-wider text-slate-600">
+                      {group.label}
+                    </p>
+                    {group.items.map((st) => (
+                      <button
+                        key={st}
+                        onClick={() => { setFilterSubType(st); setShowAll(false); setOpenDropdown(null); }}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
+                          filterSubType === st ? "text-orange-300" : "text-slate-400"
+                        }`}
+                      >
+                        {filterSubType === st && (
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                        )}
+                        <span className="truncate">{SUB_TYPE_META[st].label}</span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Summary ── */}
+        {filtered.length > 0 && (
+          <Card>
+            <div className="space-y-2.5 sm:grid sm:grid-cols-3 sm:gap-4 sm:space-y-0">
+              <div className="flex items-center justify-between sm:block">
+                <p className="text-[10px] text-slate-500 sm:text-xs">Revenu réel</p>
+                <p className="font-mono text-sm font-bold tabular-nums text-emerald-400 sm:mt-0.5 sm:leading-tight">
+                  +{formatMoney(totals.realIncome, "USD")}
+                </p>
+              </div>
+              <div className="flex items-center justify-between sm:block">
+                <p className="text-[10px] text-slate-500 sm:text-xs">Dépense réelle</p>
+                <p className="font-mono text-sm font-bold tabular-nums text-red-400 sm:mt-0.5 sm:leading-tight">
+                  -{formatMoney(totals.realExpense, "USD")}
+                </p>
+              </div>
+              <div className="flex items-center justify-between sm:block">
+                <p className="text-[10px] text-slate-500 sm:text-xs">Net réel</p>
+                <p className={`font-mono text-sm font-bold tabular-nums sm:mt-0.5 sm:leading-tight ${
+                  totals.netReal >= 0 ? "text-slate-100" : "text-red-400"
+                }`}>
+                  {totals.netReal >= 0 ? "+" : ""}{formatMoney(Math.abs(totals.netReal), "USD")}
+                </p>
+              </div>
+            </div>
+            {(totals.inflows > 0 || totals.outflows > 0 || totals.adjustments !== 0) && (
+              <>
+                <button
+                  onClick={() => setShowTechStats((s) => !s)}
+                  className="mt-2.5 text-[10px] text-slate-600 transition-colors hover:text-slate-400"
+                >
+                  {showTechStats ? "▴ Masquer détails" : "▾ Détails techniques"}
+                </button>
+                {showTechStats && (
+                  <div className="mt-2 grid grid-cols-3 gap-2 border-t border-slate-800/60 pt-2">
+                    {totals.inflows > 0 && (
+                      <div>
+                        <p className="text-[10px] text-slate-600">Entrées non-revenu</p>
+                        <p className="font-mono text-xs tabular-nums text-slate-400">+{formatMoney(totals.inflows, "USD")}</p>
+                      </div>
+                    )}
+                    {totals.outflows > 0 && (
+                      <div>
+                        <p className="text-[10px] text-slate-600">Sorties temp.</p>
+                        <p className="font-mono text-xs tabular-nums text-slate-400">-{formatMoney(totals.outflows, "USD")}</p>
+                      </div>
+                    )}
+                    {totals.adjustments !== 0 && (
+                      <div>
+                        <p className="text-[10px] text-slate-600">Corrections</p>
+                        <p className="font-mono text-xs tabular-nums text-amber-500">
+                          {totals.adjustments >= 0 ? "+" : ""}{formatMoney(Math.abs(totals.adjustments), "USD")}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
         )}
 
-        {/* Transaction list */}
+        {/* ── Transaction list ── */}
+        {filtered.length > 0 && (
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+            {filtered.length} transaction{filtered.length > 1 ? "s" : ""}
+          </p>
+        )}
         {filtered.length === 0 ? (
           <EmptyState message={tc("empty")} />
         ) : (
-          <div className="space-y-2">
-            {visible.map((tx) => {
-              const acc = accounts.find((a) => a.id === tx.account_id);
-              const isAdjustment = tx.accounting_type === "adjustment";
-              const isNonStandard =
-                tx.accounting_type === "non_income_inflow" ||
-                tx.accounting_type === "non_expense_outflow";
+          <Card className="overflow-hidden p-0">
+            <ul className="divide-y divide-slate-800/50">
+              {visible.map((tx) => {
+                const acc       = accounts.find((a) => a.id === tx.account_id);
+                const client    = tx.client_id ? clients.find((c) => c.id === tx.client_id) : null;
+                const isAdj     = tx.accounting_type === "adjustment";
+                const subLabel  = tx.sub_type ? SUB_TYPE_META[tx.sub_type]?.label : null;
+                const dotColor  = isAdj ? "bg-amber-500" : tx.type === "expense" ? "bg-red-500/70" : "bg-emerald-500/70";
+                const amtColor  = isAdj ? "text-amber-400" : tx.type === "expense" ? "text-red-400" : "text-emerald-400";
+                const amtPrefix = isAdj ? "" : tx.type === "expense" ? "−" : "+";
 
-              return (
-                <Card key={tx.id}>
-                  <article className="flex items-start justify-between gap-4">
+                return (
+                  <li
+                    key={tx.id}
+                    className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-800/25"
+                    onClick={() => setDetailTxId(tx.id)}
+                  >
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
+
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge
-                          variant={
-                            isAdjustment
-                              ? "default"
-                              : tx.type === "income"
-                              ? "success"
-                              : "danger"
-                          }
-                        >
-                          {isAdjustment
-                            ? "Correction"
-                            : tx.type === "income"
-                            ? t("income")
-                            : t("expense")}
-                        </Badge>
-                        {isNonStandard && tx.accounting_type && (
-                          <span className="rounded-full bg-amber-900/40 px-1.5 py-0.5 text-[10px] text-amber-400">
-                            {ACCOUNTING_LABELS[tx.accounting_type]}
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p className="min-w-0 truncate text-sm text-slate-200">
+                          {tx.category ?? tx.note ?? subLabel ?? "—"}
+                        </p>
+                        {tx.sub_type === null && (
+                          <span className="shrink-0 rounded-full bg-slate-800/60 px-1.5 py-0.5 text-[9px] text-slate-600">
+                            legacy
                           </span>
                         )}
-                        {tx.category && (
-                          <span className="truncate text-sm text-slate-300">
-                            {tx.category}
+                        {subLabel && (tx.accounting_type === "non_income_inflow" || tx.accounting_type === "non_expense_outflow") && (
+                          <span className="shrink-0 rounded-full bg-slate-800/50 px-1.5 py-0.5 text-[9px] text-slate-500">
+                            {subLabel}
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 truncate text-xs text-slate-500">
-                        {acc?.name ?? "—"} · {formatDate(tx.transaction_date)}
+                      <p className="mt-0.5 truncate text-[11px] text-slate-600">
+                        {acc?.name ?? "—"}
+                        {" · "}{formatDate(tx.transaction_date)}
+                        {client && ` · ${client.name}`}
                       </p>
-                      {tx.note && (
-                        <p className="mt-0.5 truncate text-xs text-slate-600">
-                          {tx.note}
-                        </p>
-                      )}
-                      {/* Balance after transaction */}
-                      {tx.balance_after !== null && tx.balance_after !== undefined && (
-                        <p className="mt-1 text-xs text-slate-600">
-                          Solde après :{" "}
-                          <span className="font-mono tabular-nums text-slate-400">
-                            {formatMoney(tx.balance_after, acc?.currency ?? tx.currency)}
-                          </span>
-                        </p>
-                      )}
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <MoneyAmount
-                        amount={tx.amount}
-                        currency={tx.currency}
-                        className={`text-sm font-semibold tabular-nums ${
-                          isAdjustment
-                            ? "text-amber-400"
-                            : tx.type === "expense"
-                            ? "text-red-400"
-                            : "text-emerald-400"
-                        }`}
-                      />
-                      <button
-                        onClick={() =>
-                          setDeleteTarget({
-                            id: tx.id,
-                            accountId: tx.account_id,
-                            type: tx.type,
-                            amount: tx.amount,
-                          })
-                        }
-                        className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-800 hover:text-red-400"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+
+                    <div className="shrink-0 text-right">
+                      <p className={`font-mono text-sm font-semibold tabular-nums ${amtColor}`}>
+                        {amtPrefix}{formatMoney(tx.amount, tx.currency)}
+                      </p>
+                      <p className="text-[10px] text-slate-700">{tx.currency}</p>
                     </div>
-                  </article>
-                </Card>
-              );
-            })}
+                  </li>
+                );
+              })}
+            </ul>
 
             {filtered.length > PAGE_SIZE && !showAll && (
               <button
                 onClick={() => setShowAll(true)}
-                className="w-full rounded-lg border border-slate-700 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                className="w-full border-t border-slate-800/60 py-2.5 text-xs text-slate-500 transition-colors hover:bg-slate-800/30 hover:text-slate-300"
               >
                 Voir tout ({filtered.length} transactions)
               </button>
@@ -476,247 +511,458 @@ export default function TransactionsPage({ params }: Props) {
             {showAll && filtered.length > PAGE_SIZE && (
               <button
                 onClick={() => setShowAll(false)}
-                className="w-full rounded-lg border border-slate-700 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                className="w-full border-t border-slate-800/60 py-2.5 text-xs text-slate-500 transition-colors hover:bg-slate-800/30 hover:text-slate-300"
               >
                 Réduire
               </button>
             )}
-          </div>
+          </Card>
         )}
       </div>
 
-      {/* ── Modal: Add transaction ── */}
-      {showForm && formMode === "transaction" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900 p-6">
-            <h2 className="mb-4 text-base font-semibold text-slate-50">{t("add")}</h2>
-            <form onSubmit={handleSubmitTransaction} className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">{t("type")}</label>
-                <div className="flex gap-2">
-                  {(["expense", "income"] as TransactionType[]).map((tp) => (
-                    <button
-                      key={tp}
-                      type="button"
-                      onClick={() => {
-                        setTxType(tp);
-                        setCategory("");
-                      }}
-                      className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
-                        txType === tp
-                          ? tp === "income"
-                            ? "bg-emerald-700 text-white"
-                            : "bg-red-700 text-white"
-                          : "border border-slate-700 text-slate-400 hover:bg-slate-800"
-                      }`}
-                    >
-                      {tp === "income" ? t("income") : t("expense")}
-                    </button>
-                  ))}
+      {/* ── Transaction detail drawer ─────────────────────────────────────────── */}
+      {detailTx && (() => {
+        const acc      = accounts.find((a) => a.id === detailTx.account_id);
+        const client   = detailTx.client_id ? clients.find((c) => c.id === detailTx.client_id) : null;
+        const order    = detailTx.order_id  ? orders.find((o) => o.id === detailTx.order_id)   : null;
+        const subMeta  = detailTx.sub_type  ? SUB_TYPE_META[detailTx.sub_type] : null;
+        const impact   = detailTx.accounting_type ? ACCOUNTING_IMPACT[detailTx.accounting_type] : null;
+        const isAdj    = detailTx.accounting_type === "adjustment";
+        const amtColor = isAdj ? "text-amber-400" : detailTx.type === "expense" ? "text-red-400" : "text-emerald-400";
+        const amtPfx   = isAdj ? "" : detailTx.type === "expense" ? "−" : "+";
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm md:items-center"
+            onClick={closeDrawer}
+          >
+            <div
+              className="flex max-h-[88vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 md:rounded-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-2.5 md:hidden">
+                <div className="h-1 w-10 rounded-full bg-slate-700" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3 border-b border-slate-800 px-5 py-3.5">
+                <div className="min-w-0">
+                  <p className={`font-mono text-2xl font-bold tabular-nums ${amtColor}`}>
+                    {amtPfx}{formatMoney(detailTx.amount, detailTx.currency)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {detailTx.currency} · {formatDate(detailTx.transaction_date)}
+                  </p>
+                </div>
+                <button
+                  onClick={closeDrawer}
+                  className="shrink-0 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                <div className="space-y-4">
+
+                  {/* Main info block */}
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/60 divide-y divide-slate-800/60">
+                    {(detailTx.category || detailTx.note) && (
+                      <div className="flex items-start justify-between gap-3 px-3.5 py-2.5">
+                        <p className="shrink-0 text-[11px] text-slate-500">Description</p>
+                        <p className="text-right text-xs text-slate-300">
+                          {detailTx.category ?? detailTx.note}
+                        </p>
+                      </div>
+                    )}
+                    {acc && (
+                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                        <p className="text-[11px] text-slate-500">Compte</p>
+                        <p className="text-xs text-slate-300">{acc.name}</p>
+                      </div>
+                    )}
+                    {subMeta ? (
+                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                        <p className="text-[11px] text-slate-500">Sous-type</p>
+                        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">
+                          {subMeta.label}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                        <p className="text-[11px] text-slate-500">Sous-type</p>
+                        <span className="rounded-full bg-slate-800/50 px-2 py-0.5 text-[10px] text-slate-600">
+                          legacy
+                        </span>
+                      </div>
+                    )}
+                    {client && (
+                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                        <p className="text-[11px] text-slate-500">Client</p>
+                        <p className="text-xs text-slate-300">{client.name}</p>
+                      </div>
+                    )}
+                    {order && (
+                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                        <p className="text-[11px] text-slate-500">Commande</p>
+                        <p className="text-xs text-slate-300">{order.product_name}</p>
+                      </div>
+                    )}
+                    {detailTx.note && detailTx.category && (
+                      <div className="flex items-start justify-between gap-3 px-3.5 py-2.5">
+                        <p className="shrink-0 text-[11px] text-slate-500">Note</p>
+                        <p className="text-right text-[11px] text-slate-500">{detailTx.note}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Accounting impact block */}
+                  <div>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                      Impact comptable
+                    </p>
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 divide-y divide-slate-800/60">
+                      <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
+                        <p className="text-[11px] text-slate-500">Solde physique</p>
+                        <p className={`text-[11px] font-medium ${
+                          detailTx.affects_physical_balance ? "text-slate-300" : "text-slate-600"
+                        }`}>
+                          {detailTx.affects_physical_balance ? "Modifié" : "Non modifié"}
+                        </p>
+                      </div>
+                      {impact && (
+                        <div className="flex items-start justify-between gap-3 px-3.5 py-2.5">
+                          <p className="shrink-0 text-[11px] text-slate-500">Comptabilité</p>
+                          <p className={`text-right text-[11px] font-medium ${impact.color}`}>
+                            {impact.label}
+                          </p>
+                        </div>
+                      )}
+                      {detailTx.balance_after !== null && (
+                        <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
+                          <p className="text-[11px] text-slate-500">Solde après</p>
+                          <p className={`font-mono text-[11px] tabular-nums ${
+                            detailTx.balance_after < 0 ? "text-red-400" : "text-slate-400"
+                          }`}>
+                            {formatMoney(detailTx.balance_after, detailTx.currency)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">
-                  {t("account")}
-                </label>
-                <select
-                  value={accountId}
-                  onChange={(e) => setAccountId(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
-                >
-                  <option value="">—</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({a.currency})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">
-                  {t("amount")}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">
-                  {t("category")}
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
-                >
-                  <option value="">—</option>
-                  {formCategories.map((c) => (
-                    <option key={`${txType}-${c}`} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                {/* Show accounting type hint based on selected category */}
-                {category && CATEGORY_ACCOUNTING_TYPE[category] && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Comptabilisé comme :{" "}
-                    <span className="text-amber-400">
-                      {ACCOUNTING_LABELS[CATEGORY_ACCOUNTING_TYPE[category]]}
-                    </span>
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">{t("date")}</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">{t("note")}</label>
-                <input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="flex-1 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
-                >
-                  {tc("cancel")}
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-                >
-                  {tc("save")}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* ── Modal: Balance reconciliation ── */}
-      {showForm && formMode === "adjustment" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900 p-6">
-            <h2 className="mb-1 text-base font-semibold text-slate-50">
-              Réconciliation de solde
-            </h2>
-            <p className="mb-4 text-xs text-slate-500">
-              Aligne DANEX sur votre solde réel. La correction est enregistrée
-              séparément et n'est pas comptée comme revenu ni dépense.
-            </p>
-            <form onSubmit={handleSubmitAdjustment} className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">Compte</label>
-                <select
-                  value={adjAccountId}
-                  onChange={(e) => {
-                    setAdjAccountId(e.target.value);
-                    const acc = accounts.find((a) => a.id === e.target.value);
-                    if (acc)
-                      setAdjTargetBalance(String(Number(acc.balance).toFixed(2)));
-                  }}
-                  required
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
-                >
-                  <option value="">—</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} — solde actuel : {formatMoney(a.balance, a.currency)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">
-                  Solde réel observé
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={adjTargetBalance}
-                  onChange={(e) => setAdjTargetBalance(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
-                />
-                {adjDifference !== null && Math.abs(adjDifference) >= 0.001 && (
-                  <p
-                    className={`mt-1 text-xs ${
-                      adjDifference > 0 ? "text-emerald-400" : "text-red-400"
-                    }`}
+              {/* Footer */}
+              <div
+                className="shrink-0 space-y-2 border-t border-slate-800 px-5 pt-3"
+                style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+              >
+                {/* Client / order links */}
+                {(client || order) && (
+                  <div className="flex gap-4 pb-0.5">
+                    {client && (
+                      <Link
+                        href={`/${locale}/clients`}
+                        className="flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-300"
+                        onClick={closeDrawer}
+                      >
+                        <ExternalLink size={10} />
+                        Voir le client
+                      </Link>
+                    )}
+                    {order && (
+                      <Link
+                        href={`/${locale}/orders`}
+                        className="flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-300"
+                        onClick={closeDrawer}
+                      >
+                        <ExternalLink size={10} />
+                        Voir la commande
+                      </Link>
+                    )}
+                  </div>
+                )}
+
+                {/* Reclassify (legacy only) */}
+                {detailTx.sub_type === null && !showReclassify && (
+                  <button
+                    onClick={() => setShowReclassify(true)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-700 py-2 text-xs text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
                   >
-                    Correction :{" "}
-                    {adjDifference > 0 ? "+" : ""}
-                    {formatMoney(adjDifference, adjAccount?.currency ?? "USD")}
+                    <RefreshCw size={11} />
+                    Reclasser cette transaction
+                  </button>
+                )}
+                {detailTx.sub_type === null && showReclassify && (
+                  <div className="space-y-2 rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+                    <p className="text-[11px] font-medium text-slate-400">Attribuer un sous-type</p>
+                    <select
+                      value={reclassifySubType}
+                      onChange={(e) => setReclassifySubType(e.target.value as TransactionSubType)}
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none"
+                    >
+                      <option value="">— Choisir —</option>
+                      {SUB_TYPE_GROUPS.map((group) => (
+                        <optgroup key={group.label} label={group.label}>
+                          {group.items.map((st) => (
+                            <option key={st} value={st}>{SUB_TYPE_META[st].label}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setShowReclassify(false); setReclassifySubType(""); }}
+                        className="flex-1 rounded-xl border border-slate-700 py-2 text-xs text-slate-400 transition-colors hover:bg-slate-800"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleReclassify}
+                        disabled={!reclassifySubType || reclassifying}
+                        className="flex-1 rounded-xl bg-orange-600 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                      >
+                        {reclassifying ? "…" : "Appliquer"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Delete */}
+                <button
+                  onClick={() => {
+                    closeDrawer();
+                    setDeleteTarget({
+                      id: detailTx.id,
+                      accountId: detailTx.account_id,
+                      type: detailTx.type,
+                      amount: detailTx.amount,
+                    });
+                  }}
+                  className="flex w-full items-center justify-center gap-1.5 py-2 text-xs text-red-500/60 transition-colors hover:text-red-400"
+                >
+                  <Trash2 size={11} />
+                  Supprimer cette transaction
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── New operation modal ─────────────────────────────────────────────────── */}
+      <TransactionFormModal
+        open={showNewForm}
+        accounts={accounts}
+        clients={clients}
+        orders={orders}
+        debts={debts}
+        onClose={() => setShowNewForm(false)}
+        onSubmit={handleCreateOperation}
+      />
+
+      {/* ── Reconciliation modal ────────────────────────────────────────────────── */}
+      {showLegacyForm && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm md:items-center md:p-4"
+          onClick={() => setShowLegacyForm(false)}
+        >
+          <div
+            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-2.5 md:hidden">
+              <div className="h-1 w-10 rounded-full bg-slate-700" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-50">Réconciliation de solde</h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Aligne l'app sur ton solde réel. Non compté comme revenu.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowLegacyForm(false)}
+                className="shrink-0 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitAdjustment} className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-5 pb-2">
+                <div className="space-y-4 py-1">
+
+                  {/* Account */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-400">Compte</label>
+                    <select
+                      value={adjAccountId}
+                      onChange={(e) => {
+                        setAdjAccountId(e.target.value);
+                        const acc = accounts.find((a) => a.id === e.target.value);
+                        if (acc) setAdjTargetBalance(String(Number(acc.balance).toFixed(2)));
+                      }}
+                      required
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none"
+                    >
+                      <option value="">—</option>
+                      {accounts.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name} ({a.currency})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Preview */}
+                  {adjAccount && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5">
+                      <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                        Aperçu
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-500">Solde actuel (app)</p>
+                          <p className="font-mono text-sm font-medium text-slate-300 tabular-nums">
+                            {formatMoney(adjAccount.balance, adjAccount.currency)}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-500">Solde réel observé</p>
+                          <p className={`font-mono text-sm font-medium tabular-nums ${
+                            adjTargetBalance ? "text-slate-200" : "text-slate-600"
+                          }`}>
+                            {adjTargetBalance
+                              ? formatMoney(Number(adjTargetBalance), adjAccount.currency)
+                              : "—"}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-slate-800/80 pt-2">
+                          <p className="text-xs font-medium text-slate-400">Correction créée</p>
+                          {adjDifference === null || adjTargetBalance === "" ? (
+                            <p className="text-xs text-slate-600">—</p>
+                          ) : Math.abs(adjDifference) < 0.001 ? (
+                            <p className="text-xs text-slate-500">Aucune correction</p>
+                          ) : (
+                            <p className={`font-mono text-sm font-bold tabular-nums ${
+                              adjDifference > 0 ? "text-emerald-400" : "text-red-400"
+                            }`}>
+                              {adjDifference > 0 ? "+" : ""}{formatMoney(adjDifference, adjAccount.currency)}
+                            </p>
+                          )}
+                        </div>
+                        {adjDifference !== null && Math.abs(adjDifference) < 0.001 && adjTargetBalance !== "" && (
+                          <p className="text-[11px] text-amber-400/80">
+                            Aucune correction nécessaire — le solde est déjà correct.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Target balance */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      Solde réel observé
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={adjTargetBalance}
+                      onChange={(e) => setAdjTargetBalance(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 font-mono text-sm tabular-nums text-slate-100 focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20"
+                    />
+                  </div>
+
+                  {/* Date */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-400">Date</label>
+                    <input
+                      type="date"
+                      value={adjDate}
+                      onChange={(e) => setAdjDate(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Note */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      Note (optionnel)
+                    </label>
+                    <input
+                      value={adjNote}
+                      onChange={(e) => setAdjNote(e.target.value)}
+                      placeholder="Ex : Vérification Alipay"
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                className="shrink-0 border-t border-slate-800 px-5 pt-3"
+                style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+              >
+                {adjDifference !== null && adjTargetBalance !== "" && (
+                  <p className={`mb-2.5 text-center text-xs ${
+                    Math.abs(adjDifference) < 0.001
+                      ? "text-slate-500"
+                      : adjDifference > 0 ? "text-emerald-400" : "text-red-400"
+                  }`}>
+                    {Math.abs(adjDifference) < 0.001
+                      ? "Aucune correction nécessaire"
+                      : `Correction : ${adjDifference > 0 ? "+" : ""}${adjDifference.toFixed(2)} ${adjAccount?.currency ?? ""}`}
                   </p>
                 )}
-                {adjDifference !== null && Math.abs(adjDifference) < 0.001 && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Aucune correction nécessaire.
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">Date</label>
-                <input
-                  type="date"
-                  value={adjDate}
-                  onChange={(e) => setAdjDate(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-400">Note</label>
-                <input
-                  placeholder="Ex : Comparaison avec Alipay réel"
-                  value={adjNote}
-                  onChange={(e) => setAdjNote(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-orange-500 focus:outline-none"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="flex-1 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
-                >
-                  {tc("cancel")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={adjDifference !== null && Math.abs(adjDifference) < 0.001}
-                  className="flex-1 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Appliquer la correction
-                </button>
+                <div className="flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowLegacyForm(false)}
+                    className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      isSubmitting ||
+                      !adjAccountId ||
+                      adjTargetBalance === "" ||
+                      (adjDifference !== null && Math.abs(adjDifference) < 0.001)
+                    }
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                  >
+                    {isSubmitting ? "Application…" : "Appliquer"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* ── Confirm delete ──────────────────────────────────────────────────────── */}
       <ConfirmDialog
         open={!!deleteTarget}
-        title={tc("confirm_delete")}
-        message="Supprimer cette transaction ? Le solde du compte sera restauré."
+        title="Supprimer cette transaction ?"
+        message={
+          deleteTarget?.accountId
+            ? "Cette action est irréversible. Le solde du compte sera recalculé automatiquement."
+            : "Cette action est irréversible."
+        }
         confirmLabel={tc("delete")}
         cancelLabel={tc("cancel")}
         danger

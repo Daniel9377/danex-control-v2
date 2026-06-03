@@ -4,12 +4,12 @@ import { cn } from "@/lib/utils";
 type Variant = "default" | "success" | "warning" | "danger" | "info" | "orange";
 
 const variantStyles: Record<Variant, string> = {
-  default: "bg-slate-700 text-slate-300",
-  success: "bg-emerald-900/50 text-emerald-400",
-  warning: "bg-amber-900/50 text-amber-400",
-  danger: "bg-red-900/50 text-red-400",
-  info: "bg-blue-900/50 text-blue-400",
-  orange: "bg-orange-900/50 text-orange-400",
+  default: "bg-slate-800/60 text-slate-300 ring-1 ring-slate-700/50",
+  success: "bg-emerald-950/60 text-emerald-400 ring-1 ring-emerald-800/40",
+  warning: "bg-amber-950/60 text-amber-400 ring-1 ring-amber-800/40",
+  danger:  "bg-red-950/60 text-red-400 ring-1 ring-red-800/40",
+  info:    "bg-blue-950/60 text-blue-400 ring-1 ring-blue-800/40",
+  orange:  "bg-orange-950/60 text-orange-400 ring-1 ring-orange-800/40",
 };
 
 type Props = {

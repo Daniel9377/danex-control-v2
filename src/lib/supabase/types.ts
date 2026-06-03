@@ -39,16 +39,13 @@ export type Account = {
 export type TransactionType = "income" | "expense";
 
 /**
- * Classifies what a transaction *means* financially.
- * Used to separate real income/expense from flows that just move money.
+ * Classifies the financial meaning of a transaction.
  *
- * real_income        — genuine revenue (salary, commission, profit)
- * non_income_inflow  — money received but NOT revenue (loan repayment, client advance,
- *                      compensation received, positive balance correction)
+ * real_income        — genuine revenue (salary, commission, validated profit)
+ * non_income_inflow  — money received but NOT revenue (client advance, debt received, loan repaid)
  * real_expense       — genuine personal or business expense
- * non_expense_outflow — money out but NOT a real expense (loan given, client purchase,
- *                       debt repaid, negative balance correction)
- * adjustment         — balance reconciliation entry (not income, not expense)
+ * non_expense_outflow — money out but NOT a real expense (client purchase, debt repaid, receivable created)
+ * adjustment         — balance reconciliation (not income, not expense)
  */
 export type AccountingType =
   | "real_income"
@@ -57,10 +54,34 @@ export type AccountingType =
   | "non_expense_outflow"
   | "adjustment";
 
+/**
+ * Granular sub-classification of a transaction's purpose.
+ * Maps to a specific accounting_type automatically.
+ */
+export type TransactionSubType =
+  | "personal_income"
+  | "personal_expense"
+  | "business_income"
+  | "business_expense"
+  | "client_money_received"
+  | "client_product_purchase"
+  | "client_shipping_fee"
+  | "shared_client_fee"
+  | "client_refund"
+  | "profit_validated"
+  | "debt_received"
+  | "debt_repayment"
+  | "receivable_created"
+  | "receivable_repaid"
+  | "balance_correction"
+  | "transfer_in"
+  | "transfer_out";
+
 export type Transaction = {
   id: string;
   user_id: string;
-  account_id: string;
+  /** Null for transactions that don't affect a physical balance (e.g. profit_validated). */
+  account_id: string | null;
   type: TransactionType;
   amount: number;
   currency: string;
@@ -69,6 +90,20 @@ export type Transaction = {
   transaction_date: string;
   accounting_type: AccountingType | null;
   balance_after: number | null;
+  /** False for accounting-only entries with no physical cash movement. */
+  affects_physical_balance: boolean;
+  // New fields (from migration 002)
+  sub_type: TransactionSubType | null;
+  client_id: string | null;
+  order_id: string | null;
+  idempotency_key: string | null;
+  exchange_rate: number | null;
+  amount_base: number | null;
+  base_currency: string | null;
+  // Migration tracking (from migration 004)
+  migration_status: "pending_review" | "reviewed" | "archived" | "ignored_modern_reports" | null;
+  legacy_reviewed_at: string | null;
+  legacy_review_note: string | null;
   created_at: string;
 };
 
@@ -104,10 +139,14 @@ export type Debt = {
   linked_account_id: string | null;
   /**
    * Only relevant for direction === "owes_me".
-   * TRUE means the money physically left the linked account when the debt was created.
+   * TRUE means the money physically left the linked account at debt creation.
    * The account was already debited, so repayment will credit it back.
    */
   affects_balance: boolean;
+  /**
+   * Links this debt to its originating transaction (from migration 002).
+   */
+  creation_tx_id: string | null;
   created_at: string;
 };
 
@@ -170,6 +209,12 @@ export type Order = {
   last_update: string | null;
   next_action: string | null;
   note: string | null;
+  description: string | null;
+  // Profit tracking (from migration 002)
+  real_profit_amount: number | null;
+  real_profit_currency: string | null;
+  profit_validated_at: string | null;
+  completed_at: string | null;
   created_at: string;
 };
 
@@ -183,4 +228,30 @@ export type Alert = {
   message: string | null;
   is_read: boolean;
   triggered_at: string;
+};
+
+export type AllocationMethod = "equal" | "manual";
+
+export type SharedFeeAllocation = {
+  id: string;
+  user_id: string;
+  transaction_id: string;
+  client_id: string | null;
+  order_id: string | null;
+  allocated_amount: number;
+  currency: string;
+  allocation_method: AllocationMethod;
+  created_at: string;
+};
+
+/** Aggregated financial summary for a single client. */
+export type ClientFinancials = {
+  clientId: string;
+  currency: string;
+  totalReceived: number;
+  totalProductCost: number;
+  totalFees: number;
+  totalRefunded: number;
+  totalProfitValidated: number;
+  balance: number;
 };

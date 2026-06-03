@@ -14,21 +14,49 @@ import {
   Bell,
   Settings,
   HandCoins,
+  BarChart2,
+  Download,
+  Tag,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 
-const navItems = [
-  { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { key: "accounts", href: "/accounts", icon: Wallet },
-  { key: "transactions", href: "/transactions", icon: Receipt },
-  { key: "transfers", href: "/transfers", icon: ArrowLeftRight },
-  { key: "debts", href: "/debts", icon: HandCoins },
-  { key: "clients", href: "/clients", icon: Users },
-  { key: "orders", href: "/orders", icon: ShoppingBag },
-  { key: "alerts", href: "/alerts", icon: Bell },
-  { key: "settings", href: "/settings", icon: Settings },
-] as const;
+type NavItem = { navKey: string; href: string; icon: LucideIcon };
+type NavGroup = { labelKey: string | null; items: NavItem[] };
+
+const navGroups: NavGroup[] = [
+  {
+    labelKey: null,
+    items: [
+      { navKey: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { navKey: "accounts", href: "/accounts", icon: Wallet },
+      { navKey: "transactions", href: "/transactions", icon: Receipt },
+    ],
+  },
+  {
+    labelKey: "group_business",
+    items: [
+      { navKey: "clients", href: "/clients", icon: Users },
+      { navKey: "orders", href: "/orders", icon: ShoppingBag },
+      { navKey: "debts", href: "/debts", icon: HandCoins },
+      { navKey: "transfers", href: "/transfers", icon: ArrowLeftRight },
+    ],
+  },
+  {
+    labelKey: "group_tools",
+    items: [
+      { navKey: "reports", href: "/reports", icon: BarChart2 },
+      { navKey: "export", href: "/export", icon: Download },
+      { navKey: "legacy", href: "/legacy", icon: Tag },
+    ],
+  },
+];
+
+const bottomItems: NavItem[] = [
+  { navKey: "alerts", href: "/alerts", icon: Bell },
+  { navKey: "settings", href: "/settings", icon: Settings },
+];
 
 type Props = {
   locale: string;
@@ -43,6 +71,34 @@ export function Sidebar({ locale, onClose }: Props) {
   useEffect(() => {
     setNavigating(false);
   }, [pathname]);
+
+  const renderItem = ({ navKey, href, icon: Icon }: NavItem) => {
+    const fullHref = `/${locale}${href}`;
+    const isActive =
+      pathname === fullHref ||
+      (href !== "/dashboard" && pathname.startsWith(fullHref));
+    return (
+      <li key={navKey}>
+        <Link
+          href={fullHref}
+          prefetch={true}
+          onClick={() => {
+            if (!isActive) setNavigating(true);
+            onClose?.();
+          }}
+          className={cn(
+            "relative flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
+            isActive
+              ? "bg-slate-800/70 text-slate-100 before:absolute before:left-0 before:top-1/2 before:h-5 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-orange-500 before:content-['']"
+              : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
+          )}
+        >
+          <Icon size={18} className="shrink-0" />
+          <span>{t(navKey as Parameters<typeof t>[0])}</span>
+        </Link>
+      </li>
+    );
+  };
 
   return (
     <nav className="relative flex h-full flex-col">
@@ -64,37 +120,28 @@ export function Sidebar({ locale, onClose }: Props) {
         )}
       </div>
 
-      <ul className="flex-1 space-y-0.5 px-2">
-        {navItems.map(({ key, href, icon: Icon }) => {
-          const fullHref = `/${locale}${href}`;
-          const isActive =
-            pathname === fullHref ||
-            (href !== "/dashboard" && pathname.startsWith(fullHref));
-          return (
-            <li key={key}>
-              <Link
-                href={fullHref}
-                prefetch={true}
-                onClick={() => {
-                  if (!isActive) setNavigating(true);
-                  onClose?.();
-                }}
-                className={cn(
-                  "flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-orange-600/20 text-orange-400"
-                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                )}
-              >
-                <Icon size={18} className="shrink-0" />
-                <span>{t(key as keyof typeof t)}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="flex-1 space-y-4 overflow-y-auto px-2">
+        {navGroups.map((group, gi) => (
+          <div key={gi}>
+            {group.labelKey && (
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+                {t(group.labelKey as Parameters<typeof t>[0])}
+              </p>
+            )}
+            <ul className="space-y-0.5">
+              {group.items.map(renderItem)}
+            </ul>
+          </div>
+        ))}
+      </div>
 
-      <div className="px-4 py-4 text-xs text-slate-600">v2.0</div>
+      <div className="border-t border-slate-800/60 px-2 pb-2 pt-2">
+        <ul className="space-y-0.5">
+          {bottomItems.map(renderItem)}
+        </ul>
+      </div>
+
+      <div className="px-4 py-3 text-xs text-slate-600">v2.0</div>
     </nav>
   );
 }

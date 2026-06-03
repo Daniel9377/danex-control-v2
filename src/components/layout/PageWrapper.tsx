@@ -32,7 +32,7 @@ export function PageWrapper({ children, locale }: Props) {
   }, [locale, router]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950">
+    <div className="danex-bg flex h-screen overflow-hidden">
       {/* Permanent sidebar: hidden on mobile, visible on md+ via CSS (no hydration flash) */}
       <aside className="hidden md:flex h-screen w-56 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
         <Sidebar locale={locale} />
