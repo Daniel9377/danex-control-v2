@@ -2,6 +2,7 @@
   getMindboostTodaySummary,
   type MindboostTodaySummary,
 } from "@/lib/mindboost/today-summary";
+import { formatEveningReport } from "@/lib/mindboost/evening-report";
 
 export type TelegramMessage = {
   message_id: number;
@@ -104,6 +105,8 @@ export function getHelpMessage() {
     "",
     "/today — résumé du jour",
     "/status — statut du jour",
+    "/evening — rapport du soir strict",
+    "/soir — rapport du soir strict",
     "/check YYYY-MM-DD — vérifier une date",
     "/help — aide",
     "",
@@ -121,6 +124,11 @@ export async function handleTelegramCommand(text: string) {
   if (cleanText === "/today" || cleanText === "/status") {
     const summary = await getMindboostTodaySummary();
     return formatTodaySummary(summary);
+  }
+
+  if (cleanText === "/evening" || cleanText === "/soir" || cleanText === "/rapport") {
+    const summary = await getMindboostTodaySummary();
+    return formatEveningReport(summary);
   }
 
   if (cleanText.startsWith("/check")) {
