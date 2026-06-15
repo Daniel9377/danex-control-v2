@@ -1,4 +1,4 @@
-﻿import {
+import {
   getMindboostTodaySummary,
   type MindboostTodaySummary,
 } from "@/lib/mindboost/today-summary";
