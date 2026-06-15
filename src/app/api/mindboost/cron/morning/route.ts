@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
         date: yesterday,
         appCompleted: true,
         sent: false,
-        reason: 'App complétée hier — aucun rappel envoyé.',
+        reason: 'App completee hier - aucun rappel envoye.',
       });
     }
 
@@ -46,12 +46,12 @@ export async function GET(req: NextRequest) {
     }
 
     const message = [
-      `📋 Rappel matinal — ${yesterday}`,
+      `Mindboost - Rappel matinal ${yesterday}`,
       ``,
-      `Tu n'as pas complété l'app hier.`,
+      `Tu n'as pas complete l'app hier.`,
       ``,
       `C'est trop tard pour corriger hier, mais note-le.`,
-      `Aujourd'hui, complète DANEX Control avant 22h.`,
+      `Aujourd'hui, complete DANEX Control avant 22h.`,
       ``,
       `Ouvre l'app et enregistre tes transactions du jour.`,
     ].join('\n');
