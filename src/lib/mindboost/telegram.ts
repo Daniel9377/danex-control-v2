@@ -3,6 +3,9 @@ import {
   type MindboostTodaySummary,
 } from "@/lib/mindboost/today-summary";
 import { formatEveningReport } from "@/lib/mindboost/evening-report";
+import { getMindboostWeeklyReport, formatWeeklyReport } from "@/lib/mindboost/weekly-report";
+import { getMindboostMonthlyReport, formatMonthlyReport } from "@/lib/mindboost/monthly-report";
+import { getUpcomingEvents } from "@/lib/mindboost/google-calendar";
 
 export type TelegramMessage = {
   message_id: number;
@@ -21,11 +24,7 @@ export type TelegramUpdate = {
 
 function requireEnv(name: string) {
   const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Missing env var: ${name}`);
-  }
-
+  if (!value) throw new Error(`Missing env var: ${name}`);
   return value;
 }
 
@@ -43,9 +42,7 @@ export async function sendTelegramMessage(chatId: number | string, text: string)
 
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id: chatId,
       text,
@@ -61,21 +58,12 @@ export async function sendTelegramMessage(chatId: number | string, text: string)
 
 function formatTotals(totalsByCurrency: Record<string, number>) {
   const entries = Object.entries(totalsByCurrency);
-
-  if (entries.length === 0) {
-    return "Aucune vraie dépense détectée.";
-  }
-
-  return entries
-    .map(([currency, amount]) => `- ${amount} ${currency}`)
-    .join("\n");
+  if (entries.length === 0) return "Aucune vraie depense detectee.";
+  return entries.map(([currency, amount]) => `- ${amount} ${currency}`).join("\n");
 }
 
 function formatCategories(summary: MindboostTodaySummary) {
-  if (summary.categories.length === 0) {
-    return "Aucune catégorie de vraie dépense.";
-  }
-
+  if (summary.categories.length === 0) return "Aucune categorie de vraie depense.";
   return summary.categories
     .map((item) => `- ${item.category}: ${item.amount} ${item.currency}`)
     .join("\n");
@@ -83,16 +71,16 @@ function formatCategories(summary: MindboostTodaySummary) {
 
 export function formatTodaySummary(summary: MindboostTodaySummary) {
   return [
-    `Mindboost — Résumé du ${summary.date}`,
+    `Mindboost - Resume du ${summary.date}`,
     "",
-    `App complétée: ${summary.appCompleted ? "Oui" : "Non"}`,
+    `App completee: ${summary.appCompleted ? "Oui" : "Non"}`,
     `Transactions: ${summary.transactionCount}`,
-    `Vraies dépenses: ${summary.realExpenseCount}`,
+    `Vraies depenses: ${summary.realExpenseCount}`,
     "",
     "Totaux:",
     formatTotals(summary.totalsByCurrency),
     "",
-    "Catégories:",
+    "Categories:",
     formatCategories(summary),
     "",
     summary.message,
@@ -103,12 +91,15 @@ export function getHelpMessage() {
   return [
     "Mindboost commandes:",
     "",
-    "/today — résumé du jour",
-    "/status — statut du jour",
-    "/evening — rapport du soir strict",
-    "/soir — rapport du soir strict",
-    "/check YYYY-MM-DD — vérifier une date",
-    "/help — aide",
+    "/today - resume du jour",
+    "/status - statut du jour",
+    "/evening - rapport du soir strict",
+    "/soir - rapport du soir strict",
+    "/check YYYY-MM-DD - verifier une date",
+    "/week - rapport hebdomadaire",
+    "/month - rapport mensuel",
+    "/agenda - evenements 3 prochains jours",
+    "/help - aide",
     "",
     "Mode actuel: lecture seule.",
   ].join("\n");
@@ -134,13 +125,35 @@ export async function handleTelegramCommand(text: string) {
   if (cleanText.startsWith("/check")) {
     const parts = cleanText.split(/\s+/);
     const date = parts[1];
-
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return "Format invalide. Utilise: /check YYYY-MM-DD";
     }
-
     const summary = await getMindboostTodaySummary(date);
     return formatTodaySummary(summary);
+  }
+
+  if (cleanText === "/week") {
+    const report = await getMindboostWeeklyReport();
+    return formatWeeklyReport(report);
+  }
+
+  if (cleanText === "/month") {
+    const report = await getMindboostMonthlyReport();
+    return formatMonthlyReport(report);
+  }
+
+  if (cleanText === "/agenda") {
+    const events = await getUpcomingEvents(3);
+    if (events.length === 0) {
+      return "Aucun evenement dans les 3 prochains jours.";
+    }
+    const lines = ["Agenda - 3 prochains jours", ""];
+    for (const event of events) {
+      const start = event.start?.dateTime ?? event.start?.date ?? "?";
+      const title = event.summary ?? "Sans titre";
+      lines.push(`- ${start.slice(0, 16).replace("T", " ")} : ${title}`);
+    }
+    return lines.join("\n");
   }
 
   return getHelpMessage();
