@@ -1,11 +1,24 @@
 ﻿import { createAdminClient } from "@/lib/supabase/admin";
 import type { Debt, Transaction } from "@/lib/supabase/types";
 
+export type UrgentPurchaseAlert = {
+  client_id: string;
+  client_name: string;
+  order_id: string;
+  product_name: string;
+  advance_received: number;
+  currency: string;
+  order_status: string;
+  days_since_advance: number;
+};
+
 export type AlertsReport = {
   date: string;
   debts: DebtAlert[];
   clientMoney: ClientMoneyAlert[];
+  urgentPurchases: UrgentPurchaseAlert[];
   hasUrgentIssues: boolean;
+  hasUrgentPurchases: boolean;
   message: string;
 };
 
@@ -32,6 +45,58 @@ function daysSince(dateStr: string): number {
   const now = new Date();
   const then = new Date(dateStr);
   return Math.floor((now.getTime() - then.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export async function getUrgentPurchaseAlerts(userId: string): Promise<UrgentPurchaseAlert[]> {
+  const supabase = createAdminClient();
+
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("id, client_id, product_name, advance_received, currency, status")
+    .eq("user_id", userId)
+    .in("status", ["new", "sourcing", "ordered"])
+    .gt("advance_received", 0);
+
+  if (!orders || orders.length === 0) return [];
+
+  const results: UrgentPurchaseAlert[] = [];
+
+  for (const order of orders) {
+    // Get client name
+    const { data: client } = await supabase
+      .from("clients")
+      .select("name")
+      .eq("id", order.client_id)
+      .single();
+
+    // Get most recent client_money_received transaction for this order
+    const { data: txRows } = await supabase
+      .from("transactions")
+      .select("transaction_date")
+      .eq("order_id", order.id)
+      .eq("sub_type", "client_money_received")
+      .order("transaction_date", { ascending: false })
+      .limit(1);
+
+    const txDate = txRows?.[0]?.transaction_date ?? null;
+    if (!txDate) continue;
+
+    const days = daysSince(txDate);
+    if (days < 1) continue;
+
+    results.push({
+      client_id: order.client_id,
+      client_name: client?.name ?? "Client inconnu",
+      order_id: order.id,
+      product_name: order.product_name,
+      advance_received: Number(order.advance_received),
+      currency: order.currency,
+      order_status: order.status,
+      days_since_advance: days,
+    });
+  }
+
+  return results.sort((a, b) => b.days_since_advance - a.days_since_advance);
 }
 
 export async function getMindboostAlerts(): Promise<AlertsReport> {
@@ -117,13 +182,17 @@ export async function getMindboostAlerts(): Promise<AlertsReport> {
   }
 
   const clientAlerts = Array.from(clientMap.values()).filter((c) => c.balance > 0);
-  const hasUrgentIssues = debtAlerts.length > 0 || clientAlerts.length > 0;
+  const urgentPurchases = await getUrgentPurchaseAlerts(userId);
+  const hasUrgentPurchases = urgentPurchases.length > 0;
+  const hasUrgentIssues = debtAlerts.length > 0 || clientAlerts.length > 0 || hasUrgentPurchases;
 
   return {
     date: today,
     debts: debtAlerts,
     clientMoney: clientAlerts,
+    urgentPurchases,
     hasUrgentIssues,
+    hasUrgentPurchases,
     message: hasUrgentIssues
       ? "Problemes detectes. Action requise."
       : "Aucune alerte critique aujourd'hui.",

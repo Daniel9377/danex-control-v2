@@ -59,6 +59,52 @@ export async function getUpcomingEvents(days: number = 3) {
   return response.data.items ?? [];
 }
 
+export async function getCurrentCalendarStatus(): Promise<{
+  hasEvent: boolean;
+  eventTitle: string | null;
+  endTime: string | null;
+}> {
+  try {
+    const auth = getAuth();
+    const calendar = google.calendar({ version: "v3", auth });
+    const calendarId = getCalendarId();
+
+    const now = new Date();
+    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+    const response = await calendar.events.list({
+      calendarId,
+      timeMin: now.toISOString(),
+      timeMax: twoHoursLater.toISOString(),
+      singleEvents: true,
+      orderBy: "startTime",
+    });
+
+    const events = response.data.items ?? [];
+    // Find an event that started before now (i.e. currently ongoing)
+    const ongoing = events.find((e) => {
+      const start = e.start?.dateTime ?? e.start?.date;
+      return start && new Date(start) <= now;
+    });
+
+    if (ongoing) {
+      const endRaw = ongoing.end?.dateTime ?? ongoing.end?.date ?? null;
+      // Format end time as HH:MM (China time)
+      let endTime: string | null = null;
+      if (endRaw) {
+        const endDate = new Date(endRaw);
+        const chinaEnd = new Date(endDate.getTime() + 8 * 60 * 60 * 1000);
+        endTime = chinaEnd.toISOString().slice(11, 16);
+      }
+      return { hasEvent: true, eventTitle: ongoing.summary ?? null, endTime };
+    }
+
+    return { hasEvent: false, eventTitle: null, endTime: null };
+  } catch {
+    return { hasEvent: false, eventTitle: null, endTime: null };
+  }
+}
+
 export async function createCalendarEvent(
   title: string,
   date: string,
