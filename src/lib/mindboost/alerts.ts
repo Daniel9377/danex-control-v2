@@ -41,6 +41,37 @@ type ClientMoneyAlert = {
   daysOld: number;
 };
 
+export async function wasUrgentPurchaseAlertSent(userId: string, orderId: string): Promise<boolean> {
+  const { createAdminClient: admin } = await import("@/lib/supabase/admin");
+  const supabase = admin();
+  const { data } = await supabase
+    .from("mindboost_memory")
+    .select("expires_at")
+    .eq("user_id", userId)
+    .eq("memory_type", `urgent_purchase_alert_${orderId}`)
+    .single();
+  if (!data) return false;
+  return !data.expires_at || new Date(data.expires_at as string) > new Date();
+}
+
+export async function markUrgentPurchaseAlertSent(userId: string, orderId: string): Promise<void> {
+  const { createAdminClient: admin } = await import("@/lib/supabase/admin");
+  const supabase = admin();
+  const endOfDay = new Date();
+  endOfDay.setUTCHours(23, 59, 59, 999);
+  await supabase.from("mindboost_memory").upsert(
+    {
+      user_id: userId,
+      memory_type: `urgent_purchase_alert_${orderId}`,
+      content: JSON.stringify({ sent_at: new Date().toISOString() }),
+      relevance_score: 1,
+      expires_at: endOfDay.toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,memory_type" }
+  );
+}
+
 function daysSince(dateStr: string): number {
   const now = new Date();
   const then = new Date(dateStr);

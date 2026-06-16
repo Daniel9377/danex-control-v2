@@ -95,6 +95,89 @@ export async function saveConversationMessage(
   }
 }
 
+// --- Parking list ---
+
+export async function saveParkingListItem(userId: string, idea: string): Promise<void> {
+  const supabase = createAdminClient();
+  const key = `parking_list_${Date.now()}`;
+  await supabase.from("mindboost_memory").insert({
+    user_id: userId,
+    memory_type: key,
+    content: JSON.stringify({ idea, saved_at: new Date().toISOString(), status: "pending" }),
+    relevance_score: 1,
+    expires_at: null,
+  });
+}
+
+export async function getParkingList(
+  userId: string
+): Promise<Array<{ idea: string; saved_at: string }>> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("mindboost_memory")
+    .select("content")
+    .eq("user_id", userId)
+    .like("memory_type", "parking_list_%")
+    .order("created_at", { ascending: true });
+
+  return (data ?? [])
+    .map((row) => {
+      try {
+        return JSON.parse(row.content as string) as { idea: string; saved_at: string };
+      } catch {
+        return null;
+      }
+    })
+    .filter((item): item is { idea: string; saved_at: string } => item !== null);
+}
+
+// --- Evening check pending ---
+
+export async function saveEveningCheckPending(userId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const endOfDay = new Date();
+  endOfDay.setUTCHours(23, 59, 59, 999);
+  await supabase.from("mindboost_memory").upsert(
+    {
+      user_id: userId,
+      memory_type: "evening_check_pending",
+      content: JSON.stringify({ asked_at: new Date().toISOString() }),
+      relevance_score: 1,
+      expires_at: endOfDay.toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,memory_type" }
+  );
+}
+
+export async function getEveningCheckPending(
+  userId: string
+): Promise<{ asked_at: string } | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("mindboost_memory")
+    .select("content, expires_at")
+    .eq("user_id", userId)
+    .eq("memory_type", "evening_check_pending")
+    .single();
+  if (!data) return null;
+  if (data.expires_at && new Date(data.expires_at as string) < new Date()) return null;
+  try {
+    return JSON.parse(data.content as string) as { asked_at: string };
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteEveningCheckPending(userId: string): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase
+    .from("mindboost_memory")
+    .delete()
+    .eq("user_id", userId)
+    .eq("memory_type", "evening_check_pending");
+}
+
 // --- Loop flag (anti-loop detection) ---
 
 export async function getLoopCount(userId: string): Promise<number> {

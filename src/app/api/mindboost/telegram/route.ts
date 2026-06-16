@@ -11,8 +11,11 @@ import {
 import { processMessageWithAI } from "@/lib/mindboost/decision-engine";
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { evaluateEscalationLevel, logEscalation, applyEscalationToReply, checkAndUpdateAlertCooldown } from "@/lib/mindboost/escalation";
-import { incrementLoopCount, resetLoopCount } from "@/lib/mindboost/conversation-memory";
+import { incrementLoopCount, resetLoopCount, getEveningCheckPending, deleteEveningCheckPending } from "@/lib/mindboost/conversation-memory";
 import { getActiveIntakeSession, detectIntakeTrigger, startIntakeSession, searchExistingClient } from "@/lib/mindboost/client-intake";
+import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
+import { getUrgentPurchaseAlerts } from "@/lib/mindboost/alerts";
+import { saveReport } from "@/lib/mindboost/reports";
 
 export const runtime = "nodejs";
 
@@ -43,6 +46,49 @@ async function processText(text: string, chatId: number | string): Promise<void>
     const reply = await handleTelegramCommand(text);
     await resetLoopCount(userId);
     await sendTelegramMessage(chatId, reply);
+    return;
+  }
+
+  // Evening check response — must run BEFORE intake and DeepSeek
+  const eveningPending = await getEveningCheckPending(userId);
+  if (eveningPending && /^(oui|non|yes|no|pas encore|pas fait)$/i.test(text.trim())) {
+    await deleteEveningCheckPending(userId);
+    await resetLoopCount(userId);
+
+    if (/^(oui|yes)$/i.test(text.trim())) {
+      const nowChina = new Date(Date.now() + 8 * 60 * 60 * 1000);
+      const todayDate = nowChina.toISOString().split('T')[0];
+      const [summary, urgentPurchases] = await Promise.all([
+        getMindboostTodaySummary(),
+        getUrgentPurchaseAlerts(userId),
+      ]);
+      const lines = [
+        `Valide. Voici le bilan du jour :`,
+        `Transactions : ${summary.transactionCount} (${summary.realExpenseCount} vraies depenses).`,
+      ];
+      if (urgentPurchases.length > 0) {
+        const p = urgentPurchases[0];
+        lines.push(`Achat en attente : ${p.client_name} — ${p.product_name}.`);
+      } else {
+        lines.push(`Aucun achat urgent.`);
+      }
+      const priorite = urgentPurchases.length > 0
+        ? `${urgentPurchases[0].product_name} (${urgentPurchases[0].client_name})`
+        : "Rien d urgent";
+      lines.push(`Priorite demain : ${priorite}.`);
+      const bilanText = lines.join('\n');
+      await sendTelegramMessage(chatId, bilanText);
+      await saveReport(userId, 'daily', todayDate, bilanText, {
+        transaction_count: summary.transactionCount,
+        real_expense_count: summary.realExpenseCount,
+        urgent_purchases_count: urgentPurchases.length,
+      });
+    } else {
+      await sendTelegramMessage(
+        chatId,
+        "Pas de probleme. Prends 2 minutes avant de dormir.\nAlimentation, transport, autres — note les dans l app.\nJe verifie demain matin."
+      );
+    }
     return;
   }
 

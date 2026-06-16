@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMindboostTodaySummary } from '@/lib/mindboost/today-summary';
-import { formatEveningReport } from '@/lib/mindboost/evening-report';
 import { sendTelegramMessage } from '@/lib/mindboost/telegram';
+import { saveEveningCheckPending } from '@/lib/mindboost/conversation-memory';
 
 function isAuthorized(req: NextRequest): boolean {
   const authHeader = req.headers.get('authorization');
   const cronSecret = req.headers.get('x-cron-secret');
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  return (
-    authHeader === `Bearer ${secret}` ||
-    cronSecret === secret
-  );
+  return authHeader === `Bearer ${secret}` || cronSecret === secret;
 }
 
 export async function GET(req: NextRequest) {
@@ -20,27 +16,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const now = new Date();
-    const chinaOffset = 8 * 60;
-    const chinaTime = new Date(now.getTime() + chinaOffset * 60 * 1000);
-    const date = chinaTime.toISOString().split('T')[0];
-
-    const summary = await getMindboostTodaySummary(date);
-    const message = formatEveningReport(summary);
-
     const chatId = process.env.TELEGRAM_ALLOWED_CHAT_ID;
-    if (!chatId) {
-      return NextResponse.json({ error: 'TELEGRAM_ALLOWED_CHAT_ID manquant' }, { status: 500 });
+    const userId = process.env.MINDBOOST_USER_ID;
+    if (!chatId || !userId) {
+      return NextResponse.json({ error: 'Env vars manquants' }, { status: 500 });
     }
 
-    await sendTelegramMessage(chatId, message);
+    await saveEveningCheckPending(userId);
 
-    return NextResponse.json({
-      ok: true,
-      date,
-      appCompleted: summary.appCompleted,
-      sent: true,
-    });
+    await sendTelegramMessage(
+      chatId,
+      "Daniel, as-tu complete ton app aujourd'hui ?\nReponds oui ou non — je verifie et je te donne le bilan."
+    );
+
+    return NextResponse.json({ ok: true, sent: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

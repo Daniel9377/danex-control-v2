@@ -2,6 +2,7 @@ import {
   getMindboostTodaySummary,
   type MindboostTodaySummary,
 } from "@/lib/mindboost/today-summary";
+import { getParkingList } from "@/lib/mindboost/conversation-memory";
 import { formatEveningReport } from "@/lib/mindboost/evening-report";
 import { getMindboostWeeklyReport, formatWeeklyReport } from "@/lib/mindboost/weekly-report";
 import { getMindboostMonthlyReport, formatMonthlyReport } from "@/lib/mindboost/monthly-report";
@@ -107,6 +108,7 @@ export function getHelpMessage() {
     "/week - rapport hebdomadaire",
     "/month - rapport mensuel",
     "/agenda - evenements 3 prochains jours",
+    "/parking - liste des idees en attente",
     "/help - aide",
     "",
     "Mode actuel: lecture seule.",
@@ -197,6 +199,20 @@ export async function handleTelegramCommand(text: string) {
   if (cleanText === "/month") {
     const report = await getMindboostMonthlyReport();
     return formatMonthlyReport(report);
+  }
+
+  if (cleanText === "/parking") {
+    const userId = process.env.MINDBOOST_USER_ID ?? "unknown";
+    const items = await getParkingList(userId);
+    if (items.length === 0) {
+      return "Parking list vide. Aucune idee en attente.";
+    }
+    const lines = ["Parking list :", ""];
+    items.forEach((item, i) => {
+      const date = new Date(item.saved_at).toLocaleDateString("fr-FR");
+      lines.push(`${i + 1}. ${item.idea} (${date})`);
+    });
+    return lines.join("\n");
   }
 
   if (cleanText === "/agenda") {

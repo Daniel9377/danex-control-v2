@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { getMindboostWeeklyReport, formatWeeklyReport } from "@/lib/mindboost/weekly-report";
 import { sendTelegramMessage } from "@/lib/mindboost/telegram";
+import { saveReport } from "@/lib/mindboost/reports";
 
 function isAuthorized(req: NextRequest): boolean {
   const authHeader = req.headers.get("authorization");
@@ -25,6 +26,12 @@ export async function GET(req: NextRequest) {
     }
 
     await sendTelegramMessage(chatId, message);
+
+    const userId = process.env.MINDBOOST_USER_ID;
+    if (userId) {
+      const weekDate = new Date().toISOString().split('T')[0];
+      await saveReport(userId, 'weekly', weekDate, message).catch(() => {});
+    }
 
     return NextResponse.json({
       ok: true,

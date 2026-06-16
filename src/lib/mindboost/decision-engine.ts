@@ -3,7 +3,7 @@ import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getCurrentCalendarStatus } from "@/lib/mindboost/google-calendar";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
-import { getConversationHistory, saveConversationMessage, saveConversationSummary } from "@/lib/mindboost/conversation-memory";
+import { getConversationHistory, saveConversationMessage, saveConversationSummary, saveParkingListItem } from "@/lib/mindboost/conversation-memory";
 import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, createClientAndOrder, getNextQuestion, detectClientMention, updateIntakeClientName, type ClientIntakeData } from "@/lib/mindboost/client-intake";
 
 const MINDBOOST_SYSTEM_PROMPT = `TU ES MINDBOOST
@@ -224,6 +224,14 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
     if (!finalResponse) {
       finalResponse = `Je ne trouve pas ${clientName} dans l app. Je lance la collecte des infos.\n\nQuel produit ${clientName} a commandé ?`;
     }
+  }
+
+  // Detecter et sauvegarder une idee parking list
+  const parkingMatch = finalResponse.match(/PARKING_LIST:\s*(.+)/);
+  if (parkingMatch) {
+    const idea = parkingMatch[1].trim();
+    await saveParkingListItem(userId, idea);
+    finalResponse = finalResponse.replace(/PARKING_LIST:\s*.+/, `Idee notee en parking list : ${idea}`);
   }
 
   // Sauvegarder dans la memoire
