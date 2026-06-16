@@ -3,6 +3,7 @@ import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
 import { getConversationHistory, saveConversationMessage, saveConversationSummary } from "@/lib/mindboost/conversation-memory";
+import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, getNextQuestion, detectClientMention, type ClientIntakeData } from "@/lib/mindboost/client-intake";
 
 const MINDBOOST_SYSTEM_PROMPT = `TU ES MINDBOOST
 Assistant personnel de Daniel. Patron, gerant, controleur financier, conseiller.
@@ -74,6 +75,12 @@ REGLES DE TON :
 export async function processMessageWithAI(userMessage: string): Promise<string> {
   const map = createAnonymizer();
   const userId = process.env.MINDBOOST_USER_ID ?? "unknown";
+
+  // Verifier session intake active
+  const activeIntake = await getActiveIntakeSession(userId);
+  if (activeIntake) {
+    return await processIntakeResponse(activeIntake.session_id, activeIntake.client_name, activeIntake.data as ClientIntakeData, userMessage, userId);
+  }
 
   // Charger le contexte depuis Supabase
   const [summary, alerts, historyData] = await Promise.all([
@@ -153,12 +160,28 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   }
 
   // Ajouter le message actuel
-  messages.push({ role: "user" as const, content: userMessage });
+  // Detecter mention client non enregistre
+  const mentionedClient = detectClientMention(userMessage);
+  let enrichedMessage = userMessage;
+  if (mentionedClient) {
+    enrichedMessage = `${userMessage}\n\n[SYSTEME: Client mentionne: "${mentionedClient}". Si ce client ou cette commande ne figure pas dans les donnees Supabase, propose de creer une session de suivi en disant exactement: NOUVEAU_CLIENT:${mentionedClient}]`;
+  }
+
+  messages.push({ role: "user" as const, content: enrichedMessage });
 
   const response = await callDeepSeek(messages);
 
-  // Re-substituer les vraies valeurs
-  const finalResponse = deanonymize(map, response);
+  // Detecter si DeepSeek veut creer un nouveau client
+  let finalResponse = deanonymize(map, response);
+  const newClientMatch = finalResponse.match(/NOUVEAU_CLIENT:([A-Za-zÀ-ÿ\s]+)/);
+  if (newClientMatch) {
+    const clientName = newClientMatch[1].trim();
+    await createIntakeSession(userId, clientName);
+    finalResponse = finalResponse.replace(/NOUVEAU_CLIENT:[A-Za-zÀ-ÿ\s]+/, "").trim();
+    if (!finalResponse) {
+      finalResponse = `Je ne trouve pas ${clientName} dans l app. Je lance la collecte des infos.\n\nQuel produit ${clientName} a commandé ?`;
+    }
+  }
 
   // Sauvegarder dans la memoire
   const exchangeSummary = `Daniel: ${userMessage}\nMindboost: ${finalResponse}`;
@@ -169,4 +192,71 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   ]);
 
   return finalResponse;
+}
+
+async function processIntakeResponse(
+  sessionId: string,
+  clientName: string,
+  data: ClientIntakeData,
+  userMessage: string,
+  userId: string
+): Promise<string> {
+  const msg = userMessage.trim().toLowerCase();
+  const updates: Partial<ClientIntakeData> = {};
+  let nextStep: ClientIntakeData["step"] = data.step;
+
+  switch (data.step) {
+    case "product":
+      updates.product = userMessage.trim();
+      nextStep = "amount";
+      break;
+
+    case "amount": {
+      const amountMatch = userMessage.match(/(\d+(?:[.,]\d+)?)\s*([A-Za-z€$¥]{1,5})/);
+      if (!amountMatch) return `Format pas reconnu. Exemple : 500 CNY ou 100 USD.`;
+      updates.amount_received = parseFloat(amountMatch[1].replace(",", "."));
+      updates.currency_received = amountMatch[2].toUpperCase();
+      nextStep = "supplier";
+      break;
+    }
+
+    case "supplier":
+      updates.supplier_known = /oui|yes|j.?ai|déjà|deja/i.test(msg);
+      nextStep = "price_china";
+      break;
+
+    case "price_china": {
+      const priceMatch = userMessage.match(/(\d+(?:[.,]\d+)?)/);
+      updates.product_price_china = priceMatch ? parseFloat(priceMatch[1].replace(",", ".")) : undefined;
+      nextStep = "delivery";
+      break;
+    }
+
+    case "delivery":
+      updates.delivery_address = userMessage.trim();
+      nextStep = "contact";
+      break;
+
+    case "contact":
+      updates.client_contacted = /oui|yes|déjà|deja/i.test(msg);
+      nextStep = "review";
+      break;
+
+    case "review":
+      if (/oui|yes|confirme|ok|c.?est bon/i.test(msg)) {
+        await createMindboostTask(userId, "client_order", `Commande ${clientName}`, { ...data });
+        await closeIntakeSession(sessionId, "confirmed");
+        return `Tâche créée pour ${clientName}. Suivi actif.`;
+      } else {
+        await closeIntakeSession(sessionId, "cancelled");
+        return `Session annulée.`;
+      }
+
+    default:
+      return getNextQuestion(data);
+  }
+
+  updates.step = nextStep;
+  await updateIntakeSession(sessionId, updates);
+  return getNextQuestion({ ...data, ...updates });
 }
