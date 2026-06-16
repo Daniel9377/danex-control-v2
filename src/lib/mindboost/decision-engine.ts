@@ -1,4 +1,4 @@
-import { callDeepSeek } from "@/lib/mindboost/deepseek";
+import { callDeepSeek, type DeepSeekMessage } from "@/lib/mindboost/deepseek";
 import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost/anonymizer";
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
@@ -89,9 +89,9 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   ].join("\n");
 
   // Construire les messages avec historique
-  const messages = [
-    { role: "system" as const, content: MINDBOOST_SYSTEM_PROMPT },
-    { role: "user" as const, content: contextBlock },
+  const messages: DeepSeekMessage[] = [
+    { role: "system", content: MINDBOOST_SYSTEM_PROMPT },
+    { role: "user", content: contextBlock },
   ];
 
   // Ajouter l historique de conversation
