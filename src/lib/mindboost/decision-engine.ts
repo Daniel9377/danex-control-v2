@@ -76,9 +76,22 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
     debts: debtList,
   });
 
+  // Heure actuelle en Chine
+  const nowChina = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const heureChine = nowChina.toISOString().slice(11, 16);
+  const momentJournee = (() => {
+    const h = parseInt(heureChine.slice(0, 2));
+    if (h >= 5 && h < 12) return `matin (${heureChine})`;
+    if (h >= 12 && h < 18) return `apres-midi (${heureChine})`;
+    if (h >= 18 && h < 22) return `soir (${heureChine})`;
+    return `nuit (${heureChine})`;
+  })();
+
   const contextBlock = [
     `--- CONTEXTE SUPABASE ANONYMISE ---`,
     `Date: ${summary.date}`,
+    `Heure Chine: ${momentJournee}`,
+    `Info: Daniel complete son app le soir, pas le matin. Ne pas pousser a completer l app avant 18h sauf urgence.`,
     `App completee: ${summary.appCompleted ? "oui" : "non"}`,
     `Transactions: ${summary.transactionCount}`,
     `Vraies depenses: ${summary.realExpenseCount}`,
