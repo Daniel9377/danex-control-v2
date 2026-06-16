@@ -3,7 +3,7 @@ import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
 import { getConversationHistory, saveConversationMessage, saveConversationSummary } from "@/lib/mindboost/conversation-memory";
-import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, getNextQuestion, detectClientMention, type ClientIntakeData } from "@/lib/mindboost/client-intake";
+import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, getNextQuestion, detectClientMention, updateIntakeClientName, type ClientIntakeData } from "@/lib/mindboost/client-intake";
 
 const MINDBOOST_SYSTEM_PROMPT = `TU ES MINDBOOST
 Assistant personnel de Daniel. Patron, gerant, controleur financier, conseiller.
@@ -206,6 +206,14 @@ async function processIntakeResponse(
   let nextStep: ClientIntakeData["step"] = data.step;
 
   switch (data.step) {
+    case "confirm_client": {
+      const newName = userMessage.trim();
+      updates.client_name = newName;
+      await updateIntakeClientName(sessionId, newName);
+      nextStep = "product";
+      break;
+    }
+
     case "product":
       updates.product = userMessage.trim();
       nextStep = "amount";

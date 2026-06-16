@@ -12,7 +12,7 @@ import { processMessageWithAI } from "@/lib/mindboost/decision-engine";
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { evaluateEscalationLevel, logEscalation, applyEscalationToReply, checkAndUpdateAlertCooldown } from "@/lib/mindboost/escalation";
 import { incrementLoopCount, resetLoopCount } from "@/lib/mindboost/conversation-memory";
-import { getActiveIntakeSession } from "@/lib/mindboost/client-intake";
+import { getActiveIntakeSession, detectIntakeTrigger, startIntakeSession } from "@/lib/mindboost/client-intake";
 
 export const runtime = "nodejs";
 
@@ -46,7 +46,24 @@ async function processText(text: string, chatId: number | string): Promise<void>
     return;
   }
 
-  // Active intake = concrete action → bypass escalation + loop entirely
+  // Intake trigger detection (synchronous) — must run BEFORE any DB/AI call
+  const trigger = detectIntakeTrigger(text);
+  if (trigger.triggered) {
+    const activeIntake = await getActiveIntakeSession(userId);
+    if (activeIntake) {
+      await sendTelegramMessage(
+        chatId,
+        `Tu as déjà un intake en cours pour ${activeIntake.client_name}. Veux-tu l'abandonner ? (oui / non)`
+      );
+      return;
+    }
+    const { firstQuestion } = await startIntakeSession(userId, trigger.clientName);
+    await resetLoopCount(userId);
+    await sendTelegramMessage(chatId, firstQuestion);
+    return;
+  }
+
+  // Active intake (ongoing response) — bypass escalation + loop entirely
   const activeIntake = await getActiveIntakeSession(userId);
   if (activeIntake) {
     const reply = await processMessageWithAI(text);

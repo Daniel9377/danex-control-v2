@@ -109,6 +109,8 @@ export async function createMindboostTask(
 
 export function getNextQuestion(data: ClientIntakeData): string {
   switch (data.step) {
+    case "confirm_client":
+      return "Quel est le nom du client ?";
     case "product":
       return `Quel produit ${data.client_name} a commandé ?`;
     case "amount":
@@ -141,6 +143,57 @@ function buildReviewMessage(data: ClientIntakeData): string {
     `Je confirme et crée la tâche ? (oui / non)`,
   ];
   return lines.join("\n");
+}
+
+export async function updateIntakeClientName(sessionId: string, clientName: string): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase
+    .from("mindboost_client_intake")
+    .update({ client_name: clientName, updated_at: new Date().toISOString() })
+    .eq("session_id", sessionId);
+}
+
+const INTAKE_TRIGGER_PATTERNS = [
+  /nouveau\s+client/i,
+  /ajouter.{0,10}client/i,
+  /j[e']?ai.{0,15}client/i,
+  /cr[eé]er.{0,10}client/i,
+  /new\s+client/i,
+];
+
+const NAME_AFTER_TRIGGER = /(?:nouveau\s+client|new\s+client|ajouter.{0,10}client|cr[eé]er.{0,10}client|j[e']?ai.{0,15}client)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'-]*)/i;
+
+export function detectIntakeTrigger(message: string): { triggered: boolean; clientName: string | null } {
+  const triggered = INTAKE_TRIGGER_PATTERNS.some((p) => p.test(message));
+  if (!triggered) return { triggered: false, clientName: null };
+  const nameMatch = message.match(NAME_AFTER_TRIGGER);
+  return { triggered: true, clientName: nameMatch?.[1] ?? null };
+}
+
+export async function startIntakeSession(
+  userId: string,
+  clientName: string | null
+): Promise<{ session: ClientIntakeSession; firstQuestion: string }> {
+  const supabase = createAdminClient();
+  const name = clientName ?? "?";
+  const step: ClientIntakeData["step"] = clientName ? "product" : "confirm_client";
+  const sessionId = `intake_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  const { data, error } = await supabase
+    .from("mindboost_client_intake")
+    .insert({
+      user_id: userId,
+      session_id: sessionId,
+      client_name: name,
+      status: "collecting",
+      data: { client_name: name, step },
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Intake session error: ${error.message}`);
+  const firstQuestion = getNextQuestion({ client_name: name, step } as ClientIntakeData);
+  return { session: data as ClientIntakeSession, firstQuestion };
 }
 
 export function detectClientMention(message: string): string | null {
