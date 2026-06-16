@@ -8,22 +8,39 @@ export type ConversationMessage = {
 
 const MAX_HISTORY = 5;
 
-export async function getConversationHistory(userId: string): Promise<ConversationMessage[]> {
+export type ConversationHistoryResult = {
+  messages: ConversationMessage[];
+  summary: string | null;
+};
+
+export async function getConversationHistory(userId: string): Promise<ConversationHistoryResult> {
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
-    .from("mindboost_conversation")
-    .select("role, content, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(MAX_HISTORY);
+  const [messagesResult, summaryResult] = await Promise.all([
+    supabase
+      .from("mindboost_conversation")
+      .select("role, content, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(MAX_HISTORY),
+    supabase
+      .from("mindboost_conversation_summary")
+      .select("summary")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single(),
+  ]);
 
-  if (error) {
-    console.error("Error fetching conversation history:", error.message);
-    return [];
+  if (messagesResult.error) {
+    console.error("Error fetching conversation history:", messagesResult.error.message);
+    return { messages: [], summary: null };
   }
 
-  return ((data ?? []) as ConversationMessage[]).reverse();
+  const messages = ((messagesResult.data ?? []) as ConversationMessage[]).reverse();
+  const summary = summaryResult.data?.summary ?? null;
+
+  return { messages, summary };
 }
 
 export async function saveConversationMessage(

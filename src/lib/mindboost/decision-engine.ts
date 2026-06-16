@@ -58,11 +58,12 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   const userId = process.env.MINDBOOST_USER_ID ?? "unknown";
 
   // Charger le contexte depuis Supabase
-  const [summary, alerts, history] = await Promise.all([
+  const [summary, alerts, historyData] = await Promise.all([
     getMindboostTodaySummary(),
     getMindboostAlerts(),
     getConversationHistory(userId),
   ]);
+  const { messages: history, summary: conversationSummary } = historyData;
 
   // Preparer les donnees pour anonymisation
   const debtList = alerts.debts.map((d) => ({
@@ -93,6 +94,14 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
     { role: "system", content: MINDBOOST_SYSTEM_PROMPT },
     { role: "user", content: contextBlock },
   ];
+
+  // Ajouter le résumé des anciennes conversations si disponible
+  if (conversationSummary) {
+    messages.push({
+      role: "user",
+      content: `Résumé des conversations précédentes:\n${conversationSummary}`,
+    });
+  }
 
   // Ajouter l historique de conversation
   for (const msg of history) {
