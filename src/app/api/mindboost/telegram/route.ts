@@ -5,7 +5,7 @@ import {
   isAllowedTelegramChat,
   sendTelegramMessage,
   downloadTelegramPhoto,
-  analyzeImageWithClaude,
+  analyzeImage,
   type TelegramUpdate,
 } from "@/lib/mindboost/telegram";
 import { processMessageWithAI } from "@/lib/mindboost/decision-engine";
@@ -85,7 +85,7 @@ async function processText(text: string, chatId: number | string): Promise<void>
 async function processPhoto(fileId: string, chatId: number | string): Promise<void> {
   try {
     const base64 = await downloadTelegramPhoto(fileId);
-    const description = await analyzeImageWithClaude(base64);
+    const description = await analyzeImage(base64);
     await sendTelegramMessage(chatId, description);
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

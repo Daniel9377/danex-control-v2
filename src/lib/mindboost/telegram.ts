@@ -128,32 +128,25 @@ export async function downloadTelegramPhoto(fileId: string): Promise<string> {
   return Buffer.from(buffer).toString("base64");
 }
 
-export async function analyzeImageWithClaude(base64Image: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("Missing env var: ANTHROPIC_API_KEY");
+export async function analyzeImage(base64Image: string): Promise<string> {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) throw new Error("Missing env var: DEEPSEEK_API_KEY");
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
     method: "POST",
     headers: {
+      "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 500,
+      model: "deepseek-chat",
+      max_tokens: 1000,
       messages: [
         {
           role: "user",
           content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: "image/jpeg", data: base64Image },
-            },
-            {
-              type: "text",
-              text: "Décris ce que tu vois sur cette image dans le contexte d'une activité commerciale import/export entre la Chine et l'Afrique. Sois précis et factuel. Texte brut, pas de markdown.",
-            },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+            { type: "text", text: "Décris cette image dans un contexte import/export Chine-Afrique." },
           ],
         },
       ],
@@ -162,11 +155,11 @@ export async function analyzeImageWithClaude(base64Image: string): Promise<strin
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`Claude API error: ${response.status} ${err}`);
+    throw new Error(`DeepSeek API error: ${response.status} ${err}`);
   }
 
-  const data = await response.json() as { content: Array<{ text: string }> };
-  return data.content[0]?.text ?? "Impossible d'analyser l'image.";
+  const data = await response.json() as { choices: Array<{ message: { content: string } }> };
+  return data.choices[0]?.message?.content ?? "Impossible d'analyser l'image.";
 }
 
 export async function handleTelegramCommand(text: string) {
