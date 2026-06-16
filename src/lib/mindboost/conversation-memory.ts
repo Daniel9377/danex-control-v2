@@ -43,6 +43,31 @@ export async function getConversationHistory(userId: string): Promise<Conversati
   return { messages, summary };
 }
 
+export async function saveConversationSummary(
+  userId: string,
+  summary: string
+): Promise<void> {
+  const supabase = createAdminClient();
+
+  await supabase.from("mindboost_conversation_summary").insert({
+    user_id: userId,
+    summary,
+    created_at: new Date().toISOString(),
+  });
+
+  // Garder seulement les 5 derniers résumés
+  const { data } = await supabase
+    .from("mindboost_conversation_summary")
+    .select("id, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (data && data.length > 5) {
+    const toDelete = data.slice(5).map((d: { id: string }) => d.id);
+    await supabase.from("mindboost_conversation_summary").delete().in("id", toDelete);
+  }
+}
+
 export async function saveConversationMessage(
   userId: string,
   role: "user" | "assistant",
