@@ -10,8 +10,9 @@ import {
 } from "@/lib/mindboost/telegram";
 import { processMessageWithAI } from "@/lib/mindboost/decision-engine";
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
-import { evaluateEscalationLevel, logEscalation, applyEscalationToReply } from "@/lib/mindboost/escalation";
+import { evaluateEscalationLevel, logEscalation, applyEscalationToReply, checkAndUpdateAlertCooldown } from "@/lib/mindboost/escalation";
 import { incrementLoopCount, resetLoopCount } from "@/lib/mindboost/conversation-memory";
+import { getActiveIntakeSession } from "@/lib/mindboost/client-intake";
 
 export const runtime = "nodejs";
 
@@ -37,6 +38,7 @@ function isSlashCommand(text: string): boolean {
 async function processText(text: string, chatId: number | string): Promise<void> {
   const userId = MINDBOOST_USER_ID;
 
+  // Slash commands = concrete action → reset loop, skip escalation
   if (isSlashCommand(text)) {
     const reply = await handleTelegramCommand(text);
     await resetLoopCount(userId);
@@ -44,7 +46,16 @@ async function processText(text: string, chatId: number | string): Promise<void>
     return;
   }
 
-  // Run AI + alerts in parallel
+  // Active intake = concrete action → bypass escalation + loop entirely
+  const activeIntake = await getActiveIntakeSession(userId);
+  if (activeIntake) {
+    const reply = await processMessageWithAI(text);
+    await resetLoopCount(userId);
+    await sendTelegramMessage(chatId, reply);
+    return;
+  }
+
+  // No active intake: run AI + alerts in parallel
   const [reply, alerts] = await Promise.all([
     processMessageWithAI(text),
     getMindboostAlerts(),
@@ -68,17 +79,24 @@ async function processText(text: string, chatId: number | string): Promise<void>
     await logEscalation(userId, text, 5, "manual_trigger");
   }
 
-  // Level >= 2: log escalation
-  if (level >= 2) {
-    const reason = level === 3 ? "critical_order" : "financial_alert";
-    await logEscalation(userId, text, level, reason);
+  let finalReply = reply;
+
+  if (level === 1) {
+    finalReply = applyEscalationToReply(reply, 1);
+  } else if (level === 2) {
+    // Cooldown 3h: ne pas spammer l'alerte financière
+    const canAlert = await checkAndUpdateAlertCooldown(userId);
+    if (canAlert) {
+      await logEscalation(userId, text, 2, "financial_alert");
+      finalReply = applyEscalationToReply(reply, 2);
+    }
+  } else if (level === 3) {
+    await logEscalation(userId, text, 3, "critical_order");
+    finalReply = applyEscalationToReply(reply, 3);
   }
 
-  const finalReply = applyEscalationToReply(reply, level);
-
-  // Track loop counter: AI text reply with no concrete action = increment
+  // Plain text reply = no concrete action → increment loop counter
   await incrementLoopCount(userId);
-
   await sendTelegramMessage(chatId, finalReply);
 }
 

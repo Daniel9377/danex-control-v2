@@ -242,8 +242,11 @@ async function processIntakeResponse(
       nextStep = "review";
       break;
 
-    case "review":
-      if (/oui|yes|confirme|ok|c.?est bon/i.test(msg)) {
+    case "review": {
+      const confirmed =
+        ["oui", "yes", "ok", "confirme", "c'est bon", "cest bon"].includes(msg) ||
+        /\boui\b|\byes\b|\bok\b|\bconfirme\b/i.test(msg);
+      if (confirmed) {
         await createMindboostTask(userId, "client_order", `Commande ${clientName}`, { ...data });
         await closeIntakeSession(sessionId, "confirmed");
         return `Tâche créée pour ${clientName}. Suivi actif.`;
@@ -251,6 +254,7 @@ async function processIntakeResponse(
         await closeIntakeSession(sessionId, "cancelled");
         return `Session annulée.`;
       }
+    }
 
     default:
       return getNextQuestion(data);

@@ -1,6 +1,38 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AlertsReport } from "@/lib/mindboost/alerts";
 
+const ALERT_COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3 hours
+
+export async function checkAndUpdateAlertCooldown(userId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+
+  const { data } = await supabase
+    .from("mindboost_memory")
+    .select("updated_at")
+    .eq("user_id", userId)
+    .eq("memory_type", "alert_cooldown")
+    .single();
+
+  const now = Date.now();
+  if (data?.updated_at) {
+    const lastAlert = new Date(data.updated_at as string).getTime();
+    if (now - lastAlert < ALERT_COOLDOWN_MS) return false;
+  }
+
+  await supabase.from("mindboost_memory").upsert(
+    {
+      user_id: userId,
+      memory_type: "alert_cooldown",
+      content: JSON.stringify({ last_alert: new Date().toISOString() }),
+      relevance_score: 1,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,memory_type" }
+  );
+
+  return true;
+}
+
 const LEVEL1_KEYWORDS = [
   "urgent", "urgente", "urgence", "problème", "probleme", "bloqué", "bloque",
   "impossible", "aide", "crisis", "critique", "perdu", "paniqué", "panique",
