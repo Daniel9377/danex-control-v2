@@ -6,24 +6,24 @@ import {
   sendTelegramMessage,
   type TelegramUpdate,
 } from "@/lib/mindboost/telegram";
+import { processMessageWithAI } from "@/lib/mindboost/decision-engine";
 
 export const runtime = "nodejs";
 
 function requireWebhookSecret() {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-
-  if (!secret) {
-    throw new Error("Missing env var: TELEGRAM_WEBHOOK_SECRET");
-  }
-
+  if (!secret) throw new Error("Missing env var: TELEGRAM_WEBHOOK_SECRET");
   return secret;
 }
 
 function isValidTelegramWebhook(request: NextRequest) {
   const expectedSecret = requireWebhookSecret();
   const receivedSecret = request.headers.get("x-telegram-bot-api-secret-token");
-
   return receivedSecret === expectedSecret;
+}
+
+function isSlashCommand(text: string): boolean {
+  return text.trim().startsWith("/");
 }
 
 export async function GET() {
@@ -54,30 +54,26 @@ export async function POST(request: NextRequest) {
     }
 
     const text = message.text ?? "";
-    const reply = await handleTelegramCommand(text);
-
     const { searchParams } = new URL(request.url);
     const dryRun = searchParams.get("dryRun") === "1";
+
+    let reply: string;
+
+    if (isSlashCommand(text)) {
+      reply = await handleTelegramCommand(text);
+    } else {
+      reply = await processMessageWithAI(text);
+    }
 
     if (!dryRun) {
       await sendTelegramMessage(chatId, reply);
     }
 
-    return NextResponse.json({
-      ok: true,
-      dryRun,
-      reply,
-    });
+    return NextResponse.json({ ok: true, dryRun, reply });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown Telegram webhook error";
-
+    const message = error instanceof Error ? error.message : "Unknown Telegram webhook error";
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Mindboost Telegram webhook failed",
-        message,
-      },
+      { ok: false, error: "Mindboost Telegram webhook failed", message },
       { status: 500 }
     );
   }
