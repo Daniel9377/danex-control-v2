@@ -173,11 +173,11 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
 
   // Detecter si DeepSeek veut creer un nouveau client
   let finalResponse = deanonymize(map, response);
-  const newClientMatch = finalResponse.match(/NOUVEAU_CLIENT:([A-Za-zÀ-ÿ\s]+)/);
+  const newClientMatch = finalResponse.match(/NOUVEAU_CLIENT:(\S+)/);
   if (newClientMatch) {
     const clientName = newClientMatch[1].trim();
     await createIntakeSession(userId, clientName);
-    finalResponse = finalResponse.replace(/NOUVEAU_CLIENT:[A-Za-zÀ-ÿ\s]+/, "").trim();
+    finalResponse = finalResponse.replace(/NOUVEAU_CLIENT:\S+/, "").trim();
     if (!finalResponse) {
       finalResponse = `Je ne trouve pas ${clientName} dans l app. Je lance la collecte des infos.\n\nQuel produit ${clientName} a commandé ?`;
     }

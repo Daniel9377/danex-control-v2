@@ -127,6 +127,7 @@ export async function incrementLoopCount(userId: string): Promise<number> {
       content: JSON.stringify({ count: newCount, last_updated: new Date().toISOString() }),
       relevance_score: 1,
       expires_at: expires,
+      updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,memory_type" }
   );
