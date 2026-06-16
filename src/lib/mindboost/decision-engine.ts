@@ -77,14 +77,24 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   const { messages: history, summary: conversationSummary } = historyData;
 
   // Preparer les donnees pour anonymisation
-  const debtList = alerts.debts.map((d) => ({
+  const iOwe = alerts.debts.filter((d) => d.direction === "i_owe");
+  const owesMe = alerts.debts.filter((d) => d.direction === "owes_me");
+
+  const iOweList = iOwe.map((d) => ({
+    person_name: d.person_name,
+    amount: d.amount,
+    currency: d.currency,
+  }));
+
+  const owesMeList = owesMe.map((d) => ({
     person_name: d.person_name,
     amount: d.amount,
     currency: d.currency,
   }));
 
   const anonymizedContext = anonymizeContext(map, {
-    debts: debtList,
+    debts: iOweList,
+    owesMe: owesMeList,
   });
 
   // Heure actuelle en Chine

@@ -52,6 +52,7 @@ export function anonymizeContext(
   context: {
     clients?: Array<{ id: string; name: string }>;
     debts?: Array<{ person_name: string; amount: number; currency: string }>;
+    owesMe?: Array<{ person_name: string; amount: number; currency: string }>;
     amounts?: Array<{ value: number; currency: string; label: string }>;
   }
 ): string {
@@ -67,10 +68,17 @@ export function anonymizeContext(
   }
 
   if (context.debts && context.debts.length > 0) {
-    lines.push("Dettes actives:");
+    lines.push("Je dois (dettes):");
     for (const debt of context.debts) {
       const nameToken = anonymize(map, debt.person_name, "entity");
-      // Montant envoye en clair, seul le nom est anonymise
+      lines.push(`- ${nameToken}: ${debt.amount} ${debt.currency}`);
+    }
+  }
+
+  if (context.owesMe && context.owesMe.length > 0) {
+    lines.push("On me doit (creances):");
+    for (const debt of context.owesMe) {
+      const nameToken = anonymize(map, debt.person_name, "entity");
       lines.push(`- ${nameToken}: ${debt.amount} ${debt.currency}`);
     }
   }
