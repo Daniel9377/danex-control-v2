@@ -2,21 +2,27 @@
 import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost/anonymizer";
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
+import { getConversationHistory, saveConversationMessage } from "@/lib/mindboost/conversation-memory";
 
 const MINDBOOST_SYSTEM_PROMPT = `TU ES MINDBOOST
 Assistant personnel de Daniel. Patron, gerant, controleur financier, conseiller.
 Tu travailles AVEC Daniel, pas seulement pour lui.
 
 REGLES ABSOLUES
-1. Source de verite = donnees fournies. Tu n inventes aucun chiffre.
-2. L argent client est intouchable. Toujours separe de l argent personnel.
-3. L argent futur n existe pas. Pas de depense sur une promesse non recue.
-4. Une priorite urgente active = aucune nouvelle idee analysee avant resolution.
-5. L app reste le registre officiel. Telegram = communication uniquement.
+1. Source de verite = donnees fournies. Tu n inventes AUCUN chiffre, AUCUN nom, AUCUN detail.
+2. Si une dette s appelle ENTITY_001 dans les donnees, tu dis "cette dette" pas un nom invente.
+3. L argent client est intouchable. Toujours separe de l argent personnel.
+4. L argent futur n existe pas. Pas de depense sur une promesse non recue.
+5. Une priorite urgente active = aucune nouvelle idee analysee avant resolution.
+6. L app reste le registre officiel. Telegram = communication uniquement.
+7. Tu te souviens de la conversation precedente. Tu ne repetes pas ce que tu as deja dit.
+8. Si Daniel pose une question sur quelque chose que tu as mentionne, explique-le clairement.
 
 PHILOSOPHIE DE REPONSE
 Court si simple. Direct si faut stopper. Calme si Daniel est bloque.
 Dur si Daniel fuit. Jamais insultant. Jamais de flatterie. Jamais de motivation sans action.
+Ne repete JAMAIS la meme chose deux fois dans la meme conversation.
+Si Daniel demande une explication, donne-la clairement et completement.
 
 STRUCTURE DE REPONSE
 1. Constater les faits.
@@ -33,14 +39,12 @@ ACHAT URGENT : client paye + achat non fait + tout pret = exiger l action mainte
 DETTE : dette urgente passe avant toute depense plaisir.
 APP : non completee soir = rappel calme. Max 2 rappels par 24h.
 
-ESCALADE (urgences verifiees uniquement)
-N0 : question calme. N1 : rappel ferme 10 min. N2 : pression directe 5 min.
-N3 : demande de preuve 2 min. N4 : pause 20-30 min. N5 : resume froid.
-
 CE QUE TU NE FAIS JAMAIS
-Insulter Daniel. Inventer des chiffres. Harceler sur des non-urgences.
+Insulter Daniel. Inventer des chiffres ou des noms. Harceler sur des non-urgences.
 Modifier les donnees officielles. Encourager une idee qui eloigne de la priorite.
 Flatter sans raison. Decider sur des suppositions sans donnees.
+Repeter exactement la meme reponse que le message precedent.
+Inventer un type de dette, une carte, un compte ou un nom que tu n as pas dans les donnees.
 
 FORMAT
 Telegram = messages courts. Max 5 lignes sauf rapport ou plan structure.
@@ -50,11 +54,13 @@ Langue : francais par defaut.`;
 
 export async function processMessageWithAI(userMessage: string): Promise<string> {
   const map = createAnonymizer();
+  const userId = process.env.MINDBOOST_USER_ID ?? "unknown";
 
   // Charger le contexte depuis Supabase
-  const [summary, alerts] = await Promise.all([
+  const [summary, alerts, history] = await Promise.all([
     getMindboostTodaySummary(),
     getMindboostAlerts(),
+    getConversationHistory(userId),
   ]);
 
   // Preparer les donnees pour anonymisation
@@ -66,13 +72,6 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
 
   const anonymizedContext = anonymizeContext(map, {
     debts: debtList,
-    amounts: [
-      {
-        value: summary.transactionCount,
-        currency: "transactions",
-        label: "Transactions du jour",
-      },
-    ],
   });
 
   const contextBlock = [
@@ -85,14 +84,36 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
     `Urgences: ${alerts.hasUrgentIssues ? "oui" : "non"}`,
     anonymizedContext,
     `--- FIN CONTEXTE ---`,
+    `IMPORTANT: N invente aucun nom, type ou detail qui ne figure pas dans ce contexte.`,
   ].join("\n");
 
-  const response = await callDeepSeek([
-    { role: "system", content: MINDBOOST_SYSTEM_PROMPT },
-    { role: "user", content: contextBlock },
-    { role: "user", content: userMessage },
-  ]);
+  // Construire les messages avec historique
+  const messages = [
+    { role: "system" as const, content: MINDBOOST_SYSTEM_PROMPT },
+    { role: "user" as const, content: contextBlock },
+  ];
+
+  // Ajouter l historique de conversation
+  for (const msg of history) {
+    messages.push({
+      role: msg.role as "user" | "assistant",
+      content: msg.content,
+    });
+  }
+
+  // Ajouter le message actuel
+  messages.push({ role: "user" as const, content: userMessage });
+
+  const response = await callDeepSeek(messages);
 
   // Re-substituer les vraies valeurs
-  return deanonymize(map, response);
+  const finalResponse = deanonymize(map, response);
+
+  // Sauvegarder dans la memoire
+  await Promise.all([
+    saveConversationMessage(userId, "user", userMessage),
+    saveConversationMessage(userId, "assistant", finalResponse),
+  ]);
+
+  return finalResponse;
 }
