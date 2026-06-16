@@ -19,6 +19,7 @@ export type TelegramMessage = {
   message_id: number;
   text?: string;
   photo?: TelegramPhotoSize[];
+  voice?: { file_id: string; duration?: number };
   chat: {
     id: number | string;
     type?: string;
@@ -108,6 +109,7 @@ export function getHelpMessage() {
     "/week - rapport hebdomadaire",
     "/month - rapport mensuel",
     "/agenda - evenements 3 prochains jours",
+    "/todo - liste des taches en attente",
     "/parking - liste des idees en attente",
     "/help - aide",
     "",
@@ -128,6 +130,47 @@ export async function downloadTelegramPhoto(fileId: string): Promise<string> {
 
   const buffer = await imgRes.arrayBuffer();
   return Buffer.from(buffer).toString("base64");
+}
+
+export async function downloadTelegramVoice(fileId: string): Promise<Buffer> {
+  const token = requireEnv("TELEGRAM_BOT_TOKEN");
+
+  const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+  if (!fileRes.ok) throw new Error(`Telegram getFile failed: ${fileRes.status}`);
+  const fileData = await fileRes.json() as { result: { file_path: string } };
+  const filePath = fileData.result.file_path;
+
+  const audioRes = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`);
+  if (!audioRes.ok) throw new Error(`Telegram voice download failed: ${audioRes.status}`);
+
+  const buffer = await audioRes.arrayBuffer();
+  return Buffer.from(buffer);
+}
+
+export async function transcribeVoice(audioBuffer: Buffer): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
+
+  const formData = new FormData();
+  const uint8 = new Uint8Array(audioBuffer);
+  const blob = new Blob([uint8], { type: "audio/ogg" });
+  formData.append("file", blob, "voice.ogg");
+  formData.append("model", "whisper-1");
+  formData.append("language", "fr");
+
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Whisper API error: ${response.status} ${err}`);
+  }
+
+  const data = await response.json() as { text: string };
+  return data.text ?? "";
 }
 
 export async function analyzeImage(base64Image: string): Promise<string> {
@@ -199,6 +242,45 @@ export async function handleTelegramCommand(text: string) {
   if (cleanText === "/month") {
     const report = await getMindboostMonthlyReport();
     return formatMonthlyReport(report);
+  }
+
+  if (cleanText === "/todo") {
+    const userId = process.env.MINDBOOST_USER_ID ?? "unknown";
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const supabase = createAdminClient();
+    const { data: tasks } = await supabase
+      .from("mindboost_tasks")
+      .select("id, type, title, status, data")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+
+    if (!tasks || tasks.length === 0) {
+      return "Aucune tache en attente. Bonne journee.";
+    }
+
+    type Task = { id: string; type: string; title: string; status: string; data: Record<string, unknown> };
+    const orders = (tasks as Task[]).filter((t) => t.type === "client_order");
+    const personal = (tasks as Task[]).filter((t) => t.type === "personal");
+    const lines = ["Todo list :", ""];
+
+    if (orders.length > 0) {
+      lines.push(`Commandes clients (${orders.length}) :`);
+      orders.forEach((t, i) => {
+        const clientName = (t.data as { client_name?: string })?.client_name ?? "";
+        lines.push(`${i + 1}. Commande ${clientName} — ${t.title} (${t.status})`);
+      });
+      lines.push("");
+    }
+
+    if (personal.length > 0) {
+      lines.push(`Taches personnelles (${personal.length}) :`);
+      personal.forEach((t, i) => lines.push(`${i + 1}. ${t.title}`));
+      lines.push("");
+    }
+
+    lines.push(`Total : ${tasks.length} tache(s) en attente.`);
+    return lines.join("\n");
   }
 
   if (cleanText === "/parking") {

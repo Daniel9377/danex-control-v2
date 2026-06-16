@@ -6,6 +6,8 @@ import {
   sendTelegramMessage,
   downloadTelegramPhoto,
   analyzeImage,
+  downloadTelegramVoice,
+  transcribeVoice,
   type TelegramUpdate,
 } from "@/lib/mindboost/telegram";
 import { processMessageWithAI } from "@/lib/mindboost/decision-engine";
@@ -89,6 +91,15 @@ async function processText(text: string, chatId: number | string): Promise<void>
         "Pas de probleme. Prends 2 minutes avant de dormir.\nAlimentation, transport, autres — note les dans l app.\nJe verifie demain matin."
       );
     }
+    return;
+  }
+
+  // Natural language todo shortcut
+  const todoShortcut = /qu.?est.?ce que j.?ai.{0,20}faire|mes t[aâ]ches|ma liste|\btodo\b/i;
+  if (todoShortcut.test(text)) {
+    const reply = await handleTelegramCommand("/todo");
+    await resetLoopCount(userId);
+    await sendTelegramMessage(chatId, reply);
     return;
   }
 
@@ -234,6 +245,30 @@ export async function POST(request: NextRequest) {
 
     after(async () => {
       await processPhoto(fileId, chatId);
+    });
+
+    return NextResponse.json({ ok: true });
+  }
+
+  // Voice message
+  if (message.voice) {
+    const fileId = message.voice.file_id;
+
+    if (dryRun) {
+      return NextResponse.json({ ok: true, dryRun: true, reply: `[voice] file_id: ${fileId}` });
+    }
+
+    after(async () => {
+      try {
+        const buffer = await downloadTelegramVoice(fileId);
+        const transcribedText = await transcribeVoice(buffer);
+        await sendTelegramMessage(chatId, `[Vocal transcrit] : ${transcribedText}`);
+        await processText(transcribedText, chatId);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Unknown error";
+        console.error("[Mindboost] Voice processing error:", msg);
+        await sendTelegramMessage(chatId, "Je n'ai pas pu lire ce vocal. Essaie d'envoyer un message texte.");
+      }
     });
 
     return NextResponse.json({ ok: true });

@@ -67,6 +67,20 @@ export async function GET(req: NextRequest) {
       await sendTelegramMessage(chatId, message);
     }
 
+    // Personal task reminder
+    const { data: pendingTasks } = await supabase
+      .from('mindboost_tasks')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+      .eq('type', 'personal');
+    if (pendingTasks && pendingTasks.length > 0) {
+      await sendTelegramMessage(
+        chatId,
+        `Tu as ${pendingTasks.length} tache(s) personnelle(s) en attente. Envoie /todo pour voir la liste.`
+      );
+    }
+
     // Proactive urgent purchase alerts
     const urgentPurchases = await getUrgentPurchaseAlerts(userId);
     for (const purchase of urgentPurchases) {

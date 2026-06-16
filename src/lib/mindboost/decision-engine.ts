@@ -103,6 +103,16 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
     return await processIntakeResponse(activeIntake.session_id, activeIntake.client_name, activeIntake.data as ClientIntakeData, userMessage, userId);
   }
 
+  // Task completion — check BEFORE DeepSeek, skip AI if match found
+  const completedTask = await detectTaskCompletion(userId, userMessage);
+  if (completedTask) {
+    await Promise.all([
+      saveConversationMessage(userId, "user", userMessage),
+      saveConversationMessage(userId, "assistant", `Tache marquee comme faite : ${completedTask}. Bien.`),
+    ]);
+    return `Tache marquee comme faite : ${completedTask}. Bien.`;
+  }
+
   const busyKeywords = /en cours|en r[eé]union|en classe|en exam|je peux pas|occup[eé]|je suis pas dispo/i;
   const mentionsBusy = busyKeywords.test(userMessage);
 
@@ -234,6 +244,12 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
     finalResponse = finalResponse.replace(/PARKING_LIST:\s*.+/, `Idee notee en parking list : ${idea}`);
   }
 
+  // Detecter et sauvegarder une tache personnelle
+  const savedTask = await detectAndSaveTasks(userId, userMessage);
+  if (savedTask) {
+    finalResponse = `${finalResponse}\nTache ajoutee : ${savedTask}`;
+  }
+
   // Sauvegarder dans la memoire
   const exchangeSummary = `Daniel: ${userMessage}\nMindboost: ${finalResponse}`;
   await Promise.all([
@@ -243,6 +259,118 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   ]);
 
   return finalResponse;
+}
+
+const TASK_CREATION_PATTERNS: RegExp[] = [
+  /je dois (.+)/i,
+  /il faut que je (.+)/i,
+  /n'oublie pas (.+)/i,
+  /rappelle.?moi (.+)/i,
+  /ajoute.{0,10}t[aâ]che (.+)/i,
+  /todo[: ] (.+)/i,
+];
+
+const TASK_COMPLETION_PATTERNS: RegExp[] = [
+  /j'ai (.+)/i,
+  /c'est fait (.+)/i,
+  /termin[eé] (.+)/i,
+  /^fait (.+)/i,
+  /trouv[eé] (.+)/i,
+];
+
+function levenshteinTask(a: string, b: string): number {
+  const la = Math.min(a.length, 40);
+  const lb = Math.min(b.length, 40);
+  const dp: number[][] = Array.from({ length: la + 1 }, (_, i) =>
+    Array.from({ length: lb + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= la; i++) {
+    for (let j = 1; j <= lb; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[la][lb];
+}
+
+function shareConsecutiveWords(phrase: string, title: string, minWords = 3): boolean {
+  const words = phrase.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  const titleLower = title.toLowerCase();
+  for (let i = 0; i <= words.length - minWords; i++) {
+    const chunk = words.slice(i, i + minWords).join(" ");
+    if (titleLower.includes(chunk)) return true;
+  }
+  return false;
+}
+
+async function detectAndSaveTasks(
+  userId: string,
+  userMessage: string
+): Promise<string | null> {
+  for (const pattern of TASK_CREATION_PATTERNS) {
+    const m = userMessage.match(pattern);
+    if (m) {
+      const title = m[1].trim().replace(/^./, (c) => c.toLowerCase());
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const supabase = createAdminClient();
+      await supabase.from("mindboost_tasks").insert({
+        user_id: userId,
+        type: "personal",
+        title,
+        data: { source: "telegram", detected_from: userMessage },
+        status: "pending",
+      });
+      return title;
+    }
+  }
+  return null;
+}
+
+async function detectTaskCompletion(
+  userId: string,
+  userMessage: string
+): Promise<string | null> {
+  let captured: string | null = null;
+  for (const pattern of TASK_COMPLETION_PATTERNS) {
+    const m = userMessage.match(pattern);
+    if (m) { captured = m[1].trim(); break; }
+  }
+  if (!captured) return null;
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createAdminClient();
+  const { data: tasks } = await supabase
+    .from("mindboost_tasks")
+    .select("id, title")
+    .eq("user_id", userId)
+    .eq("type", "personal")
+    .eq("status", "pending");
+
+  if (!tasks || tasks.length === 0) return null;
+
+  let bestId: string | null = null;
+  let bestTitle: string | null = null;
+  let bestDist = Infinity;
+
+  for (const task of tasks as { id: string; title: string }[]) {
+    if (shareConsecutiveWords(captured, task.title)) {
+      bestId = task.id;
+      bestTitle = task.title;
+      break;
+    }
+    const dist = levenshteinTask(captured.toLowerCase(), task.title.toLowerCase());
+    if (dist <= 10 && dist < bestDist) {
+      bestDist = dist;
+      bestId = task.id;
+      bestTitle = task.title;
+    }
+  }
+
+  if (!bestId) return null;
+  await supabase.from("mindboost_tasks").update({ status: "done" }).eq("id", bestId);
+  return bestTitle;
 }
 
 async function processIntakeResponse(
