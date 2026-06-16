@@ -148,19 +148,60 @@ function buildReviewMessage(data: ClientIntakeData): string {
   return lines.join("\n");
 }
 
+function levenshtein(a: string, b: string): number {
+  const la = Math.min(a.length, 20);
+  const lb = Math.min(b.length, 20);
+  const dp: number[][] = Array.from({ length: la + 1 }, (_, i) =>
+    Array.from({ length: lb + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= la; i++) {
+    for (let j = 1; j <= lb; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[la][lb];
+}
+
 export async function searchExistingClient(
   userId: string,
   name: string
 ): Promise<{ id: string; name: string } | null> {
   const supabase = createAdminClient();
-  const { data } = await supabase
+
+  // Exact substring match first (fast path)
+  const { data: exact } = await supabase
     .from("clients")
     .select("id, name")
     .eq("user_id", userId)
     .ilike("name", `%${name}%`)
     .limit(1)
     .single();
-  return data ?? null;
+  if (exact) return exact;
+
+  // Fuzzy fallback: load all client names and apply Levenshtein
+  const { data: all } = await supabase
+    .from("clients")
+    .select("id, name")
+    .eq("user_id", userId)
+    .limit(50);
+  if (!all || all.length === 0) return null;
+
+  const input = name.toLowerCase();
+  let best: { id: string; name: string } | null = null;
+  let bestDist = Infinity;
+
+  for (const client of all) {
+    const cn = client.name.toLowerCase();
+    if (cn.includes(input) || input.includes(cn)) return client;
+    const dist = levenshtein(input, cn);
+    if (dist <= 2 && dist < bestDist) {
+      bestDist = dist;
+      best = client;
+    }
+  }
+  return best;
 }
 
 export async function createClientAndOrder(
@@ -252,14 +293,15 @@ export async function updateIntakeClientName(sessionId: string, clientName: stri
 }
 
 const INTAKE_TRIGGER_PATTERNS = [
-  /nouveau\s+client/i,
-  /ajouter.{0,10}client/i,
-  /j[e']?ai.{0,15}client/i,
-  /cr[eé]er.{0,10}client/i,
+  /nouveau\s+cliente?/i,
+  /nouvelle\s+cliente?/i,
+  /ajouter.{0,10}cliente?/i,
+  /j[e']?ai.{0,15}cliente?/i,
+  /cr[eé]er.{0,10}cliente?/i,
   /new\s+client/i,
 ];
 
-const NAME_AFTER_TRIGGER = /(?:nouveau\s+client|new\s+client|ajouter.{0,10}client|cr[eé]er.{0,10}client|j[e']?ai.{0,15}client)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'-]*)/i;
+const NAME_AFTER_TRIGGER = /(?:nouveau\s+cliente?|nouvelle\s+cliente?|new\s+client|ajouter.{0,10}cliente?|cr[eé]er.{0,10}cliente?|j[e']?ai.{0,15}cliente?)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'-]*)/i;
 
 export function detectIntakeTrigger(message: string): { triggered: boolean; clientName: string | null } {
   const triggered = INTAKE_TRIGGER_PATTERNS.some((p) => p.test(message));

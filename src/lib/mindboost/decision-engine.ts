@@ -232,10 +232,32 @@ async function processIntakeResponse(
       break;
 
     case "amount": {
-      const amountMatch = userMessage.match(/(\d+(?:[.,]\d+)?)\s*([A-Za-z€$¥]{1,5})/);
-      if (!amountMatch) return `Format pas reconnu. Exemple : 500 CNY ou 100 USD.`;
-      updates.amount_received = parseFloat(amountMatch[1].replace(",", "."));
-      updates.currency_received = amountMatch[2].toUpperCase();
+      const CURRENCY_RE = /(\d+(?:[.,]\d+)?)\s*(USD|CNY|RMB|CDF|THB|EUR|€|\$|¥)/i;
+      const directMatch = userMessage.match(CURRENCY_RE);
+      if (directMatch) {
+        updates.amount_received = parseFloat(directMatch[1].replace(",", "."));
+        updates.currency_received = directMatch[2].toUpperCase().replace("$", "USD").replace("€", "EUR").replace("¥", "CNY");
+      } else {
+        // Take the largest number in the message as the amount
+        const allNums = [...userMessage.matchAll(/(\d+(?:[.,]\d+)?)/g)].map((m) =>
+          parseFloat(m[1].replace(",", "."))
+        );
+        if (allNums.length === 0) {
+          return `Format pas reconnu. Donne le montant et la devise. Exemple : 35000 USD`;
+        }
+        updates.amount_received = Math.max(...allNums);
+        // Try to infer currency from context words
+        const inferredCurrency = /dollar|\bUSD\b|\b\$\b/i.test(userMessage) ? "USD"
+          : /yuan|rmb|\bCNY\b/i.test(userMessage) ? "CNY"
+          : /franc.{0,5}congolais|\bCDF\b/i.test(userMessage) ? "CDF"
+          : /euro|\bEUR\b|€/i.test(userMessage) ? "EUR"
+          : /baht|\bTHB\b/i.test(userMessage) ? "THB"
+          : null;
+        if (!inferredCurrency) {
+          return `Montant de ${updates.amount_received} retenu. Quelle devise ? (USD, CNY, CDF, EUR…)`;
+        }
+        updates.currency_received = inferredCurrency;
+      }
       nextStep = "supplier";
       break;
     }
