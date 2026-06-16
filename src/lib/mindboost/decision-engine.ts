@@ -3,7 +3,7 @@ import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
 import { getConversationHistory, saveConversationMessage, saveConversationSummary } from "@/lib/mindboost/conversation-memory";
-import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, getNextQuestion, detectClientMention, updateIntakeClientName, type ClientIntakeData } from "@/lib/mindboost/client-intake";
+import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, createClientAndOrder, getNextQuestion, detectClientMention, updateIntakeClientName, type ClientIntakeData } from "@/lib/mindboost/client-intake";
 
 const MINDBOOST_SYSTEM_PROMPT = `TU ES MINDBOOST
 Assistant personnel de Daniel. Patron, gerant, controleur financier, conseiller.
@@ -206,6 +206,18 @@ async function processIntakeResponse(
   let nextStep: ClientIntakeData["step"] = data.step;
 
   switch (data.step) {
+    case "confirm_existing": {
+      const confirmed = /oui|yes|ok/i.test(msg);
+      if (confirmed) {
+        nextStep = "product";
+      } else {
+        // Refus : on repart comme nouveau client, on efface l'id existant
+        updates.existing_client_id = null;
+        nextStep = "product";
+      }
+      break;
+    }
+
     case "confirm_client": {
       const newName = userMessage.trim();
       updates.client_name = newName;
@@ -255,9 +267,14 @@ async function processIntakeResponse(
         ["oui", "yes", "ok", "confirme", "c'est bon", "cest bon"].includes(msg) ||
         /\boui\b|\byes\b|\bok\b|\bconfirme\b/i.test(msg);
       if (confirmed) {
-        await createMindboostTask(userId, "client_order", `Commande ${clientName}`, { ...data });
-        await closeIntakeSession(sessionId, "confirmed");
-        return `Tâche créée pour ${clientName}. Suivi actif.`;
+        try {
+          const confirmMsg = await createClientAndOrder(userId, data);
+          await closeIntakeSession(sessionId, "confirmed");
+          return confirmMsg;
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : "Erreur inconnue";
+          return `Erreur lors de l'enregistrement : ${errMsg}. Reessaie ou contacte le support.`;
+        }
       } else {
         await closeIntakeSession(sessionId, "cancelled");
         return `Session annulée.`;

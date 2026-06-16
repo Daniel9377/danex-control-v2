@@ -12,7 +12,7 @@ import { processMessageWithAI } from "@/lib/mindboost/decision-engine";
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { evaluateEscalationLevel, logEscalation, applyEscalationToReply, checkAndUpdateAlertCooldown } from "@/lib/mindboost/escalation";
 import { incrementLoopCount, resetLoopCount } from "@/lib/mindboost/conversation-memory";
-import { getActiveIntakeSession, detectIntakeTrigger, startIntakeSession } from "@/lib/mindboost/client-intake";
+import { getActiveIntakeSession, detectIntakeTrigger, startIntakeSession, searchExistingClient } from "@/lib/mindboost/client-intake";
 
 export const runtime = "nodejs";
 
@@ -46,7 +46,7 @@ async function processText(text: string, chatId: number | string): Promise<void>
     return;
   }
 
-  // Intake trigger detection (synchronous) — must run BEFORE any DB/AI call
+  // Intake trigger detection — must run BEFORE any DB/AI call
   const trigger = detectIntakeTrigger(text);
   if (trigger.triggered) {
     const activeIntake = await getActiveIntakeSession(userId);
@@ -57,7 +57,12 @@ async function processText(text: string, chatId: number | string): Promise<void>
       );
       return;
     }
-    const { firstQuestion } = await startIntakeSession(userId, trigger.clientName);
+    let existingClientId: string | null = null;
+    if (trigger.clientName) {
+      const found = await searchExistingClient(userId, trigger.clientName);
+      existingClientId = found?.id ?? null;
+    }
+    const { firstQuestion } = await startIntakeSession(userId, trigger.clientName, existingClientId);
     await resetLoopCount(userId);
     await sendTelegramMessage(chatId, firstQuestion);
     return;

@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ClientIntakeData = {
   client_name: string;
+  existing_client_id?: string | null;
   product?: string;
   amount_received?: number;
   currency_received?: string;
@@ -10,7 +11,7 @@ export type ClientIntakeData = {
   delivery_address?: string;
   client_contacted?: boolean;
   blocker?: string;
-  step: "confirm_client" | "product" | "amount" | "supplier" | "price_china" | "delivery" | "contact" | "review" | "done";
+  step: "confirm_existing" | "confirm_client" | "product" | "amount" | "supplier" | "price_china" | "delivery" | "contact" | "review" | "done";
 };
 
 export type ClientIntakeSession = {
@@ -109,6 +110,8 @@ export async function createMindboostTask(
 
 export function getNextQuestion(data: ClientIntakeData): string {
   switch (data.step) {
+    case "confirm_existing":
+      return `J'ai trouvé ${data.client_name} dans l'app. Nouvelle commande pour ce client ? (oui / non)`;
     case "confirm_client":
       return "Quel est le nom du client ?";
     case "product":
@@ -145,6 +148,101 @@ function buildReviewMessage(data: ClientIntakeData): string {
   return lines.join("\n");
 }
 
+export async function searchExistingClient(
+  userId: string,
+  name: string
+): Promise<{ id: string; name: string } | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("clients")
+    .select("id, name")
+    .eq("user_id", userId)
+    .ilike("name", `%${name}%`)
+    .limit(1)
+    .single();
+  return data ?? null;
+}
+
+export async function createClientAndOrder(
+  userId: string,
+  data: ClientIntakeData
+): Promise<string> {
+  const supabase = createAdminClient();
+  const existingId = data.existing_client_id ?? null;
+  let clientId: string;
+  let isNewClient = false;
+
+  // Step A — Create client if not existing
+  if (existingId) {
+    clientId = existingId;
+  } else {
+    const { data: client, error: clientErr } = await supabase
+      .from("clients")
+      .insert({
+        user_id: userId,
+        name: data.client_name,
+        city: data.delivery_address ?? null,
+        trust_level: "standard",
+      })
+      .select("id")
+      .single();
+    if (clientErr) throw new Error(`Client creation error: ${clientErr.message}`);
+    clientId = client.id;
+    isNewClient = true;
+  }
+
+  // Step B — Create order
+  const nextAction = data.client_contacted ? "Sourcer le produit" : "Contacter le client";
+  const { data: order, error: orderErr } = await supabase
+    .from("orders")
+    .insert({
+      user_id: userId,
+      client_id: clientId,
+      product_name: data.product ?? "Non renseigné",
+      currency: data.currency_received ?? "CNY",
+      client_price: data.amount_received ?? 0,
+      supplier_price: data.product_price_china ?? null,
+      advance_received: data.amount_received ?? 0,
+      status: "new",
+      next_action: nextAction,
+      note: "Créé via Mindboost intake",
+    })
+    .select("id")
+    .single();
+  if (orderErr) throw new Error(`Order creation error: ${orderErr.message}`);
+
+  // Step C — Create transaction (advance received)
+  const today = new Date().toISOString().slice(0, 10);
+  await supabase.from("transactions").insert({
+    user_id: userId,
+    account_id: null,
+    type: "income",
+    amount: data.amount_received ?? 0,
+    currency: data.currency_received ?? "CNY",
+    sub_type: "client_money_received",
+    client_id: clientId,
+    order_id: order.id,
+    accounting_type: "non_income_inflow",
+    affects_physical_balance: false,
+    transaction_date: today,
+    note: `Avance reçue — ${data.client_name} — ${data.product ?? "produit"}`,
+  });
+
+  // Step D — Mindboost task log
+  await supabase.from("mindboost_tasks").insert({
+    user_id: userId,
+    type: "client_order",
+    title: `Commande ${data.client_name}`,
+    data: { ...data, client_id: clientId, order_id: order.id },
+    status: "pending",
+  });
+
+  if (isNewClient) {
+    return `Client ${data.client_name} enregistré. Commande ${data.product ?? "produit"} créée. Avance ${data.amount_received ?? 0} ${data.currency_received ?? ""} enregistrée.\nStatut : sourcing en cours.`;
+  }
+  return `Nouvelle commande ajoutée pour ${data.client_name}. Avance enregistrée.`;
+}
+
 export async function updateIntakeClientName(sessionId: string, clientName: string): Promise<void> {
   const supabase = createAdminClient();
   await supabase
@@ -172,12 +270,23 @@ export function detectIntakeTrigger(message: string): { triggered: boolean; clie
 
 export async function startIntakeSession(
   userId: string,
-  clientName: string | null
+  clientName: string | null,
+  existingClientId?: string | null
 ): Promise<{ session: ClientIntakeSession; firstQuestion: string }> {
   const supabase = createAdminClient();
   const name = clientName ?? "?";
-  const step: ClientIntakeData["step"] = clientName ? "product" : "confirm_client";
+  const step: ClientIntakeData["step"] = existingClientId
+    ? "confirm_existing"
+    : clientName
+    ? "product"
+    : "confirm_client";
+
   const sessionId = `intake_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const initialData: ClientIntakeData = {
+    client_name: name,
+    existing_client_id: existingClientId ?? null,
+    step,
+  };
 
   const { data, error } = await supabase
     .from("mindboost_client_intake")
@@ -186,13 +295,13 @@ export async function startIntakeSession(
       session_id: sessionId,
       client_name: name,
       status: "collecting",
-      data: { client_name: name, step },
+      data: initialData,
     })
     .select()
     .single();
 
   if (error) throw new Error(`Intake session error: ${error.message}`);
-  const firstQuestion = getNextQuestion({ client_name: name, step } as ClientIntakeData);
+  const firstQuestion = getNextQuestion(initialData);
   return { session: data as ClientIntakeSession, firstQuestion };
 }
 
