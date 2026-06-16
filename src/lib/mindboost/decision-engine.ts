@@ -1,4 +1,4 @@
-﻿import { callDeepSeek } from "@/lib/mindboost/deepseek";
+import { callDeepSeek } from "@/lib/mindboost/deepseek";
 import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost/anonymizer";
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
@@ -50,7 +50,8 @@ FORMAT
 Telegram = messages courts. Max 5 lignes sauf rapport ou plan structure.
 Pas de formules polies. Pas de bien sur ou absolument.
 Chaque reponse : un constat + une decision + une action ou une relance.
-Langue : francais par defaut.`;
+Langue : francais par defaut.
+FORMAT STRICT : N utilise JAMAIS de markdown. Pas d asterisques, pas de gras, pas d italique, pas de tirets markdown. Texte brut uniquement. Telegram affiche le texte tel quel.`;
 
 export async function processMessageWithAI(userMessage: string): Promise<string> {
   const map = createAnonymizer();
