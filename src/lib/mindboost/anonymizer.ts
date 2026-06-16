@@ -76,10 +76,10 @@ export function anonymizeContext(
   }
 
   if (context.owesMe && context.owesMe.length > 0) {
-    lines.push("On me doit (creances):");
+    lines.push("Personnes qui te doivent de l argent:");
     for (const debt of context.owesMe) {
       const nameToken = anonymize(map, debt.person_name, "entity");
-      lines.push(`- ${nameToken}: ${debt.amount} ${debt.currency}`);
+      lines.push(`- ${nameToken} te doit ${debt.amount} ${debt.currency}`);
     }
   }
 
