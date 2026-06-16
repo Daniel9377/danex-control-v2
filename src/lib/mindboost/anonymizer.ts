@@ -70,16 +70,15 @@ export function anonymizeContext(
     lines.push("Dettes actives:");
     for (const debt of context.debts) {
       const nameToken = anonymize(map, debt.person_name, "entity");
-      const amountToken = anonymize(map, `${debt.amount} ${debt.currency}`, "amount");
-      lines.push(`- ${nameToken}: ${amountToken}`);
+      // Montant envoye en clair, seul le nom est anonymise
+      lines.push(`- ${nameToken}: ${debt.amount} ${debt.currency}`);
     }
   }
 
   if (context.amounts && context.amounts.length > 0) {
     lines.push("Montants:");
     for (const amt of context.amounts) {
-      const token = anonymize(map, `${amt.value} ${amt.currency}`, "amount");
-      lines.push(`- ${amt.label}: ${token}`);
+      lines.push(`- ${amt.label}: ${amt.value} ${amt.currency}`);
     }
   }
 

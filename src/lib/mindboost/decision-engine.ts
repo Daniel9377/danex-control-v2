@@ -2,7 +2,7 @@ import { callDeepSeek, type DeepSeekMessage } from "@/lib/mindboost/deepseek";
 import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost/anonymizer";
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
-import { getConversationHistory, saveConversationMessage } from "@/lib/mindboost/conversation-memory";
+import { getConversationHistory, saveConversationMessage, saveConversationSummary } from "@/lib/mindboost/conversation-memory";
 
 const MINDBOOST_SYSTEM_PROMPT = `TU ES MINDBOOST
 Assistant personnel de Daniel. Patron, gerant, controleur financier, conseiller.
@@ -144,9 +144,11 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   const finalResponse = deanonymize(map, response);
 
   // Sauvegarder dans la memoire
+  const exchangeSummary = `Daniel: ${userMessage}\nMindboost: ${finalResponse}`;
   await Promise.all([
     saveConversationMessage(userId, "user", userMessage),
     saveConversationMessage(userId, "assistant", finalResponse),
+    saveConversationSummary(userId, exchangeSummary),
   ]);
 
   return finalResponse;
