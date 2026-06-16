@@ -202,6 +202,12 @@ async function processIntakeResponse(
   userId: string
 ): Promise<string> {
   const msg = userMessage.trim().toLowerCase();
+
+  if (/^(annule|cancel|stop|abandonner|quitter)$/i.test(userMessage.trim())) {
+    await closeIntakeSession(sessionId, "cancelled");
+    return "Session annulée.";
+  }
+
   const updates: Partial<ClientIntakeData> = {};
   let nextStep: ClientIntakeData["step"] = data.step;
 

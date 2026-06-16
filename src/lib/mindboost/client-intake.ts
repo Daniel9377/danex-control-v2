@@ -316,7 +316,18 @@ export async function startIntakeSession(
   existingClientId?: string | null
 ): Promise<{ session: ClientIntakeSession; firstQuestion: string }> {
   const supabase = createAdminClient();
-  const name = clientName ?? "?";
+
+  // If an existing client was matched, fetch their canonical name from the DB
+  let resolvedName = clientName ?? "?";
+  if (existingClientId) {
+    const { data: found } = await supabase
+      .from("clients")
+      .select("name")
+      .eq("id", existingClientId)
+      .single();
+    if (found?.name) resolvedName = found.name;
+  }
+
   const step: ClientIntakeData["step"] = existingClientId
     ? "confirm_existing"
     : clientName
@@ -325,7 +336,7 @@ export async function startIntakeSession(
 
   const sessionId = `intake_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const initialData: ClientIntakeData = {
-    client_name: name,
+    client_name: resolvedName,
     existing_client_id: existingClientId ?? null,
     step,
   };
@@ -335,7 +346,7 @@ export async function startIntakeSession(
     .insert({
       user_id: userId,
       session_id: sessionId,
-      client_name: name,
+      client_name: resolvedName,
       status: "collecting",
       data: initialData,
     })
