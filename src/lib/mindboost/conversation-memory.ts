@@ -94,3 +94,58 @@ export async function saveConversationMessage(
     await supabase.from("mindboost_conversation").delete().in("id", toDelete);
   }
 }
+
+// --- Loop flag (anti-loop detection) ---
+
+export async function getLoopCount(userId: string): Promise<number> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("mindboost_memory")
+    .select("content")
+    .eq("user_id", userId)
+    .eq("memory_type", "loop_flag")
+    .single();
+
+  if (!data?.content) return 0;
+  try {
+    return (JSON.parse(data.content as string) as { count: number }).count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function incrementLoopCount(userId: string): Promise<number> {
+  const supabase = createAdminClient();
+  const current = await getLoopCount(userId);
+  const newCount = current + 1;
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  await supabase.from("mindboost_memory").upsert(
+    {
+      user_id: userId,
+      memory_type: "loop_flag",
+      content: JSON.stringify({ count: newCount, last_updated: new Date().toISOString() }),
+      relevance_score: 1,
+      expires_at: expires,
+    },
+    { onConflict: "user_id,memory_type" }
+  );
+
+  return newCount;
+}
+
+export async function resetLoopCount(userId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  await supabase.from("mindboost_memory").upsert(
+    {
+      user_id: userId,
+      memory_type: "loop_flag",
+      content: JSON.stringify({ count: 0, last_updated: new Date().toISOString() }),
+      relevance_score: 1,
+      expires_at: expires,
+    },
+    { onConflict: "user_id,memory_type" }
+  );
+}

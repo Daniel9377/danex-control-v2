@@ -7,9 +7,17 @@ import { getMindboostWeeklyReport, formatWeeklyReport } from "@/lib/mindboost/we
 import { getMindboostMonthlyReport, formatMonthlyReport } from "@/lib/mindboost/monthly-report";
 import { getUpcomingEvents } from "@/lib/mindboost/google-calendar";
 
+export type TelegramPhotoSize = {
+  file_id: string;
+  file_size?: number;
+  width: number;
+  height: number;
+};
+
 export type TelegramMessage = {
   message_id: number;
   text?: string;
+  photo?: TelegramPhotoSize[];
   chat: {
     id: number | string;
     type?: string;
@@ -103,6 +111,62 @@ export function getHelpMessage() {
     "",
     "Mode actuel: lecture seule.",
   ].join("\n");
+}
+
+export async function downloadTelegramPhoto(fileId: string): Promise<string> {
+  const token = requireEnv("TELEGRAM_BOT_TOKEN");
+
+  const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+  if (!fileRes.ok) throw new Error(`Telegram getFile failed: ${fileRes.status}`);
+  const fileData = await fileRes.json() as { result: { file_path: string } };
+  const filePath = fileData.result.file_path;
+
+  const imgRes = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`);
+  if (!imgRes.ok) throw new Error(`Telegram file download failed: ${imgRes.status}`);
+
+  const buffer = await imgRes.arrayBuffer();
+  return Buffer.from(buffer).toString("base64");
+}
+
+export async function analyzeImageWithClaude(base64Image: string): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Missing env var: ANTHROPIC_API_KEY");
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 500,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: "image/jpeg", data: base64Image },
+            },
+            {
+              type: "text",
+              text: "Décris ce que tu vois sur cette image dans le contexte d'une activité commerciale import/export entre la Chine et l'Afrique. Sois précis et factuel. Texte brut, pas de markdown.",
+            },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Claude API error: ${response.status} ${err}`);
+  }
+
+  const data = await response.json() as { content: Array<{ text: string }> };
+  return data.content[0]?.text ?? "Impossible d'analyser l'image.";
 }
 
 export async function handleTelegramCommand(text: string) {
