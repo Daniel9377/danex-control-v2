@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Test environment secrets
+.env.test
+tests/reports/
+tests/seed/known-state.json

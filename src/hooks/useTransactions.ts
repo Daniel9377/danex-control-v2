@@ -329,13 +329,14 @@ export function useTransactions(accountId?: string) {
   ) {
     const supabase = createClient();
 
-    const { data: acc } = await supabase
+    const { data: acc, error: accError } = await supabase
       .from("accounts")
       .select("balance")
       .eq("id", acctId)
       .single();
 
-    if (!acc) return;
+    if (accError) throw new Error(`Compte introuvable : ${accError.message}`);
+    if (!acc) throw new Error("Compte introuvable.");
 
     const currentBalance = Number(acc.balance);
     const difference = targetBalance - currentBalance;
@@ -344,7 +345,7 @@ export function useTransactions(accountId?: string) {
     const type: TransactionType = difference > 0 ? "income" : "expense";
     const amount = Math.abs(difference);
 
-    await supabase.from("transactions").insert({
+    const { error: insertError } = await supabase.from("transactions").insert({
       user_id: userId,
       account_id: acctId,
       type,
@@ -358,7 +359,14 @@ export function useTransactions(accountId?: string) {
       sub_type: "balance_correction",
     });
 
-    await supabase.from("accounts").update({ balance: targetBalance }).eq("id", acctId);
+    if (insertError) throw new Error(`Échec de la correction : ${insertError.message}`);
+
+    const { error: updateError } = await supabase
+      .from("accounts")
+      .update({ balance: targetBalance })
+      .eq("id", acctId);
+
+    if (updateError) throw new Error(`Échec de la mise à jour du solde : ${updateError.message}`);
 
     cacheInvalidatePrefix(PREFIX);
     cacheInvalidate("accounts");

@@ -1,5 +1,42 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// Default account that receives client advances recorded via the Telegram intake.
+// The intake conversation never asks which account the money landed in, so the
+// advance is credited to this designated account. Matched case-insensitively
+// and trimmed (the stored name may carry trailing spaces).
+const DEFAULT_INTAKE_ACCOUNT_NAME = "Mercury";
+
+/**
+ * Resolve the account that should receive a client advance recorded via intake.
+ * Prefers the designated default account when its currency matches the advance.
+ * Falls back to the first account in the advance currency — crediting an account
+ * of a different currency would corrupt its balance (no FX conversion happens on
+ * balance updates anywhere in the app), so that case is never allowed.
+ */
+async function resolveIntakeAccount(
+  supabase: ReturnType<typeof createAdminClient>,
+  userId: string,
+  currency: string
+): Promise<{ id: string; balance: number } | null> {
+  const { data: accounts } = await supabase
+    .from("accounts")
+    .select("id, name, currency, balance")
+    .eq("user_id", userId);
+  if (!accounts || accounts.length === 0) return null;
+
+  const named = accounts.find(
+    (a) => a.name.trim().toLowerCase() === DEFAULT_INTAKE_ACCOUNT_NAME.toLowerCase()
+  );
+  if (named && named.currency === currency) {
+    return { id: named.id, balance: Number(named.balance) };
+  }
+
+  const sameCurrency = accounts.find((a) => a.currency === currency);
+  if (sameCurrency) return { id: sameCurrency.id, balance: Number(sameCurrency.balance) };
+
+  return null;
+}
+
 export type ClientIntakeData = {
   client_name: string;
   existing_client_id?: string | null;
@@ -252,22 +289,46 @@ export async function createClientAndOrder(
     .single();
   if (orderErr) throw new Error(`Order creation error: ${orderErr.message}`);
 
-  // Step C — Create transaction (advance received)
+  // Step C — Create transaction (advance received) + credit the landing account.
+  // The advance is real cash that arrived in an account, so it must increase a
+  // physical account balance — exactly like a "client_money_received" recorded
+  // from the web form.
   const today = new Date().toISOString().slice(0, 10);
-  await supabase.from("transactions").insert({
+  const advanceAmount = data.amount_received ?? 0;
+  const advanceCurrency = data.currency_received ?? "CNY";
+
+  const account = await resolveIntakeAccount(supabase, userId, advanceCurrency);
+  if (!account) {
+    throw new Error(
+      `Aucun compte en ${advanceCurrency} trouvé pour enregistrer l'avance de ${data.client_name}.`
+    );
+  }
+
+  const balanceAfter = account.balance + advanceAmount;
+
+  const { error: txErr } = await supabase.from("transactions").insert({
     user_id: userId,
-    account_id: null,
+    account_id: account.id,
     type: "income",
-    amount: data.amount_received ?? 0,
-    currency: data.currency_received ?? "CNY",
+    amount: advanceAmount,
+    currency: advanceCurrency,
     sub_type: "client_money_received",
     client_id: clientId,
     order_id: order.id,
     accounting_type: "non_income_inflow",
-    affects_physical_balance: false,
+    affects_physical_balance: true,
+    balance_after: balanceAfter,
     transaction_date: today,
     note: `Avance reçue — ${data.client_name} — ${data.product ?? "produit"}`,
   });
+  if (txErr) throw new Error(`Transaction creation error: ${txErr.message}`);
+
+  // Balance update — must run after every received payment.
+  const { error: balErr } = await supabase
+    .from("accounts")
+    .update({ balance: balanceAfter })
+    .eq("id", account.id);
+  if (balErr) throw new Error(`Account balance update error: ${balErr.message}`);
 
   // Step D — Mindboost task log
   await supabase.from("mindboost_tasks").insert({

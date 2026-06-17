@@ -1,0 +1,45 @@
+﻿
+> danex-control-v2@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 3100
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://127.0.0.1:3100
+- Network:       http://127.0.0.1:3100
+- Environments: .env.local
+✓ Ready in 449ms
+
+ GET /fr/login 200 in 991ms (next.js: 550ms, proxy.ts: 184ms, application-code: 257ms)
+ GET /fr/login 200 in 82ms (next.js: 14ms, proxy.ts: 6ms, application-code: 62ms)
+ GET /fr/login 200 in 70ms (next.js: 7ms, proxy.ts: 5ms, application-code: 58ms)
+ GET /fr/login 200 in 76ms (next.js: 8ms, proxy.ts: 7ms, application-code: 62ms)
+ GET /fr/login 200 in 76ms (next.js: 16ms, proxy.ts: 5ms, application-code: 54ms)
+ GET /fr/login 200 in 72ms (next.js: 7ms, proxy.ts: 4ms, application-code: 61ms)
+ GET /fr/login 200 in 74ms (next.js: 12ms, proxy.ts: 6ms, application-code: 56ms)
+ GET /fr/dashboard 200 in 2.2s (next.js: 540ms, proxy.ts: 1620ms, application-code: 46ms)
+ GET /fr/dashboard 200 in 900ms (next.js: 19ms, proxy.ts: 822ms, application-code: 59ms)
+ GET /fr/accounts 200 in 1249ms (next.js: 532ms, proxy.ts: 520ms, application-code: 197ms)
+ GET /fr/accounts 200 in 610ms (next.js: 13ms, proxy.ts: 465ms, application-code: 133ms)
+ GET /fr/transactions 200 in 1386ms (next.js: 458ms, proxy.ts: 798ms, application-code: 130ms)
+ GET /fr/login 200 in 76ms (next.js: 15ms, proxy.ts: 7ms, application-code: 54ms)
+ GET /fr/login 200 in 65ms (next.js: 6ms, proxy.ts: 6ms, application-code: 53ms)
+ GET /fr/login 200 in 79ms (next.js: 17ms, proxy.ts: 6ms, application-code: 56ms)
+ GET /fr/dashboard 200 in 1937ms (next.js: 15ms, proxy.ts: 1886ms, application-code: 36ms)
+ GET /fr/dashboard 200 in 557ms (next.js: 11ms, proxy.ts: 488ms, application-code: 58ms)
+ GET /fr/transactions 200 in 1072ms (next.js: 16ms, proxy.ts: 963ms, application-code: 93ms)
+ GET /fr/login 200 in 66ms (next.js: 12ms, proxy.ts: 5ms, application-code: 49ms)
+ GET /fr/login 200 in 66ms (next.js: 7ms, proxy.ts: 4ms, application-code: 55ms)
+ GET /fr/login 200 in 76ms (next.js: 11ms, proxy.ts: 5ms, application-code: 60ms)
+ GET /fr/dashboard 200 in 2.3s (next.js: 16ms, proxy.ts: 2.2s, application-code: 30ms)
+ GET /fr/dashboard 200 in 908ms (next.js: 18ms, proxy.ts: 840ms, application-code: 50ms)
+ GET /fr/accounts 200 in 730ms (next.js: 16ms, proxy.ts: 618ms, application-code: 96ms)
+ GET /fr/accounts 200 in 622ms (next.js: 11ms, proxy.ts: 472ms, application-code: 140ms)
+ GET /fr/transactions 200 in 2.0s (next.js: 14ms, proxy.ts: 1910ms, application-code: 83ms)
+ GET /fr/accounts 200 in 1736ms (next.js: 15ms, proxy.ts: 1632ms, application-code: 89ms)
+ GET /fr/login 200 in 71ms (next.js: 12ms, proxy.ts: 6ms, application-code: 53ms)
+ GET /fr/login 200 in 67ms (next.js: 6ms, proxy.ts: 5ms, application-code: 56ms)
+ GET /fr/login 200 in 71ms (next.js: 11ms, proxy.ts: 5ms, application-code: 55ms)
+ GET /fr/dashboard 200 in 1943ms (next.js: 14ms, proxy.ts: 1899ms, application-code: 30ms)
+ GET /fr/dashboard 200 in 1069ms (next.js: 17ms, proxy.ts: 1000ms, application-code: 51ms)
+ GET /fr/accounts 200 in 991ms (next.js: 15ms, proxy.ts: 817ms, application-code: 160ms)
+ GET /fr/accounts 200 in 899ms (next.js: 12ms, proxy.ts: 796ms, application-code: 91ms)
+ GET /fr/transactions 200 in 943ms (next.js: 13ms, proxy.ts: 819ms, application-code: 111ms)

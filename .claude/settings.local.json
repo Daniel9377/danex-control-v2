@@ -74,7 +74,26 @@
       "Bash(node *)",
       "Bash(python -m json.tool)",
       "Bash(git -C \"D:\\\\02_CODE_PROJECTS\\\\NEW APP\\\\danex-control-v2\" log --oneline -3)",
-      "mcp__b89b0501-2e29-419d-a2b4-7e1828b31b53__execute_sql"
+      "mcp__b89b0501-2e29-419d-a2b4-7e1828b31b53__execute_sql",
+      "Bash(git restore *)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 40)",
+      "Bash(npx playwright *)",
+      "Bash(tail -40 dev-server.log)",
+      "Bash(ls -la *.log)",
+      "Bash(python3 -)",
+      "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(json.dumps\\(d,indent=1\\)[:1500]\\)\")",
+      "PowerShell(npx playwright test accounts.spec.ts -g \"correction de solde\" --reporter=list 2>&1 | Out-String)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/fr/login\" -UseBasicParsing -TimeoutSec 60; \"STATUS: $\\($r.StatusCode\\)\" } catch { \"ERR: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell($env:PLAYWRIGHT_PORT = \"3100\"; npx playwright test accounts.spec.ts -g \"correction de solde\" --reporter=list 2>&1 | Out-String)",
+      "PowerShell(taskkill *)",
+      "PowerShell(try { Stop-Process -Id 4048 -Force -ErrorAction Stop; \"stopped\" } catch { \"ERR: $\\($_.Exception.Message\\)\" })",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { \"STILL LISTENING PID: $\\($c.OwningProcess\\)\" } else { \"PORT 3000 FREE\" })",
+      "PowerShell(try { Stop-Process -Id 4048 -Force -ErrorAction Stop; Start-Sleep -Milliseconds 500; \"stopped\" } catch { \"ERR: $\\($_.Exception.Message\\)\" }; $c = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { \"STILL LISTENING PID: $\\($c.OwningProcess\\)\" } else { \"PORT 3000 FREE\" })",
+      "PowerShell($ok=$false; for \\($i=0; $i -lt 40; $i++\\) { try { $r=Invoke-WebRequest \"http://localhost:3100/fr/login\" -UseBasicParsing -TimeoutSec 10; if \\($r.StatusCode -eq 200\\) { \"LOGIN READY \\(try $i\\)\"; $ok=$true; break } } catch {}; Start-Sleep -Seconds 3 }; if \\(-not $ok\\) { \"NOT READY YET\" })",
+      "PowerShell(foreach \\($p in @\\(\"/fr/transactions\",\"/fr/accounts\",\"/fr/dashboard\"\\)\\) { try { $r=Invoke-WebRequest \"http://localhost:3100$p\" -UseBasicParsing -TimeoutSec 90; \"$p -> $\\($r.StatusCode\\)\" } catch { \"$p -> $\\($_.Exception.Message\\)\" } })",
+      "PowerShell($env:PLAYWRIGHT_PORT = \"3100\"; npx playwright test debug-tx.spec.ts --reporter=list --timeout=60000 2>&1 | Out-String)",
+      "PowerShell($env:PLAYWRIGHT_PORT = \"3100\"; npx playwright test debug-tx.spec.ts --reporter=list --timeout=90000 2>&1 | Out-String)"
     ]
   }
 }

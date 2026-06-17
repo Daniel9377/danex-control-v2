@@ -1,0 +1,699 @@
+﻿
+FullName                                                                          
+--------                                                                          
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\proxy.ts                         
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\app\api\mindboost\cron\evening...
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\app\api\mindboost\cron\morning...
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\app\api\mindboost\telegram\rou...
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\app\api\mindboost\today-summar...
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useAccounts.ts             
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useAlerts.ts               
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useClientFinancials.ts     
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useClients.ts              
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useCurrencies.ts           
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useDebts.ts                
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useFinancialAlerts.ts      
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useFinancialOverview.ts    
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useFinancialReports.ts     
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useOrders.ts               
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useReclassify.ts           
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useSubmit.ts               
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useTransactions.ts         
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\hooks\useTransfers.ts            
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\i18n\request.ts                  
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\i18n\routing.ts                  
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\alert-calculations.ts        
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\cache.ts                     
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\categories.ts                
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\currency.ts                  
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\export-builders.ts           
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\financial-calculations.ts    
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\transaction-types.ts         
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\utils.ts                     
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\integrations\googleCalenda...
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\integrations\notion.ts       
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\mindboost\evening-report.ts  
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\mindboost\telegram.ts        
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\mindboost\today-summary.ts   
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\supabase\admin.ts            
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\supabase\client.ts           
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\supabase\server.ts           
+D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\lib\supabase\types.ts            
+
+
+
+
+=== MINDBOOST FILES ===
+
+
+--- evening-report.ts ---
+import type { MindboostTodaySummary } from "@/lib/mindboost/today-summary";
+
+function formatTotals(totalsByCurrency: Record<string, number>) {
+  const entries = Object.entries(totalsByCurrency);
+
+  if (entries.length === 0) {
+    return "Aucune vraie dépense détectée.";
+  }
+
+  return entries.map(([currency, amount]) => `- ${amount} ${currency}`).join("\n");
+}
+
+function formatCategories(summary: MindboostTodaySummary) {
+  if (summary.categories.length === 0) {
+    return "Aucune catégorie de vraie dépense.";
+  }
+
+  return summary.categories
+    .map((item) => `- ${item.category}: ${item.amount} ${item.currency}`)
+    .join("\n");
+}
+
+export function formatEveningReport(summary: MindboostTodaySummary) {
+  if (!summary.appCompleted) {
+    return [
+      `Mindboost — Rapport du soir ${summary.date}`,
+      "",
+      "Daniel, l'app n'est pas complétée aujourd'hui.",
+      "",
+      "Action maintenant :",
+      "1. Ouvre DANEX Control.",
+      "2. Ajoute les dépenses du jour par catégorie.",
+      "3. Vérifie argent personnel, client et dettes.",
+      "",
+      "Pas besoin d'être parfait. Mais il faut une trace.",
+      "",
+      "Statut : non complété.",
+    ].join("\n");
+  }
+
+  if (summary.realExpenseCount === 0) {
+    return [
+      `Mindboost — Rapport du soir ${summary.date}`,
+      "",
+      "App complétée, mais aucune vraie dépense détectée.",
+      "",
+      `Transactions trouvées : ${summary.transactionCount}`,
+      "",
+      "Vérification :",
+      "- Si c'était client, dette, transfert ou revenu : OK.",
+      "- Si tu as dépensé pour toi ou le business : classe correctement dans l'app.",
+      "",
+      "Statut : complété, mais à vérifier.",
+    ].join("\n");
+  }
+
+  return [
+    `Mindboost — Rapport du soir ${summary.date}`,
+    "",
+    "App complétée.",
+    `Transactions : ${summary.transactionCount}`,
+    `Vraies dépenses : ${summary.realExpenseCount}`,
+    "",
+    "Totaux :",
+    formatTotals(summary.totalsByCurrency),
+    "",
+    "Catégories :",
+    formatCategories(summary),
+    "",
+    "Statut : propre. Continue comme ça.",
+  ].join("\n");
+}
+
+
+--- telegram.ts ---
+import {
+  getMindboostTodaySummary,
+  type MindboostTodaySummary,
+} from "@/lib/mindboost/today-summary";
+import { formatEveningReport } from "@/lib/mindboost/evening-report";
+
+export type TelegramMessage = {
+  message_id: number;
+  text?: string;
+  chat: {
+    id: number | string;
+    type?: string;
+  };
+};
+
+export type TelegramUpdate = {
+  update_id?: number;
+  message?: TelegramMessage;
+  edited_message?: TelegramMessage;
+};
+
+function requireEnv(name: string) {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`Missing env var: ${name}`);
+  }
+
+  return value;
+}
+
+export function getTelegramMessage(update: TelegramUpdate) {
+  return update.message ?? update.edited_message ?? null;
+}
+
+export function isAllowedTelegramChat(chatId: number | string) {
+  const allowedChatId = requireEnv("TELEGRAM_ALLOWED_CHAT_ID");
+  return String(chatId) === allowedChatId;
+}
+
+export async function sendTelegramMessage(chatId: number | string, text: string) {
+  const token = requireEnv("TELEGRAM_BOT_TOKEN");
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      disable_web_page_preview: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Telegram sendMessage failed: ${response.status} ${errorText}`);
+  }
+}
+
+function formatTotals(totalsByCurrency: Record<string, number>) {
+  const entries = Object.entries(totalsByCurrency);
+
+  if (entries.length === 0) {
+    return "Aucune vraie dépense détectée.";
+  }
+
+  return entries
+    .map(([currency, amount]) => `- ${amount} ${currency}`)
+    .join("\n");
+}
+
+function formatCategories(summary: MindboostTodaySummary) {
+  if (summary.categories.length === 0) {
+    return "Aucune catégorie de vraie dépense.";
+  }
+
+  return summary.categories
+    .map((item) => `- ${item.category}: ${item.amount} ${item.currency}`)
+    .join("\n");
+}
+
+export function formatTodaySummary(summary: MindboostTodaySummary) {
+  return [
+    `Mindboost — Résumé du ${summary.date}`,
+    "",
+    `App complétée: ${summary.appCompleted ? "Oui" : "Non"}`,
+    `Transactions: ${summary.transactionCount}`,
+    `Vraies dépenses: ${summary.realExpenseCount}`,
+    "",
+    "Totaux:",
+    formatTotals(summary.totalsByCurrency),
+    "",
+    "Catégories:",
+    formatCategories(summary),
+    "",
+    summary.message,
+  ].join("\n");
+}
+
+export function getHelpMessage() {
+  return [
+    "Mindboost commandes:",
+    "",
+    "/today — résumé du jour",
+    "/status — statut du jour",
+    "/evening — rapport du soir strict",
+    "/soir — rapport du soir strict",
+    "/check YYYY-MM-DD — vérifier une date",
+    "/help — aide",
+    "",
+    "Mode actuel: lecture seule.",
+  ].join("\n");
+}
+
+export async function handleTelegramCommand(text: string) {
+  const cleanText = text.trim();
+
+  if (!cleanText || cleanText === "/help" || cleanText === "help") {
+    return getHelpMessage();
+  }
+
+  if (cleanText === "/today" || cleanText === "/status") {
+    const summary = await getMindboostTodaySummary();
+    return formatTodaySummary(summary);
+  }
+
+  if (cleanText === "/evening" || cleanText === "/soir" || cleanText === "/rapport") {
+    const summary = await getMindboostTodaySummary();
+    return formatEveningReport(summary);
+  }
+
+  if (cleanText.startsWith("/check")) {
+    const parts = cleanText.split(/\s+/);
+    const date = parts[1];
+
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return "Format invalide. Utilise: /check YYYY-MM-DD";
+    }
+
+    const summary = await getMindboostTodaySummary(date);
+    return formatTodaySummary(summary);
+  }
+
+  return getHelpMessage();
+}
+
+
+--- today-summary.ts ---
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { Transaction } from "@/lib/supabase/types";
+
+type CategorySummary = {
+  category: string;
+  currency: string;
+  amount: number;
+};
+
+export type MindboostTodaySummary = {
+  date: string;
+  appCompleted: boolean;
+  transactionCount: number;
+  realExpenseCount: number;
+  totalsByCurrency: Record<string, number>;
+  categories: CategorySummary[];
+  warnings: string[];
+  message: string;
+};
+
+function getTodayISODate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function isValidISODate(date: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date);
+}
+
+function isRealExpense(tx: Transaction) {
+  if (tx.sub_type === "personal_expense") return true;
+  if (tx.sub_type === "business_expense") return true;
+
+  // Legacy fallback only.
+  if (!tx.sub_type && tx.accounting_type === "real_expense") return true;
+
+  return false;
+}
+
+export async function getMindboostTodaySummary(
+  date: string = getTodayISODate()
+): Promise<MindboostTodaySummary> {
+  if (!isValidISODate(date)) {
+    throw new Error("Invalid date format. Expected YYYY-MM-DD.");
+  }
+
+  const userId = process.env.MINDBOOST_USER_ID;
+
+  if (!userId) {
+    throw new Error("Missing env var: MINDBOOST_USER_ID");
+  }
+
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("transaction_date", date)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Supabase error while reading transactions: ${error.message}`);
+  }
+
+  const transactions = (data ?? []) as Transaction[];
+  const realExpenses = transactions.filter(isRealExpense);
+
+  const totalsByCurrency: Record<string, number> = {};
+  const categoryMap = new Map<string, CategorySummary>();
+
+  for (const tx of realExpenses) {
+    const currency = tx.currency || "UNKNOWN";
+    const category = tx.category || "Autre";
+    const amount = Number(tx.amount) || 0;
+
+    totalsByCurrency[currency] = (totalsByCurrency[currency] ?? 0) + amount;
+
+    const key = `${category}__${currency}`;
+    const existing = categoryMap.get(key);
+
+    if (existing) {
+      existing.amount += amount;
+    } else {
+      categoryMap.set(key, { category, currency, amount });
+    }
+  }
+
+  const categories = Array.from(categoryMap.values()).sort((a, b) => {
+    if (a.currency !== b.currency) return a.currency.localeCompare(b.currency);
+    return b.amount - a.amount;
+  });
+
+  const appCompleted = transactions.length > 0;
+
+  const warnings: string[] = [];
+
+  if (!appCompleted) {
+    warnings.push("Aucune transaction trouvée pour cette date.");
+  }
+
+  return {
+    date,
+    appCompleted,
+    transactionCount: transactions.length,
+    realExpenseCount: realExpenses.length,
+    totalsByCurrency,
+    categories,
+    warnings,
+    message: appCompleted
+      ? "App complétée aujourd’hui."
+      : "App non complétée pour cette date.",
+  };
+}
+
+
+=== API ROUTES ===
+
+
+--- D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\app\api\mindboost\cron\evening\route.ts ---
+import { NextRequest, NextResponse } from 'next/server';
+import { getMindboostTodaySummary } from '@/lib/mindboost/today-summary';
+import { formatEveningReport } from '@/lib/mindboost/evening-report';
+import { sendTelegramMessage } from '@/lib/mindboost/telegram';
+
+function isAuthorized(req: NextRequest): boolean {
+  const authHeader = req.headers.get('authorization');
+  const cronSecret = req.headers.get('x-cron-secret');
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  return (
+    authHeader === `Bearer ${secret}` ||
+    cronSecret === secret
+  );
+}
+
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const now = new Date();
+    const chinaOffset = 8 * 60;
+    const chinaTime = new Date(now.getTime() + chinaOffset * 60 * 1000);
+    const date = chinaTime.toISOString().split('T')[0];
+
+    const summary = await getMindboostTodaySummary(date);
+    const message = formatEveningReport(summary);
+
+    const chatId = process.env.TELEGRAM_ALLOWED_CHAT_ID;
+    if (!chatId) {
+      return NextResponse.json({ error: 'TELEGRAM_ALLOWED_CHAT_ID manquant' }, { status: 500 });
+    }
+
+    await sendTelegramMessage(chatId, message);
+
+    return NextResponse.json({
+      ok: true,
+      date,
+      appCompleted: summary.appCompleted,
+      sent: true,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
+}
+
+
+--- D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\app\api\mindboost\cron\morning\route.ts ---
+import { NextRequest, NextResponse } from 'next/server';
+import { getMindboostTodaySummary } from '@/lib/mindboost/today-summary';
+import { sendTelegramMessage } from '@/lib/mindboost/telegram';
+
+function isAuthorized(req: NextRequest): boolean {
+  const authHeader = req.headers.get('authorization');
+  const cronSecret = req.headers.get('x-cron-secret');
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  return (
+    authHeader === `Bearer ${secret}` ||
+    cronSecret === secret
+  );
+}
+
+function getYesterdayChina(): string {
+  const now = new Date();
+  const chinaOffset = 8 * 60;
+  const chinaTime = new Date(now.getTime() + chinaOffset * 60 * 1000);
+  chinaTime.setUTCDate(chinaTime.getUTCDate() - 1);
+  return chinaTime.toISOString().split('T')[0];
+}
+
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const yesterday = getYesterdayChina();
+    const summary = await getMindboostTodaySummary(yesterday);
+
+    if (summary.appCompleted) {
+      return NextResponse.json({
+        ok: true,
+        date: yesterday,
+        appCompleted: true,
+        sent: false,
+        reason: 'App complÃ©tÃ©e hier â€” aucun rappel envoyÃ©.',
+      });
+    }
+
+    const chatId = process.env.TELEGRAM_ALLOWED_CHAT_ID;
+    if (!chatId) {
+      return NextResponse.json({ error: 'TELEGRAM_ALLOWED_CHAT_ID manquant' }, { status: 500 });
+    }
+
+    const message = [
+      `ðŸ“‹ Rappel matinal â€” ${yesterday}`,
+      ``,
+      `Tu n'as pas complÃ©tÃ© l'app hier.`,
+      ``,
+      `C'est trop tard pour corriger hier, mais note-le.`,
+      `Aujourd'hui, complÃ¨te DANEX Control avant 22h.`,
+      ``,
+      `Ouvre l'app et enregistre tes transactions du jour.`,
+    ].join('\n');
+
+    await sendTelegramMessage(chatId, message);
+
+    return NextResponse.json({
+      ok: true,
+      date: yesterday,
+      appCompleted: false,
+      sent: true,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
+}
+
+
+--- D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\app\api\mindboost\telegram\route.ts ---
+import { NextRequest, NextResponse } from "next/server";
+import {
+  getTelegramMessage,
+  handleTelegramCommand,
+  isAllowedTelegramChat,
+  sendTelegramMessage,
+  type TelegramUpdate,
+} from "@/lib/mindboost/telegram";
+
+export const runtime = "nodejs";
+
+function requireWebhookSecret() {
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
+
+  if (!secret) {
+    throw new Error("Missing env var: TELEGRAM_WEBHOOK_SECRET");
+  }
+
+  return secret;
+}
+
+function isValidTelegramWebhook(request: NextRequest) {
+  const expectedSecret = requireWebhookSecret();
+  const receivedSecret = request.headers.get("x-telegram-bot-api-secret-token");
+
+  return receivedSecret === expectedSecret;
+}
+
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    service: "Mindboost Telegram webhook",
+    mode: "read-only",
+  });
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    if (!isValidTelegramWebhook(request)) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const update = (await request.json()) as TelegramUpdate;
+    const message = getTelegramMessage(update);
+
+    if (!message) {
+      return NextResponse.json({ ok: true, ignored: "No message" });
+    }
+
+    const chatId = message.chat.id;
+
+    if (!isAllowedTelegramChat(chatId)) {
+      return NextResponse.json({ ok: true, ignored: "Unauthorized chat" });
+    }
+
+    const text = message.text ?? "";
+    const reply = await handleTelegramCommand(text);
+
+    const { searchParams } = new URL(request.url);
+    const dryRun = searchParams.get("dryRun") === "1";
+
+    if (!dryRun) {
+      await sendTelegramMessage(chatId, reply);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      dryRun,
+      reply,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown Telegram webhook error";
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Mindboost Telegram webhook failed",
+        message,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+--- D:\02_CODE_PROJECTS\NEW APP\danex-control-v2\src\app\api\mindboost\today-summary\route.ts ---
+import { NextRequest, NextResponse } from "next/server";
+import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
+
+function isAuthorized(request: NextRequest) {
+  const expectedSecret = process.env.MINDBOOST_API_SECRET;
+
+  if (!expectedSecret) {
+    throw new Error("Missing env var: MINDBOOST_API_SECRET");
+  }
+
+  const authorization = request.headers.get("authorization");
+  return authorization === `Bearer ${expectedSecret}`;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    if (!isAuthorized(request)) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const date = searchParams.get("date") ?? undefined;
+
+    const summary = await getMindboostTodaySummary(date);
+
+    return NextResponse.json(summary);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown Mindboost error";
+
+    return NextResponse.json(
+      {
+        error: "Mindboost today summary failed",
+        message,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+=== VERCEL.JSON ===
+{
+  "crons": [
+    {
+      "path": "/api/mindboost/cron/evening",
+      "schedule": "30 14 * * *"
+    },
+    {
+      "path": "/api/mindboost/cron/morning",
+      "schedule": "30 1 * * *"
+    }
+  ]
+}
+
+
+=== PACKAGE.JSON ===
+{
+  "name": "danex-control-v2",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.105.3",
+    "clsx": "^2.1.1",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^1.14.0",
+    "next": "16.2.6",
+    "next-intl": "^4.11.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

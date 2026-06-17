@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:seed": "tsx tests/seed/seed-test-db.ts",
+    "test:e2e": "playwright test",
+    "test:report": "tsx tests/report/generate-report.ts",
+    "test:night": "tsx tests/run-night.ts",
+    "test:night:report": "tsx tests/report/generate-report.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -23,13 +28,16 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }

@@ -99,6 +99,7 @@ export default function TransactionsPage({ params }: Props) {
   const [adjNote, setAdjNote]                   = useState("");
   const [adjDate, setAdjDate]                   = useState(new Date().toISOString().split("T")[0]);
   const [isSubmitting, setIsSubmitting]         = useState(false);
+  const [adjError, setAdjError]                 = useState<string | null>(null);
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ export default function TransactionsPage({ params }: Props) {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setAdjError(null);
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -176,6 +178,8 @@ export default function TransactionsPage({ params }: Props) {
       await addAdjustment(user.id, adjAccountId, acc?.currency ?? "USD",
         Number(adjTargetBalance), adjNote || null, adjDate);
       setShowLegacyForm(false);
+    } catch (err) {
+      setAdjError(err instanceof Error ? err.message : "Erreur lors de la correction.");
     } finally {
       setIsSubmitting(false);
     }
@@ -186,6 +190,7 @@ export default function TransactionsPage({ params }: Props) {
     setAdjTargetBalance(accounts[0] ? String(Number(accounts[0].balance).toFixed(2)) : "");
     setAdjNote("");
     setAdjDate(new Date().toISOString().split("T")[0]);
+    setAdjError(null);
     setShowLegacyForm(true);
   }
 
@@ -916,7 +921,12 @@ export default function TransactionsPage({ params }: Props) {
                 className="shrink-0 border-t border-slate-800 px-5 pt-3"
                 style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
               >
-                {adjDifference !== null && adjTargetBalance !== "" && (
+                {adjError && (
+                  <p className="mb-2.5 rounded-xl border border-red-900/50 bg-red-950/30 px-3.5 py-2.5 text-center text-xs text-red-400">
+                    {adjError}
+                  </p>
+                )}
+                {!adjError && adjDifference !== null && adjTargetBalance !== "" && (
                   <p className={`mb-2.5 text-center text-xs ${
                     Math.abs(adjDifference) < 0.001
                       ? "text-slate-500"
