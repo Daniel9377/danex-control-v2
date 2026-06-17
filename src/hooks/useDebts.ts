@@ -114,20 +114,38 @@ export function useDebts() {
     settlementMethod: SettlementMethod = "real_payment",
     linkedTransactionId: string | null = null
   ) {
-    if (debt.status === "paid") {
+    const supabase = createClient();
+
+    // ── Read the FRESH debt state from the DB to avoid stale React cache ────
+    // The `debt` parameter comes from React state which may not have re-rendered
+    // after a previous payment in the same tick, causing `paid_amount` to be stale.
+    // This would silently overwrite the real paid_amount, corrupt the debt status,
+    // and skip the account balance update on subsequent payments.
+    const { data: fresh, error: freshError } = await supabase
+      .from("debts")
+      .select("amount, paid_amount, status, direction")
+      .eq("id", debt.id)
+      .single();
+
+    if (freshError) throw new Error(`Impossible de vérifier la dette : ${freshError.message}`);
+    if (!fresh) throw new Error("Cette dette n'existe plus.");
+
+    if (fresh.status === "paid") {
       throw new Error("Cette dette est déjà entièrement réglée.");
     }
 
-    const remaining = Number(debt.amount) - Number(debt.paid_amount);
+    const currentPaid = Number(fresh.paid_amount);
+    const totalAmount = Number(fresh.amount);
+    const remaining = totalAmount - currentPaid;
+
     if (paymentAmount > remaining + 0.001) {
       throw new Error(
         `Le montant (${paymentAmount}) dépasse le solde restant (${remaining.toFixed(2)}).`
       );
     }
 
-    const supabase = createClient();
-
-    await supabase.from("debt_payments").insert({
+    // ── Insert payment record ──────────────────────────────────────────────
+    const { error: pmtError } = await supabase.from("debt_payments").insert({
       user_id: userId,
       debt_id: debt.id,
       account_id: accountId,
@@ -138,31 +156,41 @@ export function useDebts() {
       linked_transaction_id: linkedTransactionId,
     });
 
-    const newPaid = Number(debt.paid_amount) + paymentAmount;
-    const newStatus =
-      newPaid >= Number(debt.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
+    if (pmtError) throw new Error(`Échec de l'enregistrement du paiement : ${pmtError.message}`);
 
-    await supabase
+    // ── Update debt status (using the FRESH paid_amount) ────────────────────
+    const newPaid = currentPaid + paymentAmount;
+    const newStatus =
+      newPaid >= totalAmount ? "paid" : newPaid > 0 ? "partial" : "unpaid";
+
+    const { error: debtUpdateError } = await supabase
       .from("debts")
       .update({ paid_amount: newPaid, status: newStatus })
       .eq("id", debt.id);
 
-    // Only move account money for real payments
+    if (debtUpdateError) throw new Error(`Échec de la mise à jour de la dette : ${debtUpdateError.message}`);
+
+    // ── Update account balance for real payments ────────────────────────────
     if (accountId && settlementMethod === "real_payment") {
-      const { data: acc } = await supabase
+      const { data: acc, error: accError } = await supabase
         .from("accounts")
         .select("balance")
         .eq("id", accountId)
         .single();
-      if (acc) {
-        // i_owe: I pay out → account decreases
-        // owes_me: I receive repayment → account increases
-        const delta = debt.direction === "i_owe" ? -paymentAmount : paymentAmount;
-        await supabase
-          .from("accounts")
-          .update({ balance: Number(acc.balance) + delta })
-          .eq("id", accountId);
-      }
+
+      if (accError) throw new Error(`Compte introuvable : ${accError.message}`);
+      if (!acc) throw new Error("Compte introuvable (aucune ligne retournée).");
+
+      const delta = fresh.direction === "i_owe" ? -paymentAmount : paymentAmount;
+      const newBalance = Number(acc.balance) + delta;
+
+      const { error: accUpdateError } = await supabase
+        .from("accounts")
+        .update({ balance: newBalance })
+        .eq("id", accountId);
+
+      if (accUpdateError) throw new Error(`Échec de la mise à jour du solde : ${accUpdateError.message}`);
+
       cacheInvalidate("accounts");
     }
 

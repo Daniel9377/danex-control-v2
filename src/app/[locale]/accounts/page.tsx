@@ -1,5 +1,9 @@
 "use client";
 
+// Force dynamic rendering — account balances change frequently and must
+// never be served from the Next.js SSR cache (e.g. after debt payments).
+export const dynamic = "force-dynamic";
+
 import { useState, useMemo } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";

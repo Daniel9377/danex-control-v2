@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useDebts } from "@/hooks/useDebts";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -51,6 +52,7 @@ export default function DebtsPage({ params }: Props) {
   const { locale } = use(params);
   const t  = useTranslations("debts");
   const tc = useTranslations("common");
+  const router = useRouter();
   const { debts, loading, addDebt, addPayment, deleteDebt, getPayments } = useDebts();
   const { accounts } = useAccounts();
   const { currencies } = useCurrencies();
@@ -160,6 +162,9 @@ export default function DebtsPage({ params }: Props) {
       setShowPaymentForm(null);
       setPayAmount(""); setPayNote(""); setPayAccountId("");
       setSettlementMethod("real_payment");
+      // Invalidate the Next.js client-side router cache so a subsequent
+      // navigation to /fr/accounts fetches the updated account balance.
+      router.refresh();
     } catch (err: unknown) {
       setPayError(err instanceof Error ? err.message : "Erreur lors du paiement.");
     }
