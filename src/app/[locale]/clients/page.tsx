@@ -1,5 +1,9 @@
 "use client";
 
+// Force dynamic rendering — client financial data changes after every
+// transaction and must never be served from the Next.js SSR cache.
+export const dynamic = "force-dynamic";
+
 import { useState, useMemo } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";

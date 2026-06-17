@@ -167,8 +167,12 @@ function clientCard(page: Page, clientName: string) {
 }
 
 async function navigateBySidebar(page: Page, name: RegExp) {
+  // Resolve the href and do a full page load instead of clicking the link.
+  // Next.js soft navigation preserves the module cache, so useAllClientFinancials
+  // returns stale data from the initial mount instead of re-fetching.
   const link = page.getByRole("link", { name }).first();
   await expect(link, `Lien de navigation introuvable: ${name}`).toBeVisible();
-  await link.click();
+  const href = await link.getAttribute("href");
+  if (href) await page.goto(href);
   await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
 }
