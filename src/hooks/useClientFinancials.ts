@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Transaction, SharedFeeAllocation, ClientFinancials } from "@/lib/supabase/types";
-import { cacheGet, cacheSet } from "@/lib/cache";
+import { cacheGet, cacheSet, cacheSubscribe } from "@/lib/cache";
 
 const CLIENT_TX_PREFIX = "client_tx";
 const CLIENT_ALLOC_PREFIX = "client_alloc";
@@ -61,13 +62,15 @@ export function computeClientFinancials(
  * Loads financial data for all clients at once (single DB round-trip).
  * Returns a map: clientId → ClientFinancials
  */
+const ALL_CLIENTS_KEY = "all_client_financials";
+
 export function useAllClientFinancials() {
   const [financials, setFinancials] = useState<Record<string, ClientFinancials>>({});
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
 
   const load = useCallback(async () => {
-    const cacheKey = "all_client_financials";
-    const cached = cacheGet<Record<string, ClientFinancials>>(cacheKey);
+    const cached = cacheGet<Record<string, ClientFinancials>>(ALL_CLIENTS_KEY);
     if (cached) {
       setFinancials(cached);
       setLoading(false);
@@ -91,6 +94,13 @@ export function useAllClientFinancials() {
       supabase.from("shared_fee_allocations").select("*").not("client_id", "is", null),
     ]);
 
+    if (txRes.error) {
+      console.error("[useAllClientFinancials] transactions query error:", txRes.error);
+    }
+    if (allocRes.error) {
+      console.error("[useAllClientFinancials] allocations query error:", allocRes.error);
+    }
+
     const txList: Transaction[] = (txRes.data as Transaction[]) ?? [];
     const allocList: SharedFeeAllocation[] =
       (allocRes.data as SharedFeeAllocation[]) ?? [];
@@ -105,14 +115,30 @@ export function useAllClientFinancials() {
       result[clientId] = computeClientFinancials(clientId, clientTx, clientAlloc);
     }
 
-    cacheSet(cacheKey, result);
+    cacheSet(ALL_CLIENTS_KEY, result);
     setFinancials(result);
     setLoading(false);
   }, []);
 
+  // Initial load + subscribe to cross-component cache invalidation
   useEffect(() => {
     load();
-  }, [load]);
+    const unsubscribe = cacheSubscribe(ALL_CLIENTS_KEY, () => {
+      setLoading(true);
+      load();
+    });
+    return unsubscribe;
+  }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Next.js preserves page components across soft navigations — the
+  // component does NOT unmount/remount when navigating between /transactions
+  // and /clients.  We detect arrival via usePathname and re-fetch.
+  useEffect(() => {
+    if (pathname?.includes("/clients")) {
+      setLoading(true);
+      load();
+    }
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { financials, loading, reload: load };
 }

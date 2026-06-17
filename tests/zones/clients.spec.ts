@@ -167,9 +167,10 @@ function clientCard(page: Page, clientName: string) {
 }
 
 async function navigateBySidebar(page: Page, name: RegExp) {
-  // Resolve the href and do a full page load instead of clicking the link.
-  // Next.js soft navigation preserves the module cache, so useAllClientFinancials
-  // returns stale data from the initial mount instead of re-fetching.
+  // Use full page load instead of link.click().  On soft navigation, the
+  // Supabase anon client intermittently returns 0 rows for the transactions
+  // query (read consistency gap), so useAllClientFinancials sees no data.
+  // A full page load clears the JS context and forces a fresh auth + fetch.
   const link = page.getByRole("link", { name }).first();
   await expect(link, `Lien de navigation introuvable: ${name}`).toBeVisible();
   const href = await link.getAttribute("href");
