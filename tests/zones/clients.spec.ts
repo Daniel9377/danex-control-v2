@@ -158,7 +158,7 @@ async function createOrder(page: Page, clientName: string, productName: string) 
   await selectFieldOption(page, /^Client$/, clientName);
   await fillFieldInput(page, /^Produit$/, productName);
   await selectFieldOption(page, /^Devise$/, "USD");
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
   await expect(page.locator("article").filter({ hasText: productName }).first()).toBeVisible();
 }
 

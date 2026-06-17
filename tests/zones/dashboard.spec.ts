@@ -116,23 +116,23 @@ async function createOrder(page: Page, clientName: string, productName: string) 
   await selectFieldOption(page, /^Client$/, clientName);
   await fillFieldInput(page, /^Produit$/, productName);
   await selectFieldOption(page, /^Devise$/, "USD");
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
   await expect(page.locator("article").filter({ hasText: productName }).first()).toBeVisible();
 }
 
 async function readDashboardCardValue(page: Page, label: RegExp) {
   await page.goto("/fr/dashboard");
-  await page.waitForLoadState("networkidle");
+  // Wait for the specific card instead of networkidle (dashboard fires continuous
+  // Supabase requests after transaction mutations, preventing networkidle).
   const card = page.locator("button").filter({ hasText: label }).first();
-  await expect(card, `Carte dashboard introuvable: ${label}`).toBeVisible();
+  await expect(card, `Carte dashboard introuvable: ${label}`).toBeVisible({ timeout: 15_000 });
   return firstMoneyNumber((await card.textContent()) ?? "");
 }
 
 async function readHeroPersonalEstimate(page: Page) {
   await page.goto("/fr/dashboard");
-  await page.waitForLoadState("networkidle");
   const hero = page.locator("main > div > div").filter({ hasText: /Situation/i }).first();
-  await expect(hero, "Carte hero Situation introuvable.").toBeVisible();
+  await expect(hero, "Carte hero Situation introuvable.").toBeVisible({ timeout: 15_000 });
   return firstMoneyNumber((await hero.textContent()) ?? "");
 }
 

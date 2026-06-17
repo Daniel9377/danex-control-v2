@@ -126,7 +126,7 @@ async function createOrder(page: Page, clientName: string, productName: string, 
   await fillFieldInput(page, /^Produit$/, productName);
   await selectFieldOption(page, /^Devise$/, "USD");
   await fillFieldInput(page, /^Avance/, advance, 'input[type="number"]');
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
   await expect(page.locator("article").filter({ hasText: productName }).first()).toBeVisible();
 }
 
@@ -154,9 +154,8 @@ async function orderDetailText(page: Page, productName: string) {
 
 async function readDashboardCardValue(page: Page, label: RegExp) {
   await page.goto("/fr/dashboard");
-  await page.waitForLoadState("networkidle");
   const card = page.locator("button").filter({ hasText: label }).first();
-  await expect(card, `Carte dashboard introuvable: ${label}`).toBeVisible();
+  await expect(card, `Carte dashboard introuvable: ${label}`).toBeVisible({ timeout: 15_000 });
   return firstMoneyNumber((await card.textContent()) ?? "");
 }
 
@@ -168,7 +167,7 @@ async function createTransfer(page: Page, from: string, to: string, amount: stri
   await selectFieldOption(page, /^Vers$/, to);
   await fillFieldInput(page, /envoy/i, amount, 'input[type="number"]');
   await fillFieldInput(page, /^Note/, note);
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
 }
 
 async function payDebt(page: Page, personName: string, amount: string, accountName: string, note: string) {
@@ -181,5 +180,5 @@ async function payDebt(page: Page, personName: string, amount: string, accountNa
   await fillFieldInput(page, /^Montant$/, amount, 'input[type="number"]');
   await selectFieldOption(page, /Compte/, accountName);
   await fillFieldInput(page, /^Note/, note);
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
 }

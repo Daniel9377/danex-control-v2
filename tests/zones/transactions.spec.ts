@@ -308,11 +308,11 @@ async function fillNote(page: Page, value: string) {
 }
 
 async function saveTransactionForm(page: Page) {
-  const saveButton = page.getByRole("button", { name: /^Enregistrer$/ });
+  const saveButton = page.getByRole("button", { name: /Enregistr/ });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
   await expect(saveButton).toBeHidden({ timeout: 10_000 });
-  await page.waitForLoadState("networkidle");
+  // NB: /fr/transactions fires continuous Supabase requests — skip networkidle.
 }
 
 function fieldContainer(page: Page, label: RegExp): Locator {
@@ -336,7 +336,7 @@ async function deleteOpenTransaction(page: Page) {
   await expect(confirm).toBeVisible();
   await confirm.click();
   await expect(confirm).toBeHidden({ timeout: 10_000 });
-  await page.waitForLoadState("networkidle");
+  // NB: /fr/transactions fires continuous Supabase requests — skip networkidle.
 }
 
 async function readAccountBalance(page: Page, accountName: string): Promise<number> {

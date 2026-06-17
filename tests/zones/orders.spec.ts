@@ -174,7 +174,7 @@ async function createOrder(
   await fillFieldInput(page, /^Produit$/, input.productName);
   await selectFieldOption(page, /^Devise$/, input.currency);
   await fillFieldInput(page, /^Avance/, input.advance, 'input[type="number"]');
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
   await expect(orderCard(page, input.productName)).toBeVisible();
 }
 
@@ -221,7 +221,7 @@ async function createOrderQuickTransaction(
   await selectFieldOption(page, /^Client$/, input.clientName);
   await selectFieldOption(page, /^Commande/, input.productName);
   await fillFieldInput(page, /^Note/, input.note);
-  await saveByName(page, /^Enregistrer$/);
+  await saveByName(page, /^Enregistrer$/, /Enregistr/);
 }
 
 async function updateOrderStatus(page: Page, productName: string, statusLabel: string) {
@@ -231,5 +231,5 @@ async function updateOrderStatus(page: Page, productName: string, statusLabel: s
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: /^Modifier$/ }).click();
   await selectFieldOption(page, /^Statut$/, statusLabel);
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
 }

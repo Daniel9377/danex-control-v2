@@ -67,7 +67,7 @@ test("Dettes - creer une creance 150 USD apparait dans Creances a recevoir", asy
   await fillFieldInput(page, /^Montant$/, "150", 'input[type="number"]');
   await selectFieldOption(page, /^Devise$/, "USD");
   await fillFieldInput(page, /^Note/, "QA RECEIVABLE 150");
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
 
   const rows = await tableRows(state, "debts", { person_name: "Marc Receivable Test" });
   expect(rows, "La creance Marc doit etre creee en base.").toHaveLength(1);
@@ -111,7 +111,7 @@ async function payDebt(page: Page, personName: string, amount: string, accountNa
   await fillFieldInput(page, /^Montant$/, amount, 'input[type="number"]');
   await selectFieldOption(page, /Compte/, accountName);
   await fillFieldInput(page, /^Note/, note);
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
 }
 
 async function openPaymentForm(page: Page, personName: string) {

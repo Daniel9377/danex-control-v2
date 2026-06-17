@@ -103,8 +103,21 @@ export async function selectFieldOption(page: Page, label: RegExp, optionText: s
   await select.selectOption(optionValue!);
 }
 
-export async function saveByName(page: Page, name: RegExp = /^(Sauvegarder|Enregistrer)$/) {
-  const saveButton = page.getByRole("button", { name });
+export async function saveByName(
+  page: Page,
+  name: RegExp = /^(Sauvegarder|Enregistrer)$/,
+  /** Regex that also matches the button during submission (text/aria-label changes).
+   *  e.g. "Enregistrer" → "Enregistrement…", "Appliquer" → "Application…",
+   *       "Sauvegarder" → "Sauvegarde en cours".
+   *  When omitted the original name is used, which may cause toBeHidden to pass
+   *  prematurely if the accessible name changes on click. */
+  submittingName?: RegExp
+) {
+  // Match both normal and submitting states so toBeHidden only resolves
+  // when the button is actually removed from the DOM (modal closed), not
+  // when the text merely changes during processing.
+  const locatorName = submittingName ?? name;
+  const saveButton = page.getByRole("button", { name: locatorName });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
   await expect(saveButton).toBeHidden({ timeout: 10_000 });
@@ -117,7 +130,7 @@ export async function createClientUi(page: Page, name: string, city = "Lubumbash
   await page.getByRole("button", { name: /Nouveau client/i }).click();
   await fillFieldInput(page, /^Nom$/, name);
   await fillFieldInput(page, /^Ville$/, city);
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
   await expect(page.locator("article").filter({ hasText: name }).first()).toBeVisible();
 }
 
@@ -134,7 +147,7 @@ export async function createAccountUi(
   if (input.availabilityLabel) await form.locator("button").filter({ hasText: input.availabilityLabel }).first().click();
   await selectFieldOption(page, /^Devise$/, input.currency);
   await fillFieldInput(page, /^Solde initial$/, input.balance ?? "0", 'input[type="number"]');
-  await saveByName(page, /^Sauvegarder$/);
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
   await expect(page.locator("article").filter({ hasText: input.name }).first()).toBeVisible();
 }
 
@@ -162,7 +175,7 @@ export async function createTransactionUi(
   if (input.orderName) await selectFieldOption(page, /^Commande/, input.orderName);
   if (input.category) await selectFieldOption(page, /^Cat.gorie$/, input.category);
   if (input.note) await fillFieldInput(page, /^Note/, input.note);
-  await saveByName(page, /^Enregistrer$/);
+  await saveByName(page, /^Enregistrer$/, /Enregistr/);
 }
 
 export async function openTransactionCreateForm(page: Page) {
