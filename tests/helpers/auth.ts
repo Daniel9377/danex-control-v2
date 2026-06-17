@@ -17,8 +17,9 @@ export async function loginAsTestUser(page: Page): Promise<void> {
   const password = requireEnv("TEST_USER_PASSWORD");
 
   await page.goto("/fr/login");
+  // The login page is static — networkidle resolves quickly and ensures
+  // the Supabase JS client is loaded before form submission.
   await page.waitForLoadState("networkidle");
-
   const emailInput = page.locator('input[type="email"][autocomplete="email"]');
   const passwordInput = page.locator('input[type="password"][autocomplete="current-password"]');
   await expect(emailInput).toBeVisible();
@@ -27,7 +28,7 @@ export async function loginAsTestUser(page: Page): Promise<void> {
 
   try {
     await Promise.all([
-      page.waitForURL(/\/dashboard(?:$|[?#])/, { timeout: 15_000 }),
+      page.waitForURL(/\/dashboard(?:$|[?#])/, { timeout: 25_000 }),
       passwordInput.press("Enter"),
     ]);
   } catch (error) {

@@ -99,7 +99,6 @@ test("Commandes - solde commande et solde client suivent recu moins achat", asyn
   });
 
   await page.goto("/fr/orders");
-  await page.waitForLoadState("networkidle");
   await openOrderDetails(page, "Balance Product");
   const orderText = normalizeText((await orderCard(page, "Balance Product").textContent()) ?? "");
   console.log(`Commandes S3 - affichage commande: ${orderText}`);
@@ -108,7 +107,7 @@ test("Commandes - solde commande et solde client suivent recu moins achat", asyn
   expect(orderText, "Le solde commande attendu est 38 USD.").toMatch(/38/);
 
   await page.goto("/fr/clients");
-  await page.waitForLoadState("networkidle");
+  await expect(page.locator("article").filter({ hasText: "Divine Test" }).first()).toBeVisible({ timeout: 15_000 });
   const divineCard = page.locator("article").filter({ hasText: "Divine Test" }).first();
   await expect(divineCard).toBeVisible();
   const clientText = normalizeText((await divineCard.textContent()) ?? "");
@@ -127,17 +126,13 @@ test("Commandes - statut nouveau puis sourcing puis commande persiste au recharg
 
   await updateOrderStatus(page, "Status Product", "En recherche");
   await page.reload();
-  await page.waitForLoadState("networkidle");
-  await expect(orderCard(page, "Status Product"), "Le statut sourcing doit etre visible apres rechargement.").toContainText(
-    /En recherche|sourcing/i
-  );
+  await expect(orderCard(page, "Status Product")).toBeVisible({ timeout: 15_000 });
+  await expect(orderCard(page, "Status Product")).toContainText(/En recherche|sourcing/i);
 
   await updateOrderStatus(page, "Status Product", "Commande");
   await page.reload();
-  await page.waitForLoadState("networkidle");
-  await expect(orderCard(page, "Status Product"), "Le statut ordered doit etre visible apres rechargement.").toContainText(
-    /Command/i
-  );
+  await expect(orderCard(page, "Status Product")).toBeVisible({ timeout: 15_000 });
+  await expect(orderCard(page, "Status Product")).toContainText(/Command/i);
 
   const order = await singleRow(state, "orders", { product_name: "Status Product" });
   console.log(`Commandes S4 - statut attendu=ordered, actuel=${order.status}`);
@@ -156,7 +151,6 @@ test("Commandes - double clic Sauvegarder cree une seule commande", async ({ pag
     (button as HTMLButtonElement).click();
   });
   await expect(saveButton).toBeHidden({ timeout: 10_000 });
-  await page.waitForLoadState("networkidle");
 
   const rows = await tableRows(state, "orders", { product_name: "Double Submit Order" });
   console.log(`Commandes S5 - commandes attendues=1, actuelles=${rows.length}`);
@@ -170,12 +164,31 @@ async function createOrder(
   await page.goto("/fr/orders");
   await expect(page.getByRole("button", { name: /Nouvelle commande/i })).toBeVisible({ timeout: 15_000 });
   await openOrderForm(page);
-  await selectFieldOption(page, /^Client$/, input.clientName);
-  await fillFieldInput(page, /^Produit$/, input.productName);
-  await selectFieldOption(page, /^Devise$/, input.currency);
-  await fillFieldInput(page, /^Avance/, input.advance, 'input[type="number"]');
+  // Scope fields to the modal form to avoid matching page-level filter labels
+  const form = page.locator("form").first();
+  await selectFieldInForm(form, page, /^Client$/, input.clientName);
+  await fillFieldInForm(form, page, /^Produit$/, input.productName);
+  await selectFieldInForm(form, page, /^Devise$/, input.currency);
+  await fillFieldInForm(form, page, /^Avance/, input.advance, 'input[type="number"]');
   await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
   await expect(orderCard(page, input.productName)).toBeVisible();
+}
+
+async function selectFieldInForm(form: ReturnType<Page['locator']>, page: Page, label: RegExp, optionText: string) {
+  const select = form.locator("label").filter({ hasText: label }).first().locator("..").locator("select").first();
+  await expect(select).toBeVisible();
+  const optionValue = await select.evaluate((el, wanted) => {
+    const s = el as HTMLSelectElement;
+    const m = Array.from(s.options).find(o => o.textContent?.toLowerCase().includes(String(wanted).toLowerCase()));
+    return m?.value ?? null;
+  }, optionText);
+  expect(optionValue, `Option "${optionText}" introuvable pour ${label}.`).toBeTruthy();
+  await select.selectOption(optionValue!);
+}
+async function fillFieldInForm(form: ReturnType<Page['locator']>, page: Page, label: RegExp, value: string, selector = "input") {
+  const input = form.locator("label").filter({ hasText: label }).first().locator("..").locator(selector).first();
+  await expect(input).toBeVisible();
+  await input.fill(value);
 }
 
 async function openOrderForm(page: Page) {

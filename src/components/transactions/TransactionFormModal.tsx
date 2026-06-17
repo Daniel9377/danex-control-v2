@@ -163,10 +163,15 @@ export function TransactionFormModal({
   useEffect(() => {
     if (open) {
       setIdempotencyKey(generateIdempotencyKey());
+      // Sync subType with the current defaultSubType prop — the component
+      // is always mounted (never unmounted), so useState's initializer
+      // only runs once. Without this, a second open with a different
+      // defaultSubType would show the type picker instead of the form.
+      setSubType(defaultSubType ?? null);
     } else {
       setTypeSearch("");
     }
-  }, [open]);
+  }, [open, defaultSubType]);
 
   // ── Derived ───────────────────────────────────────────────────────────────────
 
