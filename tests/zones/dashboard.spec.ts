@@ -12,7 +12,7 @@ import {
   type KnownState,
 } from "../helpers/e2e-utils";
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial", timeout: 90_000 });
 
 let state: KnownState;
 
@@ -83,8 +83,6 @@ test("Dashboard - alertes visibles pour dette en retard et deficit client", asyn
   });
 
   await page.goto("/fr/dashboard");
-  await page.waitForLoadState("networkidle");
-
   const alertSection = page.locator("section").filter({ hasText: /Alertes/i }).first();
   await expect(alertSection, "La section Alertes doit etre visible.").toBeVisible();
   const text = normalizeText((await alertSection.textContent()) ?? "");
@@ -96,7 +94,6 @@ test("Dashboard - alertes visibles pour dette en retard et deficit client", asyn
 test("Dashboard - transactions vides affichent des zeros propres sans NaN", async ({ page }) => {
   await wipeTransactionsOnly();
   await page.goto("/fr/dashboard");
-  await page.waitForLoadState("networkidle");
 
   const bodyText = normalizeText((await page.locator("body").textContent()) ?? "");
   console.log(`Dashboard S5 - etat vide: ${bodyText.slice(0, 500)}`);
@@ -111,7 +108,7 @@ test("Dashboard - transactions vides affichent des zeros propres sans NaN", asyn
 
 async function createOrder(page: Page, clientName: string, productName: string) {
   await page.goto("/fr/orders");
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("button", { name: /Nouvelle commande/i })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
   await selectFieldOption(page, /^Client$/, clientName);
   await fillFieldInput(page, /^Produit$/, productName);

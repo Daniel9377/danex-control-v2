@@ -13,7 +13,7 @@ import {
   type KnownState,
 } from "../helpers/e2e-utils";
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial", timeout: 90_000 });
 
 let state: KnownState;
 
@@ -116,7 +116,6 @@ async function payDebt(page: Page, personName: string, amount: string, accountNa
 
 async function openPaymentForm(page: Page, personName: string) {
   await page.goto("/fr/debts");
-  await page.waitForLoadState("networkidle");
   const card = debtCard(page, personName);
   await expect(card).toBeVisible();
   const button = card.getByRole("button", { name: /Ajouter un paiement/i });

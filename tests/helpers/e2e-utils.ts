@@ -50,7 +50,9 @@ export async function seedAndLogin(page: Page, route: string): Promise<KnownStat
   const state = loadKnownState();
   await loginAsTestUser(page);
   await page.goto(route);
-  await page.waitForLoadState("networkidle");
+  // Wait for a known element instead of networkidle — many pages fire
+  // continuous Supabase requests and never settle.
+  await expect(page.locator("main")).toBeVisible({ timeout: 15_000 });
   return state;
 }
 
@@ -120,13 +122,16 @@ export async function saveByName(
   const saveButton = page.getByRole("button", { name: locatorName });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(saveButton).toBeHidden({ timeout: 10_000 });
-  await page.waitForLoadState("networkidle");
+  // Give the async submit handler enough time to complete its Supabase calls
+  // and close the modal (serial E2E tests have 90s budgets).
+  await expect(saveButton).toBeHidden({ timeout: 30_000 });
+  // Skip networkidle — many pages fire continuous Supabase requests and never
+  // settle. Individual test helpers wait for specific UI elements instead.
 }
 
 export async function createClientUi(page: Page, name: string, city = "Lubumbashi") {
   await page.goto("/fr/clients");
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("button", { name: /Nouveau client/i })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Nouveau client/i }).click();
   await fillFieldInput(page, /^Nom$/, name);
   await fillFieldInput(page, /^Ville$/, city);
@@ -139,7 +144,7 @@ export async function createAccountUi(
   input: { name: string; currency: string; balance?: string; typeLabel?: RegExp; availabilityLabel?: RegExp }
 ) {
   await page.goto("/fr/accounts");
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("button", { name: /Nouveau compte/i })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Nouveau compte/i }).click();
   await fillFieldInput(page, /^Nom du compte$/, input.name);
   const form = page.locator("form").first();
@@ -165,7 +170,8 @@ export async function createTransactionUi(
   }
 ) {
   await page.goto("/fr/transactions");
-  await page.waitForLoadState("networkidle");
+  // /fr/transactions fires continuous Supabase requests — wait for control instead.
+  await expect(page.getByRole("button", { name: /Nouvelle transaction/i })).toBeVisible({ timeout: 15_000 });
   await openTransactionCreateForm(page);
   await pickTransactionSubType(page, input.subType);
   await selectFieldOption(page, /^Compte$/, input.accountName);
@@ -214,17 +220,15 @@ export function transactionRows(page: Page): Locator {
 
 export async function readAccountBalance(page: Page, accountName: string): Promise<number> {
   await page.goto("/fr/accounts");
-  await page.waitForLoadState("networkidle");
   const card = page.locator("article").filter({ hasText: accountName }).first();
-  await expect(card, `Compte introuvable: ${accountName}`).toBeVisible();
+  await expect(card, `Compte introuvable: ${accountName}`).toBeVisible({ timeout: 15_000 });
   return firstMoneyNumber((await card.textContent()) ?? "");
 }
 
 export async function readDashboardPhysicalBalance(page: Page): Promise<number> {
   await page.goto("/fr/dashboard");
-  await page.waitForLoadState("networkidle");
   const card = page.locator("button").filter({ hasText: /Solde physique/i }).first();
-  await expect(card, "Carte Solde physique introuvable sur le dashboard.").toBeVisible();
+  await expect(card, "Carte Solde physique introuvable sur le dashboard.").toBeVisible({ timeout: 15_000 });
   return firstMoneyNumber((await card.textContent()) ?? "");
 }
 

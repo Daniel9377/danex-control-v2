@@ -16,7 +16,7 @@ import {
   type KnownState,
 } from "../helpers/e2e-utils";
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial", timeout: 90_000 });
 
 let state: KnownState;
 
@@ -120,19 +120,40 @@ test("Coherence - paiement dette aligne compte dette restante et dashboard", asy
 
 async function createOrder(page: Page, clientName: string, productName: string, advance: string) {
   await page.goto("/fr/orders");
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("button", { name: /Nouvelle commande/i })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
-  await selectFieldOption(page, /^Client$/, clientName);
-  await fillFieldInput(page, /^Produit$/, productName);
-  await selectFieldOption(page, /^Devise$/, "USD");
-  await fillFieldInput(page, /^Avance/, advance, 'input[type="number"]');
+  // Target fields INSIDE the modal form to avoid matching page-level filter labels
+  const form = page.locator("form").first();
+  await selectFieldInForm(form, page, /^Client$/, clientName);
+  await fillFieldInForm(form, page, /^Produit$/, productName);
+  await selectFieldInForm(form, page, /^Devise$/, "USD");
+  await fillFieldInForm(form, page, /^Avance/, advance, 'input[type="number"]');
   await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
   await expect(page.locator("article").filter({ hasText: productName }).first()).toBeVisible();
 }
 
+// Helpers that scope to a specific form (avoids matching page-level filter labels)
+async function selectFieldInForm(form: ReturnType<Page['locator']>, page: Page, label: RegExp, optionText: string) {
+  const select = form.locator("label").filter({ hasText: label }).first().locator("..").locator("select").first();
+  await expect(select).toBeVisible();
+  const optionValue = await select.evaluate((element, wantedText) => {
+    const selectElement = element as HTMLSelectElement;
+    const match = Array.from(selectElement.options).find((option) =>
+      option.textContent?.toLowerCase().includes(String(wantedText).toLowerCase())
+    );
+    return match?.value ?? null;
+  }, optionText);
+  expect(optionValue, `Option "${optionText}" introuvable pour ${label} dans le formulaire.`).toBeTruthy();
+  await select.selectOption(optionValue!);
+}
+async function fillFieldInForm(form: ReturnType<Page['locator']>, page: Page, label: RegExp, value: string, selector = "input") {
+  const input = form.locator("label").filter({ hasText: label }).first().locator("..").locator(selector).first();
+  await expect(input).toBeVisible();
+  await input.fill(value);
+}
+
 async function divineClientText(page: Page) {
   await page.goto("/fr/clients");
-  await page.waitForLoadState("networkidle");
   const card = page.locator("article").filter({ hasText: "Divine Test" }).first();
   await expect(card).toBeVisible();
   const expand = card.getByRole("button", { name: /financier/i });
@@ -143,7 +164,6 @@ async function divineClientText(page: Page) {
 
 async function orderDetailText(page: Page, productName: string) {
   await page.goto("/fr/orders");
-  await page.waitForLoadState("networkidle");
   const card = page.locator("article").filter({ hasText: productName }).first();
   await expect(card).toBeVisible();
   const details = card.getByRole("button", { name: /Voir d.tail/i });
@@ -161,7 +181,7 @@ async function readDashboardCardValue(page: Page, label: RegExp) {
 
 async function createTransfer(page: Page, from: string, to: string, amount: string, note: string) {
   await page.goto("/fr/transfers");
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("button", { name: /Nouveau transfert/i })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Nouveau transfert/i }).click();
   await selectFieldOption(page, /^De$/, from);
   await selectFieldOption(page, /^Vers$/, to);
@@ -172,7 +192,6 @@ async function createTransfer(page: Page, from: string, to: string, amount: stri
 
 async function payDebt(page: Page, personName: string, amount: string, accountName: string, note: string) {
   await page.goto("/fr/debts");
-  await page.waitForLoadState("networkidle");
   const card = page.locator("article").filter({ hasText: personName }).first();
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: /Ajouter un paiement/i }).click();

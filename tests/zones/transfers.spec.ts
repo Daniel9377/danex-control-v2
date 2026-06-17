@@ -11,7 +11,7 @@ import {
   type KnownState,
 } from "../helpers/e2e-utils";
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial", timeout: 90_000 });
 
 let state: KnownState;
 
@@ -121,6 +121,7 @@ async function createTransfer(
   const receivedInput = fieldContainer(page, /re.u/i).locator('input[type="number"]').first();
   await expect(receivedInput, "Le champ Montant recu doit etre present.").toBeVisible();
   await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
+}
 
 async function openTransferForm(page: Page) {
   await page.getByRole("button", { name: /Nouveau transfert/i }).click();

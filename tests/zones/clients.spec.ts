@@ -14,7 +14,7 @@ import {
   type KnownState,
 } from "../helpers/e2e-utils";
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial", timeout: 90_000 });
 
 let state: KnownState;
 
@@ -170,5 +170,5 @@ async function navigateBySidebar(page: Page, name: RegExp) {
   const link = page.getByRole("link", { name }).first();
   await expect(link, `Lien de navigation introuvable: ${name}`).toBeVisible();
   await link.click();
-  await page.waitForLoadState("networkidle");
+  await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
 }

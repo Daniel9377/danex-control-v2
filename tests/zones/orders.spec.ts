@@ -11,7 +11,7 @@ import {
   type KnownState,
 } from "../helpers/e2e-utils";
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial", timeout: 90_000 });
 
 let state: KnownState;
 
@@ -168,7 +168,7 @@ async function createOrder(
   input: { clientName: string; productName: string; currency: string; advance: string }
 ) {
   await page.goto("/fr/orders");
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("button", { name: /Nouvelle commande/i })).toBeVisible({ timeout: 15_000 });
   await openOrderForm(page);
   await selectFieldOption(page, /^Client$/, input.clientName);
   await fillFieldInput(page, /^Produit$/, input.productName);
@@ -207,14 +207,14 @@ async function createOrderQuickTransaction(
   }
 ) {
   await page.goto("/fr/orders");
-  await page.waitForLoadState("networkidle");
+  await expect(page.locator("article").filter({ hasText: input.productName })).toBeVisible({ timeout: 15_000 });
   await openOrderDetails(page, input.productName);
   const card = orderCard(page, input.productName);
   const action = card.locator("button").filter({ hasText: input.actionLabel }).first();
   await expect(action, `Action rapide introuvable: ${input.actionLabel}`).toBeVisible();
   await action.click();
 
-  await expect(page.getByRole("button", { name: /^Enregistrer$/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Enregistr/ })).toBeVisible({ timeout: 15_000 });
   await selectFieldOption(page, /^Compte$/, input.accountName);
   await fillFieldInput(page, /^Montant$/, input.amount, 'input[type="number"]');
   await fillFieldInput(page, /^Montant$/, "USD", 'input[type="text"][maxlength="4"]');
@@ -226,7 +226,6 @@ async function createOrderQuickTransaction(
 
 async function updateOrderStatus(page: Page, productName: string, statusLabel: string) {
   await page.goto("/fr/orders");
-  await page.waitForLoadState("networkidle");
   const card = orderCard(page, productName);
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: /^Modifier$/ }).click();

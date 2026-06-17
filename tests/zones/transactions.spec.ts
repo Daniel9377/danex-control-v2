@@ -30,7 +30,7 @@ type KnownState = {
 
 const KNOWN_STATE_PATH = path.resolve(process.cwd(), "tests/seed/known-state.json");
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial", timeout: 90_000 });
 
 let knownState: KnownState;
 
@@ -43,7 +43,8 @@ test.beforeEach(async ({ page }) => {
 
   await loginAsTestUser(page);
   await page.goto("/fr/transactions");
-  await page.waitForLoadState("networkidle");
+  // /fr/transactions fires continuous Supabase requests — wait for control instead.
+  await expect(page.getByRole("button", { name: /Nouvelle transaction/i })).toBeVisible({ timeout: 15_000 });
 });
 
 test("Transactions - creation depense CNY: une seule ligne et solde Alipay a 800 CNY", async ({ page }) => {
@@ -311,7 +312,7 @@ async function saveTransactionForm(page: Page) {
   const saveButton = page.getByRole("button", { name: /Enregistr/ });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await expect(saveButton).toBeHidden({ timeout: 10_000 });
+  await expect(saveButton).toBeHidden({ timeout: 30_000 });
   // NB: /fr/transactions fires continuous Supabase requests — skip networkidle.
 }
 
@@ -341,17 +342,15 @@ async function deleteOpenTransaction(page: Page) {
 
 async function readAccountBalance(page: Page, accountName: string): Promise<number> {
   await page.goto("/fr/accounts");
-  await page.waitForLoadState("networkidle");
   const card = page.locator("article").filter({ hasText: accountName }).first();
-  await expect(card, `Compte introuvable: ${accountName}`).toBeVisible();
+  await expect(card, `Compte introuvable: ${accountName}`).toBeVisible({ timeout: 15_000 });
   return firstNumber((await card.textContent()) ?? "");
 }
 
 async function readDashboardPhysicalBalance(page: Page): Promise<number> {
   await page.goto("/fr/dashboard");
-  await page.waitForLoadState("networkidle");
   const card = page.locator("button").filter({ hasText: /Solde physique/i }).first();
-  await expect(card, "Carte Solde physique introuvable sur le dashboard.").toBeVisible();
+  await expect(card, "Carte Solde physique introuvable sur le dashboard.").toBeVisible({ timeout: 15_000 });
   return firstNumber((await card.textContent()) ?? "");
 }
 
