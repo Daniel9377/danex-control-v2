@@ -69,10 +69,12 @@ test("Clients - Joseph affiche 200 USD immediatement apres argent recu", async (
   await navigateBySidebar(page, /Clients/);
   const card = clientCard(page, "Joseph Test");
   await expect(card).toBeVisible();
+  // Auto-wait: useAllClientFinancials loads asynchronously after soft nav.
+  // toContainText retries until the financial data appears (default 10s).
+  await expect(card, "Joseph doit afficher 200 USD (attente chargement async apres soft nav).").toContainText(/200/);
+  await expect(card, "Joseph doit afficher USD ou $US.").toContainText(/USD|\$US|US\$/);
   const text = normalizeText((await card.textContent()) ?? "");
   console.log(`Clients S3 - affichage Joseph: ${text}`);
-  expect(text, "Joseph doit afficher 200 USD sans rechargement manuel.").toMatch(/200/);
-  expect(text, "Joseph doit afficher USD ou $US.").toMatch(/USD|\$US|US\$/i);
 });
 
 test("Clients - supprimer la transaction remet Joseph a 0 sans cache stale", async ({ page }) => {
@@ -90,17 +92,21 @@ test("Clients - supprimer la transaction remet Joseph a 0 sans cache stale", asy
   await expect(clientCard(page, "Joseph Test")).toContainText(/200/);
 
   await navigateBySidebar(page, /Transactions/);
-  const row = transactionRows(page).filter({ hasText: /QA CLIENT CACHE DELETE/ }).first();
-  await expect(row).toBeVisible();
+  // Notes are hidden in compact rows — filter by visible text instead
+  const row = transactionRows(page).filter({ hasText: /Joseph Test/ }).first();
+  await expect(row).toBeVisible({ timeout: 10_000 });
   await row.click();
   await deleteOpenTransaction(page);
 
   await navigateBySidebar(page, /Clients/);
-  const text = normalizeText((await clientCard(page, "Joseph Test").textContent()) ?? "");
-  console.log(`Clients S4 - affichage Joseph apres suppression attendu=0, actuel=${text}`);
-  expect(text, `CACHE STALE: Joseph affiche encore 200 USD apres suppression. Texte: ${text}`).not.toMatch(
-    /200(?:[,.]00)?\s*(?:USD|\$US|US\$|\$)/i
-  );
+  // Auto-wait + normalize approach for the inverse check
+  await expect(async () => {
+    const t = normalizeText((await clientCard(page, "Joseph Test").textContent()) ?? "");
+    console.log(`Clients S4 - affichage Joseph apres suppression attendu=0, actuel=${t}`);
+    expect(t, `CACHE STALE: Joseph affiche encore 200 USD apres suppression. Texte: ${t}`).not.toMatch(
+      /200(?:[,.]00)?\s*(?:USD|\$US|US\$|\$)/i
+    );
+  }).toPass({ timeout: 10_000 });
 });
 
 test("Clients - solde client = recu moins couts moins remboursements", async ({ page }) => {
@@ -167,13 +173,12 @@ function clientCard(page: Page, clientName: string) {
 }
 
 async function navigateBySidebar(page: Page, name: RegExp) {
-  // Use full page load instead of link.click().  On soft navigation, the
-  // Supabase anon client intermittently returns 0 rows for the transactions
-  // query (read consistency gap), so useAllClientFinancials sees no data.
-  // A full page load clears the JS context and forces a fresh auth + fetch.
+  // True user-like navigation: click the sidebar link to trigger a soft
+  // (client-side) navigation.  This exercises the real cache pub/sub path
+  // (useAllClientFinancials subscribes to "all_client_financials" invalidation
+  // and re-fetches on soft-navigation arrival via usePathname detection).
   const link = page.getByRole("link", { name }).first();
   await expect(link, `Lien de navigation introuvable: ${name}`).toBeVisible();
-  const href = await link.getAttribute("href");
-  if (href) await page.goto(href);
+  await link.click();
   await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
 }

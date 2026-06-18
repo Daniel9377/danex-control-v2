@@ -314,6 +314,7 @@ export function useTransactions(accountId?: string) {
 
     cacheInvalidatePrefix(PREFIX);
     cacheInvalidate("accounts");
+    cacheInvalidate("all_client_financials");
     await load();
   }
 
