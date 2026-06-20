@@ -121,6 +121,8 @@ async function createTransfer(
   const receivedInput = fieldContainer(page, /re.u/i).locator('input[type="number"]').first();
   await expect(receivedInput, "Le champ Montant recu doit etre present.").toBeVisible();
   await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
+  // Let the async balance update + cache invalidation settle
+  await page.waitForTimeout(500);
 }
 
 async function openTransferForm(page: Page) {

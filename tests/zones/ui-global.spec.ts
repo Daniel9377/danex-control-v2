@@ -147,7 +147,10 @@ const sidebarLinks = [
 
 async function openAndAssertResponsive(page: Page, route: string, testInfo: TestInfo, prefix: string) {
   await page.goto(`/fr/${route}`);
-  await page.waitForLoadState("networkidle");
+  // Mobile pages have continuous Supabase polling, never reach networkidle.
+  // Wait for the main content instead.
+  await expect(page.locator("main")).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(300);
   await expect(page, `${route} doit rester sur sa route.`).toHaveURL(new RegExp(`/fr/${route}$`));
   await assertNoHorizontalScroll(page, `${prefix} ${route}`);
   await assertNoElementOverflow(page, `${prefix} ${route}`);

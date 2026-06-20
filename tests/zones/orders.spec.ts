@@ -122,11 +122,14 @@ test("Commandes - statut nouveau puis sourcing puis commande persiste au recharg
   });
 
   await updateOrderStatus(page, "Status Product", "En recherche");
+  // Let the cache invalidation propagate before reloading
+  await page.waitForTimeout(500);
   await page.reload();
   await expect(orderCard(page, "Status Product")).toBeVisible({ timeout: 15_000 });
   await expect(orderCard(page, "Status Product")).toContainText(/En recherche|sourcing/i);
 
   await updateOrderStatus(page, "Status Product", "Commandé");
+  await page.waitForTimeout(500);
   await page.reload();
   await expect(orderCard(page, "Status Product")).toBeVisible({ timeout: 15_000 });
   await expect(orderCard(page, "Status Product")).toContainText(/Command/i);
