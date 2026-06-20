@@ -770,7 +770,7 @@ export default function RecoveryPage({ params }: Props) {
                                     row.type === "income" ? "text-emerald-400" : "text-red-400"
                                   }`}>
                                     {row.type === "income" ? "+" : "−"}
-                                    {row.amount.toLocaleString("fr-FR")} {row.currency}
+                                    {formatMoney(row.amount, row.currency)}
                                   </span>
                                 </div>
                                 {row.description && (
@@ -822,7 +822,7 @@ export default function RecoveryPage({ params }: Props) {
                                   </p>
                                   <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
                                     <span className="text-slate-500">
-                                      Original : {splitTarget.amount} {splitTarget.currency}
+                                      Original : {formatMoney(splitTarget.amount, splitTarget.currency)}
                                     </span>
                                     <span className={Math.abs(splitRemaining) < 0.001 ? "text-emerald-400" : "text-amber-400"}>
                                       Reste : {splitRemaining.toFixed(2)}
@@ -880,8 +880,8 @@ export default function RecoveryPage({ params }: Props) {
                                 {/* Split validation message */}
                                 {!splitValid && splitRows.length > 0 && (
                                   <p className="mt-2 text-[11px] text-amber-400">
-                                    Total divisé ({splitTotal.toFixed(2)}) ≠ montant original (
-                                    {splitTarget.amount} {splitTarget.currency}).
+                                    Total divisé ({formatMoney(splitTotal, splitTarget.currency)}) ≠ montant original (
+                                    {formatMoney(splitTarget.amount, splitTarget.currency)}).
                                   </p>
                                 )}
 

@@ -227,8 +227,9 @@ export async function readAccountBalance(page: Page, accountName: string): Promi
 
 export async function readDashboardPhysicalBalance(page: Page): Promise<number> {
   await page.goto("/fr/dashboard");
-  const card = page.locator("button").filter({ hasText: /Solde physique/i }).first();
-  await expect(card, "Carte Solde physique introuvable sur le dashboard.").toBeVisible({ timeout: 15_000 });
+  // After design-v2: the card says "Physique" not "Solde physique"
+  const card = page.locator("button .card-interactive, button").filter({ hasText: /Physique/i }).first();
+  await expect(card, "Carte Physique introuvable sur le dashboard.").toBeVisible({ timeout: 15_000 });
   return firstMoneyNumber((await card.textContent()) ?? "");
 }
 

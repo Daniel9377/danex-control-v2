@@ -112,7 +112,8 @@ test("Transactions - bug Divine: 118 USD reste en USD, jamais en CNY", async ({ 
   console.log(`Scenario 2 - affichage Divine: ${text}`);
 
   expect(text, `BUG DEVISE: le montant 118 n'est pas affiche pour Divine. Texte: ${text}`).toMatch(/118/);
-  expect(text, `BUG DEVISE: l'affichage Divine doit indiquer USD ou $US. Texte: ${text}`).toMatch(/USD|\$US|US\$/i);
+  // Accept $ (narrow symbol, new formatMoney) or $US/USD (legacy format)
+  expect(text, `BUG DEVISE: l'affichage Divine doit indiquer USD, $US ou $. Texte: ${text}`).toMatch(/USD|US\$|\$\d/i);
   expect(text, `BUG DEVISE: CNY detecte dans l'affichage Divine. Texte: ${text}`).not.toMatch(/CNY|CN\s*Y|\u00A5/i);
   expect(text, `BUG DEVISE: affichage proche de 16 USD detecte au lieu de 118 USD. Texte: ${text}`).not.toMatch(
     /16(?:[,.]\d{1,2})?\s*(?:USD|\$US|US\$|\$)/i
@@ -349,8 +350,8 @@ async function readAccountBalance(page: Page, accountName: string): Promise<numb
 
 async function readDashboardPhysicalBalance(page: Page): Promise<number> {
   await page.goto("/fr/dashboard");
-  const card = page.locator("button").filter({ hasText: /Solde physique/i }).first();
-  await expect(card, "Carte Solde physique introuvable sur le dashboard.").toBeVisible({ timeout: 15_000 });
+  const card = page.locator("button").filter({ hasText: /Physique/i }).first();
+  await expect(card, "Carte Physique introuvable sur le dashboard.").toBeVisible({ timeout: 15_000 });
   return firstNumber((await card.textContent()) ?? "");
 }
 

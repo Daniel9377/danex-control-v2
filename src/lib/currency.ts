@@ -1,27 +1,49 @@
-const intlUnsupported: Record<string, string> = {
+const currencyPrefix: Record<string, string> = {
   CDF: "FC",
 };
 
+/**
+ * Format a number with the currency symbol/code BEFORE the amount.
+ * Uses French number formatting (spaces, comma decimal) but
+ * places the currency first — "$1 000,00", "CNY 5 000,00", etc.
+ */
 export function formatMoney(
   amount: number | string | null,
   currency: string
 ): string {
   const n = Number(amount ?? 0);
   if (!Number.isFinite(n)) return "—";
-  const symbol = intlUnsupported[currency];
-  if (symbol) {
-    return `${n.toLocaleString("fr-FR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })} ${symbol}`;
-  }
+
+  const formatted = new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+
+  const prefix = currencyPrefix[currency];
+  if (prefix) return `${prefix} ${formatted}`;
+
+  // For USD/EUR/THB/etc., Intl gives us "1 000,00 $US" — extract the symbol
+  // and place it before the number.
   try {
-    return new Intl.NumberFormat("fr-FR", {
+    const parts = new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency,
-    }).format(n);
+      currencyDisplay: "narrowSymbol",
+    }).formatToParts(n);
+
+    // Reorder: symbol/code first, then the number
+    const symbolPart = parts.find((p) => p.type === "currency");
+    const symbol = symbolPart?.value ?? currency;
+    const numberPart = parts
+      .filter((p) => p.type !== "currency" && p.type !== "literal")
+      .map((p) => p.value)
+      .join("");
+
+    // If the symbol looks like an ISO code (3 uppercase letters), add a space
+    const isCode = /^[A-Z]{3}$/.test(symbol);
+    return isCode ? `${symbol} ${numberPart}` : `${symbol}${numberPart}`;
   } catch {
-    return `${n.toFixed(2)} ${currency}`;
+    return `${currency} ${n.toFixed(2).replace(".", ",")}`;
   }
 }
 

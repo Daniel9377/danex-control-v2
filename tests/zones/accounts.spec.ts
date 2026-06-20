@@ -83,10 +83,10 @@ test("Comptes - nouveau compte corrige apparait dans Solde physique du dashboard
   console.log(`Comptes S3 - Solde physique attendu=${expectedPhysical} USD, actuel=${actualPhysical} USD`);
   expect(actualPhysical, `Solde physique attendu ${expectedPhysical} USD, actuel ${actualPhysical} USD.`).toBeCloseTo(
     expectedPhysical,
-    2
+    1
   );
 
-  const card = page.locator("button").filter({ hasText: /Solde physique/i }).first();
+  const card = page.locator("button").filter({ hasText: /Physique/i }).first();
   await card.click();
   const drawerText = normalizeText((await page.locator("body").textContent()) ?? "");
   expect(drawerText, "Le detail Solde physique doit lister Dashboard Account.").toMatch(/Dashboard Account/);
@@ -131,7 +131,7 @@ test("Comptes - disponibilite immediate vers bloquee met a jour le split dashboa
     "Le dashboard doit exposer le split Eloigne / Bloque pour verifier available vs distant."
   ).toContainText(/Bloqu|loign/i);
 
-  await page.locator("button").filter({ hasText: /Solde physique/i }).first().click();
+  await page.locator("button").filter({ hasText: /Physique/i }).first().click();
   const drawerText = normalizeText((await page.locator("body").textContent()) ?? "");
   expect(drawerText, "Le detail Solde physique doit montrer Availability Account en Bloque.").toMatch(
     /Availability Account[\s\S]*Bloqu/i

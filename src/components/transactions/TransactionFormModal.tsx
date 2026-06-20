@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { Account, Client, Order, Debt, TransactionSubType } from "@/lib/supabase/types";
+import { formatMoney } from "@/lib/currency";
 import {
   SUB_TYPE_META,
   SUB_TYPE_GROUPS,
@@ -491,7 +492,7 @@ export function TransactionFormModal({
                     <option value="">—</option>
                     {accounts.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.name} ({a.currency} · {Number(a.balance).toFixed(2)})
+                        {a.name} ({formatMoney(Number(a.balance), a.currency)})
                       </option>
                     ))}
                   </select>
@@ -514,7 +515,7 @@ export function TransactionFormModal({
                   />
                   {correctionDiff !== null && Math.abs(correctionDiff) >= 0.001 && (
                     <p className={`mt-1.5 text-xs ${correctionDiff > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                      Correction : {correctionDiff > 0 ? "+" : ""}{correctionDiff.toFixed(2)} {selectedAccount?.currency}
+                      Correction : {correctionDiff > 0 ? "+" : ""}{selectedAccount ? formatMoney(correctionDiff, selectedAccount.currency) : `${correctionDiff.toFixed(2)}`}
                     </p>
                   )}
                   {correctionDiff !== null && Math.abs(correctionDiff) < 0.001 && targetBalance !== "" && (
@@ -650,7 +651,7 @@ export function TransactionFormModal({
                       <option value="">Sélectionner</option>
                       {openDebts.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.person_name} — {Number(d.amount - d.paid_amount).toFixed(2)} {d.currency} restant
+                          {d.person_name} — {formatMoney(Number(d.amount) - Number(d.paid_amount), d.currency)} restant
                         </option>
                       ))}
                     </select>
@@ -676,7 +677,7 @@ export function TransactionFormModal({
                       <option value="">Sélectionner</option>
                       {openReceivables.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.person_name} — {Number(d.amount - d.paid_amount).toFixed(2)} {d.currency} à recevoir
+                          {d.person_name} — {formatMoney(Number(d.amount) - Number(d.paid_amount), d.currency)} à recevoir
                         </option>
                       ))}
                     </select>
@@ -769,7 +770,7 @@ export function TransactionFormModal({
                         ? "border border-emerald-900/40 bg-emerald-950/20 text-emerald-400"
                         : "border border-red-900/40 bg-red-950/20 text-red-400"
                     }`}>
-                      Total réparti : {allocTotal.toFixed(2)} / {amountNum.toFixed(2)} {currency}
+                      Total réparti : {formatMoney(allocTotal, currency)} / {formatMoney(amountNum, currency)}
                       {Math.abs(allocTotal - amountNum) >= 0.01 && " ← doit égaler le montant total"}
                     </div>
                   )}

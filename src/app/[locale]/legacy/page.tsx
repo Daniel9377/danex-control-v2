@@ -60,7 +60,8 @@ const filterSelectCls =
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatAmount(amount: number, currency: string) {
-  return `${amount.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${currency}`;
+  const n = amount.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return `${currency} ${n}`;
 }
 
 function formatDate(dateStr: string) {

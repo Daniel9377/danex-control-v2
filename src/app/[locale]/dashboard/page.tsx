@@ -10,6 +10,7 @@ import { useFinancialOverview } from "@/hooks/useFinancialOverview";
 import { useFinancialAlerts } from "@/hooks/useFinancialAlerts";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { MoneyAmount } from "@/components/ui/MoneyAmount";
 import { Badge } from "@/components/ui/Badge";
@@ -323,7 +324,7 @@ export default function DashboardPage({ params }: Props) {
     [criticalAlerts, highAlerts]
   );
 
-  const [chartsOpen, setChartsOpen] = useState(false);
+  const [chartsOpen, setChartsOpen] = useState(true);
   const [chartPeriod, setChartPeriod] = useState<DashPeriod>("month");
   const [chartAccountId, setChartAccountId] = useState<string | null>(null);
 
@@ -640,9 +641,7 @@ export default function DashboardPage({ params }: Props) {
             <div className="mt-3 grid gap-4 lg:grid-cols-2">
               <Card>
                 {isChartEmpty ? (
-                  <div className="flex h-[180px] items-center justify-center">
-                    <p className="text-sm text-slate-600">{t("no_real_data")}</p>
-                  </div>
+                  <EmptyState message={t("no_real_data")} />
                 ) : (
                   <ExpenseChart data={chartData} currency="USD" />
                 )}
@@ -654,9 +653,7 @@ export default function DashboardPage({ params }: Props) {
                 {categoryData.length > 0 ? (
                   <CategoryPie data={categoryData} currency="USD" />
                 ) : (
-                  <div className="flex h-[180px] items-center justify-center">
-                    <p className="text-sm text-slate-600">{t("no_real_expenses_month")}</p>
-                  </div>
+                  <EmptyState message={t("no_real_expenses_month")} />
                 )}
               </Card>
             </div>

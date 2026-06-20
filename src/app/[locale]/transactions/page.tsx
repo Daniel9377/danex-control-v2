@@ -934,7 +934,7 @@ export default function TransactionsPage({ params }: Props) {
                   }`}>
                     {Math.abs(adjDifference) < 0.001
                       ? "Aucune correction nécessaire"
-                      : `Correction : ${adjDifference > 0 ? "+" : ""}${adjDifference.toFixed(2)} ${adjAccount?.currency ?? ""}`}
+                      : `Correction : ${adjDifference > 0 ? "+" : ""}${adjAccount ? formatMoney(adjDifference, adjAccount.currency) : adjDifference.toFixed(2)}`}
                   </p>
                 )}
                 <div className="flex gap-2.5">
