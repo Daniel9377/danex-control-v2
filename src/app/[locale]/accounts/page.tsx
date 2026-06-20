@@ -21,7 +21,12 @@ import { Sparkline } from "@/components/charts/Sparkline";
 import { Account, AccountType, AccountAvailability } from "@/lib/supabase/types";
 import { formatMoney } from "@/lib/currency";
 import { computeAccountClientMoney } from "@/lib/financial-calculations";
-import { Plus, Pencil, Trash2, X, AlertTriangle, MoreHorizontal, Wallet, ChevronDown } from "lucide-react";
+import {
+  Plus, Pencil, Trash2, X, AlertTriangle, MoreHorizontal,
+  Wallet, Briefcase, Users, PiggyBank, TrendingUp, Shield,
+  GraduationCap, CreditCard, Hand, CircleDollarSign, ChevronDown,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { LoadingPage } from "@/components/ui/LoadingSpinner";
 
@@ -56,12 +61,29 @@ const TYPE_VARIANT: Record<string, "default" | "info" | "success" | "warning" | 
   other: "default",
 };
 
-const ACCOUNT_ICONS: Record<string, string> = {
-  personal: "wallet", business: "briefcase", client: "users",
-  savings: "piggy-bank", investment: "trending-up", emergency: "shield",
-  school: "graduation-cap", debt: "credit-card", held: "hand",
-  other: "circle-dollar-sign",
+const ACCOUNT_ICONS: Record<string, LucideIcon> = {
+  personal: Wallet,
+  business: Briefcase,
+  client: Users,
+  savings: PiggyBank,
+  investment: TrendingUp,
+  emergency: Shield,
+  school: GraduationCap,
+  debt: CreditCard,
+  held: Hand,
+  other: CircleDollarSign,
 };
+
+/** Resolves the icon for an account, using its name as a fallback hint. */
+function accountIcon(acc: Pick<Account, "type" | "name">): LucideIcon {
+  // Name-based overrides for well-known platforms
+  const n = acc.name.toLowerCase();
+  if (n.includes("alipay") || n.includes("wechat") || n.includes("微信")) return Wallet;   // mobile wallet
+  if (n.includes("bank") || n.includes("boc") || n.includes("icbc") || n.includes("banque")) return PiggyBank;
+  if (n.includes("cash") || n.includes("liquide") || n.includes("espèce") || n.includes("espece")) return CreditCard;
+  if (n.includes("mercury")) return Briefcase;  // business account
+  return ACCOUNT_ICONS[acc.type] ?? CircleDollarSign;
+}
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -319,7 +341,7 @@ export default function AccountsPage({ params }: Props) {
                       aria-label={acc.name}
                     >
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700/60 bg-slate-800 text-slate-400">
-                        <Wallet size={18} />
+                        {(() => { const Icon = accountIcon(acc); return <Icon size={18} />; })()}
                       </span>
 
                       <div className="min-w-0 flex-1">
