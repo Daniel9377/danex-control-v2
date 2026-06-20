@@ -114,7 +114,7 @@ async function createTransfer(
   await selectFieldOption(page, /^Vers$/, input.to);
   await fillFieldInput(page, /envoy/i, input.fromAmount, 'input[type="number"]');
   if (input.exchangeRate) {
-    await fillFieldInput(page, /^Taux de change$/, input.exchangeRate, 'input[type="number"]');
+    await fillFieldInput(page, /^Taux de change/, input.exchangeRate, 'input[type="number"]');
   }
   await fillFieldInput(page, /^Note/, input.note);
 

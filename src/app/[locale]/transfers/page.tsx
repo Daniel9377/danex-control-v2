@@ -37,6 +37,8 @@ export default function TransfersPage({ params }: Props) {
   const [note, setNote]                   = useState("");
   const [filterAccount, setFilterAccount] = useState("");
   const [openDropdown, setOpenDropdown]   = useState(false);
+  const [saving, setSaving]               = useState(false);
+  const [formError, setFormError]         = useState<string | null>(null);
 
   // ── Derived ───────────────────────────────────────────────────────────────────
 
@@ -96,18 +98,26 @@ export default function TransfersPage({ params }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSave) return;
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await addTransfer(
-      user.id, fromId, toId,
-      Number(fromAmount), Number(toAmount),
-      fromAcc?.currency ?? "USD", toAcc?.currency ?? "USD",
-      Number(exchangeRate), date, note || null
-    );
-    setShowForm(false);
-    setFromAmount(""); setToAmount(""); setNote(""); setExchangeRate("1");
+    if (!canSave || saving) return;
+    setSaving(true);
+    setFormError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setFormError("Session expirée. Reconnecte-toi."); return; }
+      await addTransfer(
+        user.id, fromId, toId,
+        Number(fromAmount), Number(toAmount),
+        fromAcc?.currency ?? "USD", toAcc?.currency ?? "USD",
+        Number(exchangeRate), date, note || null
+      );
+      setShowForm(false);
+      setFromAmount(""); setToAmount(""); setNote(""); setExchangeRate("1");
+    } catch (err: any) {
+      setFormError(err?.message || "Une erreur est survenue. Réessaie.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   // ── Loading ───────────────────────────────────────────────────────────────────
@@ -503,12 +513,15 @@ export default function TransfersPage({ params }: Props) {
                   >
                     {tc("cancel")}
                   </button>
+                  {formError && (
+                    <p className="rounded-xl bg-red-900/30 px-4 py-2.5 text-center text-xs text-red-400">{formError}</p>
+                  )}
                   <button
                     type="submit"
-                    disabled={!canSave}
+                    disabled={!canSave || saving}
                     className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
                   >
-                    {tc("save")}
+                    {saving ? "Sauvegarde en cours…" : tc("save")}
                   </button>
                 </div>
               </div>

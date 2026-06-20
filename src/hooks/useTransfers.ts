@@ -19,11 +19,14 @@ export function useTransfers() {
       return;
     }
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("transfers")
       .select("*")
       .order("transfer_date", { ascending: false })
       .order("created_at", { ascending: false });
+    if (error) {
+      console.error("[useTransfers] load error:", error.code, error.message);
+    }
     if (data) {
       cacheSet(KEY, data);
       setTransfers(data);
@@ -48,19 +51,50 @@ export function useTransfers() {
     note: string | null
   ) {
     const supabase = createClient();
-    await supabase.from("transfers").insert({
+    const { error: insertError } = await supabase.from("transfers").insert({
       user_id: userId, from_account_id: fromAccountId, to_account_id: toAccountId,
       from_amount: fromAmount, to_amount: toAmount, from_currency: fromCurrency,
       to_currency: toCurrency, exchange_rate: exchangeRate, transfer_date: date, note,
     });
-    const { data: fromAcc } = await supabase.from("accounts").select("balance").eq("id", fromAccountId).single();
-    const { data: toAcc } = await supabase.from("accounts").select("balance").eq("id", toAccountId).single();
+    if (insertError) {
+      console.error("[addTransfer] insert error:", insertError.code, insertError.message);
+      throw new Error(insertError.message || "Échec de la création du transfert.");
+    }
+
+    const { data: fromAcc, error: fromFetchErr } = await supabase
+      .from("accounts").select("balance").eq("id", fromAccountId).single();
+    if (fromFetchErr) {
+      console.error("[addTransfer] from-account fetch error:", fromFetchErr.code, fromFetchErr.message);
+      throw new Error("Impossible de lire le solde du compte source.");
+    }
     if (fromAcc) {
-      await supabase.from("accounts").update({ balance: Number(fromAcc.balance) - fromAmount }).eq("id", fromAccountId);
+      const { error: debitErr } = await supabase
+        .from("accounts")
+        .update({ balance: Number(fromAcc.balance) - fromAmount })
+        .eq("id", fromAccountId);
+      if (debitErr) {
+        console.error("[addTransfer] debit error:", debitErr.code, debitErr.message);
+        throw new Error(debitErr.message || "Échec du débit du compte source.");
+      }
+    }
+
+    const { data: toAcc, error: toFetchErr } = await supabase
+      .from("accounts").select("balance").eq("id", toAccountId).single();
+    if (toFetchErr) {
+      console.error("[addTransfer] to-account fetch error:", toFetchErr.code, toFetchErr.message);
+      throw new Error("Impossible de lire le solde du compte destination.");
     }
     if (toAcc) {
-      await supabase.from("accounts").update({ balance: Number(toAcc.balance) + toAmount }).eq("id", toAccountId);
+      const { error: creditErr } = await supabase
+        .from("accounts")
+        .update({ balance: Number(toAcc.balance) + toAmount })
+        .eq("id", toAccountId);
+      if (creditErr) {
+        console.error("[addTransfer] credit error:", creditErr.code, creditErr.message);
+        throw new Error(creditErr.message || "Échec du crédit du compte destination.");
+      }
     }
+
     cacheInvalidate(KEY, "accounts");
     await load();
   }
