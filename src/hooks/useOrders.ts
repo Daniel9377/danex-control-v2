@@ -48,12 +48,16 @@ export function useOrders(clientId?: string) {
     note: string | null
   ) {
     const supabase = createClient();
-    await supabase.from("orders").insert({
+    const { error } = await supabase.from("orders").insert({
       user_id: userId, client_id: clientId, product_name: productName, currency,
       client_price: clientPrice, supplier_price: supplierPrice,
       advance_received: advanceReceived, status, tracking_code: trackingCode,
       next_action: nextAction, note, last_update: new Date().toISOString().split("T")[0],
     });
+    if (error) {
+      console.error("[addOrder] insert error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la création de la commande.");
+    }
     cacheInvalidatePrefix(PREFIX);
     await load();
   }
@@ -63,17 +67,25 @@ export function useOrders(clientId?: string) {
     updates: Partial<Omit<Order, "id" | "user_id" | "created_at">>
   ) {
     const supabase = createClient();
-    await supabase
+    const { error } = await supabase
       .from("orders")
       .update({ ...updates, last_update: new Date().toISOString().split("T")[0] })
       .eq("id", id);
+    if (error) {
+      console.error("[updateOrder] update error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la mise à jour de la commande.");
+    }
     cacheInvalidatePrefix(PREFIX);
     await load();
   }
 
   async function deleteOrder(id: string) {
     const supabase = createClient();
-    await supabase.from("orders").delete().eq("id", id);
+    const { error } = await supabase.from("orders").delete().eq("id", id);
+    if (error) {
+      console.error("[deleteOrder] delete error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la suppression de la commande.");
+    }
     cacheInvalidatePrefix(PREFIX);
     await load();
   }

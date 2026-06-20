@@ -36,7 +36,11 @@ export function useCurrencies() {
     const supabase = createClient();
     const { data } = await supabase.from("currencies").select("id").eq("user_id", userId).limit(1);
     if (data && data.length === 0) {
-      await supabase.from("currencies").insert(DEFAULT_CURRENCIES.map((c) => ({ ...c, user_id: userId })));
+      const { error } = await supabase.from("currencies").insert(DEFAULT_CURRENCIES.map((c) => ({ ...c, user_id: userId })));
+      if (error) {
+        console.error("[seedIfEmpty] insert error:", error.code, error.message);
+        // Non-fatal: user can manually add currencies later
+      }
       cacheInvalidate(KEY);
       await load();
     }
@@ -50,12 +54,16 @@ export function useCurrencies() {
     rate_to_usd: number
   ) {
     const supabase = createClient();
-    await supabase
+    const { error } = await supabase
       .from("currencies")
       .upsert(
         { user_id: userId, code, name, symbol, rate_to_usd, updated_at: new Date().toISOString() },
         { onConflict: "user_id,code" }
       );
+    if (error) {
+      console.error("[upsertCurrency] upsert error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la mise à jour de la devise.");
+    }
     cacheInvalidate(KEY);
     await load();
   }

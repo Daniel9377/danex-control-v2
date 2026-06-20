@@ -49,6 +49,7 @@ export default function ClientsPage({ params }: Props) {
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState<string | null>(null);
   const [deleteId, setDeleteId]     = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [search, setSearch]         = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -520,7 +521,21 @@ export default function ClientsPage({ params }: Props) {
         confirmLabel={tc("delete")}
         cancelLabel={tc("cancel")}
         danger
-        onConfirm={async () => { if (deleteId) await deleteClient(deleteId); setDeleteId(null); }}
+        onConfirm={async () => {
+          if (!deleteId) return;
+          try {
+            await deleteClient(deleteId);
+            setDeleteId(null);
+            setDeleteError(null);
+          } catch (err: unknown) {
+            setDeleteError(err instanceof Error ? err.message : "Échec de la suppression.");
+          }
+        }}
+        message={
+          deleteError
+            ? `Erreur : ${deleteError}`
+            : "Supprimer ce client ? Ses transactions resteront mais ne seront plus liées."
+        }
         onCancel={() => setDeleteId(null)}
       />
     </PageWrapper>

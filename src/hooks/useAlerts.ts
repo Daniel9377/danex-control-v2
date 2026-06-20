@@ -36,16 +36,30 @@ export function useAlerts() {
 
   async function markRead(id: string) {
     const supabase = createClient();
-    await supabase.from("alerts").update({ is_read: true }).eq("id", id);
-    cacheInvalidate(KEY);
+    // Optimistic update
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, is_read: true } : a)));
+    const { error } = await supabase.from("alerts").update({ is_read: true }).eq("id", id);
+    if (error) {
+      // Rollback
+      setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, is_read: false } : a)));
+      console.error("[markRead] update error:", error.code, error.message);
+      throw new Error(error.message || "Échec du marquage de l'alerte.");
+    }
+    cacheInvalidate(KEY);
   }
 
   async function markAllRead() {
     const supabase = createClient();
-    await supabase.from("alerts").update({ is_read: true }).eq("is_read", false);
-    cacheInvalidate(KEY);
+    // Snapshot for rollback
+    const prevAlerts = alerts;
     setAlerts((prev) => prev.map((a) => ({ ...a, is_read: true })));
+    const { error } = await supabase.from("alerts").update({ is_read: true }).eq("is_read", false);
+    if (error) {
+      setAlerts(prevAlerts); // Rollback
+      console.error("[markAllRead] update error:", error.code, error.message);
+      throw new Error(error.message || "Échec du marquage de toutes les alertes.");
+    }
+    cacheInvalidate(KEY);
   }
 
   const unreadCount = alerts.filter((a) => !a.is_read).length;
