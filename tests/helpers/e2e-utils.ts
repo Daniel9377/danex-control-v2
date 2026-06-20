@@ -111,8 +111,8 @@ export async function saveByName(
   /** Regex that also matches the button during submission (text/aria-label changes).
    *  e.g. "Enregistrer" → "Enregistrement…", "Appliquer" → "Application…",
    *       "Sauvegarder" → "Sauvegarde en cours".
-   *  When omitted the original name is used, which may cause toBeHidden to pass
-   *  prematurely if the accessible name changes on click. */
+   *  Must be provided — otherwise toBeHidden may resolve immediately when the
+   *  button text flips on click, racing past the async Supabase call. */
   submittingName?: RegExp
 ) {
   // Match both normal and submitting states so toBeHidden only resolves

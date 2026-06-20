@@ -122,14 +122,13 @@ test("Comptes - disponibilite immediate vers bloquee met a jour le split dashboa
   await page.goto("/fr/dashboard");
   await page.waitForLoadState("networkidle");
   const body = page.locator("body");
+  // Design-v2: dashboard shows only "Disponible" (available = physical − client).
+  // The "Éloigné / Bloqué" split tile was removed; individual availability is
+  // visible on each account card on the Accounts page instead.
   await expect(
     body,
-    "Le dashboard doit exposer le split Disponible pour verifier available vs distant."
+    "Le dashboard doit exposer le tile Disponible."
   ).toContainText(/Disponible/i);
-  await expect(
-    body,
-    "Le dashboard doit exposer le split Eloigne / Bloque pour verifier available vs distant."
-  ).toContainText(/Bloqu|loign/i);
 
   await page.locator("button").filter({ hasText: /Physique/i }).first().click();
   const drawerText = normalizeText((await page.locator("body").textContent()) ?? "");
@@ -191,8 +190,10 @@ async function editAccountAvailability(page: Page, accountName: string, availabi
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: /Options du compte/i }).click();
   await card.locator("button").filter({ hasText: /Modifier/ }).click();
-  await page.getByRole("button", { name: availabilityLabel }).click();
-  await saveByName(page, /^Sauvegarder$/);
+  // Scoped to the form: avoid clicking the filter pill on the page behind the modal
+  const form = page.locator("form").first();
+  await form.locator("button").filter({ hasText: availabilityLabel }).first().click();
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
 }
 
 async function currencyRates() {

@@ -60,8 +60,8 @@ export function useAccounts() {
     const { error } = await supabase.from("accounts").insert(payload);
 
     if (error) {
-      console.error("[addAccount] error:", error.code);
-      return;
+      console.error("[addAccount] error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la création du compte.");
     }
 
     cacheInvalidate(KEY);
@@ -76,8 +76,8 @@ export function useAccounts() {
     const { error } = await supabase.from("accounts").update(updates).eq("id", id);
 
     if (error) {
-      console.error("[updateAccount] error:", error.code);
-      return;
+      console.error("[updateAccount] error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la mise à jour du compte.");
     }
 
     cacheInvalidate(KEY);
@@ -89,8 +89,8 @@ export function useAccounts() {
     const { error } = await supabase.from("accounts").delete().eq("id", id);
 
     if (error) {
-      console.error("[deleteAccount] Supabase error:", error.code, error.message);
-      return;
+      console.error("[deleteAccount] error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la suppression du compte.");
     }
 
     cacheInvalidate(KEY);
