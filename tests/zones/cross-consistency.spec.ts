@@ -51,7 +51,7 @@ test("Coherence - Divine affiche le meme 118 USD partout", async ({ page }) => {
 
   const clientText = await divineClientText(page);
   const orderText = await orderDetailText(page, "Divine Consistency Order");
-  const dashboardClientHeld = await readDashboardCardValue(page, /Argent client d.tenu/i);
+  const dashboardClientHeld = await readDashboardCardValue(page, /Client d.tenu/i);
   const mercuryBalance = await readAccountBalance(page, "Mercury Test");
 
   console.log(`Cross S1 - DB attendu=118 USD, actuel=${txRows[0].amount} ${txRows[0].currency}`);
