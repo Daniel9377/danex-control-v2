@@ -17,7 +17,8 @@ test.beforeEach(async ({ page }) => {
   state = await seedAndLogin(page, "/fr/dashboard");
 });
 
-test("UI globale - bascule sombre clair change la classe html et reste lisible", async ({ page }, testInfo) => {
+// SKIP: design-v2 removed the theme toggle button. Dark mode is now the only theme.
+test.skip("UI globale - bascule sombre clair change la classe html et reste lisible", async ({ page }, testInfo) => {
   await page.goto("/fr/dashboard");
   await page.waitForLoadState("networkidle");
   await takeUiScreenshot(page, testInfo, "theme-dark-initial");
@@ -108,7 +109,7 @@ test("UI globale - tous les liens sidebar ouvrent la bonne page", async ({ page 
     await expect(page, `Navigation ${item.label} doit aller vers ${item.href}.`).toHaveURL(
       new RegExp(`/fr${item.href}$`)
     );
-    const body = normalizeText((await page.locator("body").textContent()) ?? "");
+    const body = normalizeText((await page.locator("body").innerText()) ?? "");
     console.log(`UI S5 - ${item.label}: ${page.url()}`);
     expect(body, `${item.label} ne doit pas afficher de 404.`).not.toMatch(/404|not found|introuvable/i);
   }
@@ -150,7 +151,7 @@ async function openAndAssertResponsive(page: Page, route: string, testInfo: Test
   await expect(page, `${route} doit rester sur sa route.`).toHaveURL(new RegExp(`/fr/${route}$`));
   await assertNoHorizontalScroll(page, `${prefix} ${route}`);
   await assertNoElementOverflow(page, `${prefix} ${route}`);
-  const body = normalizeText((await page.locator("body").textContent()) ?? "");
+  const body = normalizeText((await page.locator("body").innerText()) ?? "");
   expect(body, `${route} ne doit pas afficher de 404.`).not.toMatch(/404|not found|introuvable/i);
   await takeUiScreenshot(page, testInfo, `${prefix}-${route}`);
 }
