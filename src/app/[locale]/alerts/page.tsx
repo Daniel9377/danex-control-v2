@@ -327,8 +327,8 @@ export default function AlertsPage({ params }: Props) {
           </span>
         </div>
 
-        {/* ── Scrollable tab bar (6 onglets → overflow) ── */}
-        <div className="flex gap-0.5 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 p-1">
+        {/* ── Tab bar — wraps on narrow viewports instead of overflowing ── */}
+        <div className="flex flex-wrap gap-0.5 rounded-xl border border-slate-800 bg-slate-950 p-1">
           {TAB_CONFIG.map(({ key, labelKey }) => {
             const count = key !== "all" ? tabCount(key) : undefined;
             const active = activeTab === key;
@@ -336,7 +336,7 @@ export default function AlertsPage({ params }: Props) {
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   active
                     ? "bg-slate-800 text-slate-100 shadow-sm"
                     : "text-slate-500 hover:text-slate-300"
