@@ -145,6 +145,7 @@ export default function RecoveryPage({ params }: Props) {
   const [resetting, setResetting]           = useState(false);
   const [resetDone, setResetDone]           = useState(false);
   const [resetError, setResetError]         = useState<string | null>(null);
+  const [zeroError, setZeroError]           = useState<string | null>(null);
 
   // Zero Point
   const [zeroValues, setZeroValues]         = useState<Record<string, string>>({});
@@ -224,21 +225,25 @@ export default function RecoveryPage({ params }: Props) {
 
       // 2. Supprimer les paiements de dettes (liés par debt_id)
       if (debtIds.length > 0) {
-        await supabase.from("debt_payments").delete().in("debt_id", debtIds);
+        const { error: dpErr } = await supabase.from("debt_payments").delete().in("debt_id", debtIds);
+        if (dpErr) throw new Error(`Échec suppression paiements : ${dpErr.message}`);
       }
 
       // 3. Réinitialiser les dettes (paid_amount → 0, status → unpaid)
-      await supabase.from("debts").update({
+      const { error: debtErr } = await supabase.from("debts").update({
         paid_amount: 0,
         status: "unpaid",
         creation_tx_id: null,
       }).eq("user_id", uid);
+      if (debtErr) throw new Error(`Échec réinitialisation dettes : ${debtErr.message}`);
 
       // 4. Supprimer toutes les transactions (CASCADE → shared_fee_allocations)
-      await supabase.from("transactions").delete().eq("user_id", uid);
+      const { error: txErr } = await supabase.from("transactions").delete().eq("user_id", uid);
+      if (txErr) throw new Error(`Échec suppression transactions : ${txErr.message}`);
 
       // 5. Remettre les soldes à 0
-      await supabase.from("accounts").update({ balance: 0 }).eq("user_id", uid);
+      const { error: accErr } = await supabase.from("accounts").update({ balance: 0 }).eq("user_id", uid);
+      if (accErr) throw new Error(`Échec remise à zéro des soldes : ${accErr.message}`);
 
       setResetDone(true);
       setConfirmText("");
@@ -271,7 +276,7 @@ export default function RecoveryPage({ params }: Props) {
 
       if (Math.abs(difference) >= 0.001) {
         const now = new Date().toISOString().split("T")[0];
-        await supabase.from("transactions").insert({
+        const { error: txErr } = await supabase.from("transactions").insert({
           user_id: uid,
           account_id: accountId,
           type: difference > 0 ? "income" : "expense",
@@ -287,10 +292,15 @@ export default function RecoveryPage({ params }: Props) {
           idempotency_key: `zero_${accountId}_${Date.now()}`,
           migration_status: null,
         });
-        await supabase.from("accounts").update({ balance: targetBalance }).eq("id", accountId);
+        if (txErr) throw new Error(`Échec correction point zéro : ${txErr.message}`);
+
+        const { error: accErr } = await supabase.from("accounts").update({ balance: targetBalance }).eq("id", accountId);
+        if (accErr) throw new Error(`Échec mise à jour solde : ${accErr.message}`);
       }
 
       setZeroApplied((prev) => new Set([...prev, accountId]));
+    } catch (err) {
+      setZeroError(err instanceof Error ? err.message : "Erreur lors du point zéro.");
     } finally {
       setZeroApplying(null);
     }
@@ -329,7 +339,7 @@ export default function RecoveryPage({ params }: Props) {
       if (!session) return;
       const uid = session.user.id;
 
-      await supabase.from("transactions").insert({
+      const { error: txErr } = await supabase.from("transactions").insert({
         user_id: uid,
         account_id: null,
         type: row.type,
@@ -345,6 +355,7 @@ export default function RecoveryPage({ params }: Props) {
         idempotency_key: `hist_${rowId}`,
         migration_status: "pending_review",
       });
+      if (txErr) throw new Error(`Échec import transaction : ${txErr.message}`);
 
       setImportQueue((prev) => prev.map((r) => r.id === rowId ? { ...r, status: "validated" } : r));
     } catch (err) {
@@ -396,7 +407,7 @@ export default function RecoveryPage({ params }: Props) {
       for (const split of splitRows) {
         const amt = Number(split.amount);
         if (amt <= 0) continue;
-        await supabase.from("transactions").insert({
+        const { error: splitErr } = await supabase.from("transactions").insert({
           user_id: uid,
           account_id: null,
           type: split.type,
@@ -412,6 +423,7 @@ export default function RecoveryPage({ params }: Props) {
           idempotency_key: `hist_split_${split.id}`,
           migration_status: "pending_review",
         });
+        if (splitErr) throw new Error(`Échec import transaction divisée : ${splitErr.message}`);
       }
 
       setImportQueue((prev) => prev.map((r) => r.id === splitTargetId ? { ...r, status: "validated" } : r));
@@ -672,6 +684,12 @@ export default function RecoveryPage({ params }: Props) {
                         </div>
                       );
                     })
+                  )}
+
+                  {zeroError && (
+                    <div className="mt-3 rounded-xl border border-red-800/50 bg-red-950/30 px-3.5 py-2.5">
+                      <p className="text-xs text-red-400">{zeroError}</p>
+                    </div>
                   )}
                 </div>
               </OperationCard>
