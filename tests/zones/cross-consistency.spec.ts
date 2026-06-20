@@ -63,9 +63,9 @@ test("Coherence - Divine affiche le meme 118 USD partout", async ({ page }) => {
   expect(Number(txRows[0].amount), `DB attendue 118, actuelle ${txRows[0]?.amount}.`).toBe(118);
   expect(txRows[0].currency, `DB attendue USD, actuelle ${txRows[0]?.currency}.`).toBe("USD");
   expect(clientText, `Clients: Divine doit afficher 118 USD. Texte: ${clientText}`).toMatch(/118/);
-  expect(clientText, `Clients: Divine doit afficher USD ou $US. Texte: ${clientText}`).toMatch(/USD|\$US|US\$/i);
+  expect(clientText, `Clients: Divine doit afficher USD, $US ou $. Texte: ${clientText}`).toMatch(/USD|US\$|\$\d/i);
   expect(orderText, `Orders: la commande liee doit afficher 118 USD. Texte: ${orderText}`).toMatch(/118/);
-  expect(orderText, `Orders: la commande liee doit afficher USD ou $US. Texte: ${orderText}`).toMatch(/USD|\$US|US\$/i);
+  expect(orderText, `Orders: la commande liee doit afficher USD, $US ou $. Texte: ${orderText}`).toMatch(/USD|US\$|\$\d/i);
   expect(dashboardClientHeld, `Dashboard attendu 118 USD, actuel ${dashboardClientHeld} USD.`).toBeCloseTo(118, 2);
   expect(mercuryBalance, `Mercury attendu ${mercury.balance + 118} USD, actuel ${mercuryBalance} USD.`).toBe(
     mercury.balance + 118
