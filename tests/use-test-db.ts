@@ -81,7 +81,16 @@ function restoreProduction() {
     process.exit(1);
   }
   fs.copyFileSync(backupPath, localEnv);
-  console.log("✓ .env.local restored to production Supabase project");
+  // Verify the restore actually worked
+  const restored = fs.readFileSync(localEnv, "utf-8");
+  const match = restored.match(/NEXT_PUBLIC_SUPABASE_URL=(https:\/\/[^.]+\.supabase\.co)/);
+  const projectId = match ? match[1].split("//")[1].split(".")[0] : "UNKNOWN";
+  if (projectId === "dhrcuyzrwwjkenjvpeow") {
+    console.log("✓ .env.local restored to production Supabase (dhrcuyzrwwjkenjvpeow)");
+  } else {
+    console.error(`ERROR: Restore produced wrong project: ${projectId}. Expected dhrcuyzrwwjkenjvpeow.`);
+    process.exit(1);
+  }
 }
 
 const arg = process.argv[2];
