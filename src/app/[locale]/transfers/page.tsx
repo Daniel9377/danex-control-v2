@@ -474,6 +474,21 @@ export default function TransfersPage({ params }: Props) {
                     />
                   </div>
 
+                  {/* Received amount preview (cross-currency only) */}
+                  {!sameCurrency && fromAcc && toAcc && fromAmount && Number(fromAmount) > 0 && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                        Montant reçu
+                      </p>
+                      <p className="mt-1 font-mono text-lg font-bold tabular-nums text-sky-400">
+                        {formatMoney(Number(toAmount) || 0, toAcc.currency)}
+                      </p>
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        {formatMoney(Number(fromAmount), fromAcc.currency)} × {Number(exchangeRate).toFixed(4)} = {formatMoney(Number(toAmount) || 0, toAcc.currency)}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Date */}
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-slate-400">
