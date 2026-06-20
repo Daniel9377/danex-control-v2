@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -68,6 +68,8 @@ export default function DebtsPage({ params }: Props) {
   const [saving, setSaving]                 = useState(false);
   const [formError, setFormError]           = useState<string | null>(null);
   const [deleteError, setDeleteError]       = useState<string | null>(null);
+  const savingRef = useRef(false);
+  const payingRef = useRef(false);
 
   // Debt form
   const [personName, setPersonName]         = useState("");
@@ -135,7 +137,8 @@ export default function DebtsPage({ params }: Props) {
 
   async function handleAddDebt(e: React.FormEvent) {
     e.preventDefault();
-    if (saving) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setFormError(null);
     try {
@@ -153,18 +156,21 @@ export default function DebtsPage({ params }: Props) {
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "Une erreur est survenue. Réessaie.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
 
   async function handlePayment(e: React.FormEvent, debtId: string) {
     e.preventDefault();
+    if (payingRef.current) return;
+    payingRef.current = true;
     setPayError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { payingRef.current = false; return; }
     const debt = debts.find((d) => d.id === debtId);
-    if (!debt) return;
+    if (!debt) { payingRef.current = false; return; }
     try {
       await addPayment(
         user.id, debt, Number(payAmount),
@@ -174,11 +180,11 @@ export default function DebtsPage({ params }: Props) {
       setShowPaymentForm(null);
       setPayAmount(""); setPayNote(""); setPayAccountId("");
       setSettlementMethod("real_payment");
-      // Invalidate the Next.js client-side router cache so a subsequent
-      // navigation to /fr/accounts fetches the updated account balance.
       router.refresh();
     } catch (err: unknown) {
       setPayError(err instanceof Error ? err.message : "Erreur lors du paiement.");
+    } finally {
+      payingRef.current = false;
     }
   }
 

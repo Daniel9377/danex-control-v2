@@ -4,7 +4,7 @@
 // never be served from the Next.js SSR cache (e.g. after debt payments).
 export const dynamic = "force-dynamic";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -109,6 +109,7 @@ export default function AccountsPage({ params }: Props) {
   const [availability, setAvailability] = useState<AccountAvailability>("immediate");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const savingRef = useRef(false); // synchronous guard against double-clicks
 
   async function openDetail(acc: Account) {
     setDetailAccount(acc);
@@ -153,7 +154,8 @@ export default function AccountsPage({ params }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (saving) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setFormError(null);
     try {
@@ -170,6 +172,7 @@ export default function AccountsPage({ params }: Props) {
     } catch {
       setFormError("Une erreur est survenue. Réessaie.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }

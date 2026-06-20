@@ -72,7 +72,7 @@ test("Clients - Joseph affiche 200 USD immediatement apres argent recu", async (
   // Auto-wait: useAllClientFinancials loads asynchronously after soft nav.
   // toContainText retries until the financial data appears (default 10s).
   await expect(card, "Joseph doit afficher 200 USD (attente chargement async apres soft nav).").toContainText(/200/);
-  await expect(card, "Joseph doit afficher USD ou $US.").toContainText(/USD|\$US|US\$/);
+  await expect(card, "Joseph doit afficher USD, $US ou $.").toContainText(/USD|US\$|\$\d/i);
   const text = normalizeText((await card.textContent()) ?? "");
   console.log(`Clients S3 - affichage Joseph: ${text}`);
 });

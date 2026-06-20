@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -39,6 +39,7 @@ export default function TransfersPage({ params }: Props) {
   const [openDropdown, setOpenDropdown]   = useState(false);
   const [saving, setSaving]               = useState(false);
   const [formError, setFormError]         = useState<string | null>(null);
+  const savingRef = useRef(false);
 
   // ── Derived ───────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,8 @@ export default function TransfersPage({ params }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSave || saving) return;
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setFormError(null);
     try {
@@ -116,6 +118,7 @@ export default function TransfersPage({ params }: Props) {
     } catch (err: any) {
       setFormError(err?.message || "Une erreur est survenue. Réessaie.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
