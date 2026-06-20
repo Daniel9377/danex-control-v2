@@ -85,6 +85,7 @@ export default function TransactionsPage({ params }: Props) {
   const [deleteTarget, setDeleteTarget]       = useState<{
     id: string; accountId: string | null; type: TransactionType; amount: number;
   } | null>(null);
+  const [deleteError, setDeleteError]         = useState<string | null>(null);
   const [showReclassify, setShowReclassify]   = useState(false);
   const [reclassifySubType, setReclassifySubType] = useState<TransactionSubType | "">("");
 
@@ -969,7 +970,9 @@ export default function TransactionsPage({ params }: Props) {
         open={!!deleteTarget}
         title="Supprimer cette transaction ?"
         message={
-          deleteTarget?.accountId
+          deleteError
+            ? `Erreur : ${deleteError}`
+            : deleteTarget?.accountId
             ? "Cette action est irréversible. Le solde du compte sera recalculé automatiquement."
             : "Cette action est irréversible."
         }
@@ -977,15 +980,19 @@ export default function TransactionsPage({ params }: Props) {
         cancelLabel={tc("cancel")}
         danger
         onConfirm={async () => {
-          if (deleteTarget) {
+          if (!deleteTarget) return;
+          try {
             await deleteTransaction(
               deleteTarget.id,
               deleteTarget.accountId,
               deleteTarget.type,
               deleteTarget.amount
             );
+            setDeleteTarget(null);
+            setDeleteError(null);
+          } catch (err: unknown) {
+            setDeleteError(err instanceof Error ? err.message : "Échec de la suppression.");
           }
-          setDeleteTarget(null);
         }}
         onCancel={() => setDeleteTarget(null)}
       />
