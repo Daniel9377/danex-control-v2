@@ -14,9 +14,6 @@ import {
   Bell,
   Settings,
   HandCoins,
-  BarChart2,
-  Download,
-  Tag,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,14 +38,6 @@ const navGroups: NavGroup[] = [
       { navKey: "orders", href: "/orders", icon: ShoppingBag },
       { navKey: "debts", href: "/debts", icon: HandCoins },
       { navKey: "transfers", href: "/transfers", icon: ArrowLeftRight },
-    ],
-  },
-  {
-    labelKey: "group_tools",
-    items: [
-      { navKey: "reports", href: "/reports", icon: BarChart2 },
-      { navKey: "export", href: "/export", icon: Download },
-      { navKey: "legacy", href: "/legacy", icon: Tag },
     ],
   },
 ];

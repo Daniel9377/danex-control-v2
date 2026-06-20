@@ -1,24 +1,20 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
 
 :root {
-  --background: #020817;
-  --foreground: #e2e8f0;
+  --background: var(--bg-app);
+  --foreground: var(--text-body);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-size: 14px;
+  background: var(--bg-app);
+  color: var(--text-body);
+  font-size: var(--text-base);
   min-height: 100vh;
 }
 
 /* Premium radial gradient background */
-.danex-bg {
-  background:
-    radial-gradient(ellipse 70% 50% at 5% 5%, rgba(234, 88, 12, 0.055) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(99, 102, 241, 0.035) 0%, transparent 60%),
-    var(--background);
-}
+.danex-bg { background: var(--bg-danex); }
 
 /* Micro-interaction animations */
 @keyframes fade-up {
@@ -34,8 +30,8 @@ body {
   to   { opacity: 1; transform: scale(1); }
 }
 
-.animate-fade-up  { animation: fade-up  0.22s ease-out both; }
-.animate-slide-up { animation: slide-up 0.28s ease-out both; }
+.animate-fade-up  { animation: fade-up  var(--dur-base) ease-out both; }
+.animate-slide-up { animation: slide-up var(--dur-slow) ease-out both; }
 .animate-scale-in { animation: scale-in 0.20s ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -48,17 +44,18 @@ body {
 
 /* Interactive card utility */
 .card-interactive {
-  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+  transition: transform var(--dur-quick) ease, box-shadow var(--dur-quick) ease,
+              border-color var(--dur-quick) ease;
   cursor: pointer;
 }
 .card-interactive:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-lg);
   border-color: rgba(148, 163, 184, 0.15);
 }
 .card-interactive:active {
   transform: translateY(0) scale(0.99);
-  transition-duration: 0.08s;
+  transition-duration: var(--dur-fast);
 }
 @media (prefers-reduced-motion: reduce) {
   .card-interactive,
@@ -71,14 +68,12 @@ body {
 
 /* Glass surface */
 .glass-surface {
-  background: rgba(15, 22, 41, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--surface-glass);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 /* Navigation progress bar animation */
 @keyframes progress {
@@ -88,22 +83,12 @@ body {
 }
 
 /* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--slate-700); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--slate-600); }
 
-/* Task 1 — Remove blue focus/outline from all Recharts SVG elements */
+/* Remove blue focus/outline from all Recharts SVG elements */
 .recharts-wrapper,
 .recharts-wrapper *,
 .recharts-surface,
@@ -114,14 +99,10 @@ body {
   outline: none !important;
   -webkit-tap-highlight-color: transparent !important;
 }
-
 .recharts-wrapper *:focus,
 .recharts-wrapper *:focus-visible,
 .recharts-wrapper *:active {
   outline: none !important;
   box-shadow: none !important;
 }
-
-svg *:focus {
-  outline: none !important;
-}
+svg *:focus { outline: none !important; }
