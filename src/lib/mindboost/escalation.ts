@@ -19,7 +19,7 @@ export async function checkAndUpdateAlertCooldown(userId: string): Promise<boole
     if (now - lastAlert < ALERT_COOLDOWN_MS) return false;
   }
 
-  await supabase.from("mindboost_memory").upsert(
+  const { error } = await supabase.from("mindboost_memory").upsert(
     {
       user_id: userId,
       memory_type: "alert_cooldown",
@@ -29,6 +29,11 @@ export async function checkAndUpdateAlertCooldown(userId: string): Promise<boole
     },
     { onConflict: "user_id,memory_type" }
   );
+  if (error) {
+    console.error("[checkAndUpdateAlertCooldown] upsert error:", error.code, error.message);
+    // Non-fatal: returns true (alert can fire) — cooldown doesn't engage,
+    // user may get duplicate alerts. Prefer over-suppression (return false).
+  }
 
   return true;
 }
@@ -90,13 +95,17 @@ export async function logEscalation(
 ): Promise<void> {
   if (level < 2) return;
   const supabase = createAdminClient();
-  await supabase.from("mindboost_escalations").insert({
+  const { error } = await supabase.from("mindboost_escalations").insert({
     user_id: userId,
     trigger_message: triggerMessage,
     level,
     reason,
     resolved: false,
   });
+  if (error) {
+    console.error("[logEscalation] insert error:", error.code, error.message);
+    // Non-fatal: audit trail only, user experience identical
+  }
 }
 
 export function applyEscalationToReply(reply: string, level: number): string {

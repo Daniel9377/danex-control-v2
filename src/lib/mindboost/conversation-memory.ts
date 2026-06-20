@@ -1,4 +1,4 @@
-﻿import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ConversationMessage = {
   role: "user" | "assistant";
@@ -49,13 +49,18 @@ export async function saveConversationSummary(
 ): Promise<void> {
   const supabase = createAdminClient();
 
-  await supabase.from("mindboost_conversation_summary").insert({
+  const { error: insertErr } = await supabase.from("mindboost_conversation_summary").insert({
     user_id: userId,
     summary,
     created_at: new Date().toISOString(),
   });
+  if (insertErr) {
+    console.error("[saveConversationSummary] insert error:", insertErr.code, insertErr.message);
+    // Non-fatal: degrades long-term memory but doesn't break current conversation
+    return;
+  }
 
-  // Garder seulement les 5 derniers résumés
+  // Keep only the 5 latest summaries
   const { data } = await supabase
     .from("mindboost_conversation_summary")
     .select("id, created_at")
@@ -64,7 +69,11 @@ export async function saveConversationSummary(
 
   if (data && data.length > 5) {
     const toDelete = data.slice(5).map((d: { id: string }) => d.id);
-    await supabase.from("mindboost_conversation_summary").delete().in("id", toDelete);
+    const { error: delErr } = await supabase.from("mindboost_conversation_summary").delete().in("id", toDelete);
+    if (delErr) {
+      console.error("[saveConversationSummary] prune error:", delErr.code, delErr.message);
+      // Non-fatal: storage bloat only
+    }
   }
 }
 
@@ -75,14 +84,19 @@ export async function saveConversationMessage(
 ): Promise<void> {
   const supabase = createAdminClient();
 
-  await supabase.from("mindboost_conversation").insert({
+  const { error: insertErr } = await supabase.from("mindboost_conversation").insert({
     user_id: userId,
     role,
     content,
     created_at: new Date().toISOString(),
   });
+  if (insertErr) {
+    console.error("[saveConversationMessage] insert error:", insertErr.code, insertErr.message);
+    // Non-fatal: bot has already generated its response, only short-term memory affected
+    return;
+  }
 
-  // Garder seulement les 20 derniers messages
+  // Keep only the 20 latest messages
   const { data } = await supabase
     .from("mindboost_conversation")
     .select("id, created_at")
@@ -91,7 +105,10 @@ export async function saveConversationMessage(
 
   if (data && data.length > 20) {
     const toDelete = data.slice(20).map((d: { id: string }) => d.id);
-    await supabase.from("mindboost_conversation").delete().in("id", toDelete);
+    const { error: delErr } = await supabase.from("mindboost_conversation").delete().in("id", toDelete);
+    if (delErr) {
+      console.error("[saveConversationMessage] prune error:", delErr.code, delErr.message);
+    }
   }
 }
 
@@ -100,13 +117,21 @@ export async function saveConversationMessage(
 export async function saveParkingListItem(userId: string, idea: string): Promise<void> {
   const supabase = createAdminClient();
   const key = `parking_list_${Date.now()}`;
-  await supabase.from("mindboost_memory").insert({
+  const { error } = await supabase.from("mindboost_memory").insert({
     user_id: userId,
     memory_type: key,
     content: JSON.stringify({ idea, saved_at: new Date().toISOString(), status: "pending" }),
     relevance_score: 1,
     expires_at: null,
   });
+  if (error) {
+    console.error("[saveParkingListItem] insert error:", error.code, error.message);
+    // The bot already told the user it saved the idea. This is a lie if we fail.
+    // However, the bot response was already sent — we can't retract it.
+    // Throw so the caller (decision-engine) can log the failure; the user may
+    // notice the idea is missing later.
+    throw new Error("Impossible de sauvegarder l'idée dans la parking list.");
+  }
 }
 
 export async function getParkingList(
@@ -137,7 +162,7 @@ export async function saveEveningCheckPending(userId: string): Promise<void> {
   const supabase = createAdminClient();
   const endOfDay = new Date();
   endOfDay.setUTCHours(23, 59, 59, 999);
-  await supabase.from("mindboost_memory").upsert(
+  const { error } = await supabase.from("mindboost_memory").upsert(
     {
       user_id: userId,
       memory_type: "evening_check_pending",
@@ -148,6 +173,10 @@ export async function saveEveningCheckPending(userId: string): Promise<void> {
     },
     { onConflict: "user_id,memory_type" }
   );
+  if (error) {
+    console.error("[saveEveningCheckPending] upsert error:", error.code, error.message);
+    // Non-fatal: may cause duplicate evening check question, annoying but not destructive
+  }
 }
 
 export async function getEveningCheckPending(
@@ -171,11 +200,15 @@ export async function getEveningCheckPending(
 
 export async function deleteEveningCheckPending(userId: string): Promise<void> {
   const supabase = createAdminClient();
-  await supabase
+  const { error } = await supabase
     .from("mindboost_memory")
     .delete()
     .eq("user_id", userId)
     .eq("memory_type", "evening_check_pending");
+  if (error) {
+    console.error("[deleteEveningCheckPending] delete error:", error.code, error.message);
+    // Non-fatal: flag stays set, next cycle may think check is still pending
+  }
 }
 
 // --- Loop flag (anti-loop detection) ---
@@ -203,7 +236,7 @@ export async function incrementLoopCount(userId: string): Promise<number> {
   const newCount = current + 1;
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-  await supabase.from("mindboost_memory").upsert(
+  const { error } = await supabase.from("mindboost_memory").upsert(
     {
       user_id: userId,
       memory_type: "loop_flag",
@@ -214,6 +247,11 @@ export async function incrementLoopCount(userId: string): Promise<number> {
     },
     { onConflict: "user_id,memory_type" }
   );
+  if (error) {
+    console.error("[incrementLoopCount] upsert error:", error.code, error.message);
+    // Safety mechanism silently disabled — throw so the caller knows
+    throw new Error("Échec de la protection anti-boucle.");
+  }
 
   return newCount;
 }
@@ -222,7 +260,7 @@ export async function resetLoopCount(userId: string): Promise<void> {
   const supabase = createAdminClient();
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-  await supabase.from("mindboost_memory").upsert(
+  const { error } = await supabase.from("mindboost_memory").upsert(
     {
       user_id: userId,
       memory_type: "loop_flag",
@@ -232,4 +270,9 @@ export async function resetLoopCount(userId: string): Promise<void> {
     },
     { onConflict: "user_id,memory_type" }
   );
+  if (error) {
+    console.error("[resetLoopCount] upsert error:", error.code, error.message);
+    // Non-fatal but may cause the bot to stay in forced-binary mode
+    throw new Error("Échec de la réinitialisation du compteur de boucle.");
+  }
 }

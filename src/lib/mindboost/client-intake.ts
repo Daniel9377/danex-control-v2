@@ -368,10 +368,15 @@ export async function createClientAndOrder(
 
 export async function updateIntakeClientName(sessionId: string, clientName: string): Promise<void> {
   const supabase = createAdminClient();
-  await supabase
+  const { error } = await supabase
     .from("mindboost_client_intake")
     .update({ client_name: clientName, updated_at: new Date().toISOString() })
     .eq("session_id", sessionId);
+  if (error) {
+    console.error("[updateIntakeClientName] update error:", error.code, error.message);
+    // Non-fatal: DB keeps old name, bot uses new name in conversation text.
+    // Downstream reporting may have the wrong name.
+  }
 }
 
 const INTAKE_TRIGGER_PATTERNS = [
