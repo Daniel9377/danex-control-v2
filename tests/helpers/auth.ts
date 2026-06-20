@@ -24,12 +24,19 @@ export async function loginAsTestUser(page: Page): Promise<void> {
   const passwordInput = page.locator('input[type="password"][autocomplete="current-password"]');
   await expect(emailInput).toBeVisible();
   await emailInput.fill(email);
+  await emailInput.dispatchEvent("input");
   await passwordInput.fill(password);
+  await passwordInput.dispatchEvent("input");
+
+  // Click the submit button rather than pressing Enter — more reliable
+  // with React controlled inputs that may not sync on fill() alone.
+  const submitBtn = page.locator('button[type="submit"]');
+  await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
 
   try {
     await Promise.all([
       page.waitForURL(/\/dashboard(?:$|[?#])/, { timeout: 25_000 }),
-      passwordInput.press("Enter"),
+      submitBtn.click(),
     ]);
   } catch (error) {
     const loginError = await page
