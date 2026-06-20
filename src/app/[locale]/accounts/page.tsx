@@ -22,7 +22,7 @@ import { Account, AccountType, AccountAvailability } from "@/lib/supabase/types"
 import { formatMoney } from "@/lib/currency";
 import { computeAccountClientMoney } from "@/lib/financial-calculations";
 import {
-  Plus, Pencil, Trash2, X, AlertTriangle, MoreHorizontal,
+  Plus, Pencil, Trash2, X, AlertTriangle,
   Wallet, Briefcase, Users, PiggyBank, TrendingUp, Shield,
   GraduationCap, CreditCard, Hand, CircleDollarSign, ChevronDown,
 } from "lucide-react";
@@ -125,8 +125,6 @@ export default function AccountsPage({ params }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  const [availFilter, setAvailFilter] = useState<AccountAvailability | "all">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -173,11 +171,6 @@ export default function AccountsPage({ params }: Props) {
     const rate = Number(ratesByCode[acc.currency] ?? 1);
     return rate > 0 ? blockedUSD / rate : 0;
   }
-
-  const filteredAccounts = useMemo(() => {
-    if (availFilter === "all") return accounts;
-    return accounts.filter((a) => (a.availability ?? "immediate") === availFilter);
-  }, [accounts, availFilter]);
 
   const byAvail = useMemo(() => {
     const map: Record<string, number> = {};
@@ -252,10 +245,6 @@ export default function AccountsPage({ params }: Props) {
             {accounts.length > 0 && (
               <p className="mt-0.5 text-xs text-slate-500">
                 {accounts.length} compte{accounts.length !== 1 ? "s" : ""}
-                {byAvail.immediate ? ` · ${byAvail.immediate} disponible${byAvail.immediate > 1 ? "s" : ""}` : ""}
-                {byAvail.close ? ` · ${byAvail.close} proche${byAvail.close > 1 ? "s" : ""}` : ""}
-                {byAvail.distant ? ` · ${byAvail.distant} éloigné${byAvail.distant > 1 ? "s" : ""}` : ""}
-                {byAvail.blocked ? ` · ${byAvail.blocked} bloqué${byAvail.blocked > 1 ? "s" : ""}` : ""}
               </p>
             )}
           </div>
@@ -269,67 +258,21 @@ export default function AccountsPage({ params }: Props) {
           </button>
         </div>
 
-        {/* ── Availability filters ── */}
-        {accounts.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setAvailFilter("all")}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                availFilter === "all"
-                  ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
-                  : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
-              }`}
-            >
-              Tous {accounts.length}
-            </button>
-            {(["immediate", "close", "distant", "blocked"] as AccountAvailability[]).map((av) => {
-              const count = accounts.filter((a) => (a.availability ?? "immediate") === av).length;
-              if (count === 0) return null;
-              return (
-                <button
-                  key={av}
-                  onClick={() => setAvailFilter(av)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    availFilter === av
-                      ? av === "immediate" ? "border-emerald-600/60 bg-emerald-950/40 text-emerald-300"
-                      : av === "close" ? "border-amber-600/60 bg-amber-950/40 text-amber-300"
-                      : av === "distant" ? "border-amber-700/60 bg-amber-950/30 text-amber-400"
-                      : "border-slate-600/60 bg-slate-800/40 text-slate-300"
-                      : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
-                  }`}
-                >
-                  {availLabels[av]} {count}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Menu backdrop */}
-        {menuOpenId && (
-          <div className="fixed inset-0 z-10" onClick={() => setMenuOpenId(null)} />
-        )}
-
         {/* ── Account grid ─────────────────────────────────────────── */}
-        {filteredAccounts.length === 0 ? (
-          availFilter !== "all" ? (
-            <EmptyState message="Aucun compte avec ce filtre." />
-          ) : (
-            <EmptyState message={tc("empty")} />
-          )
+        {accounts.length === 0 ? (
+          <EmptyState message={tc("empty")} />
         ) : (
           <>
-            {filteredAccounts.length > 0 && (
-              <SectionHeader label={`${filteredAccounts.length} compte${filteredAccounts.length > 1 ? "s" : ""}`} />
+            {accounts.length > 0 && (
+              <SectionHeader label={`${accounts.length} compte${accounts.length > 1 ? "s" : ""}`} />
             )}
             <div className="grid grid-cols-1 gap-3">
-              {filteredAccounts.map((acc) => {
+              {accounts.map((acc) => {
                 const isNeg = Number(acc.balance) < 0;
                 const isOpen = expandedId === acc.id;
                 const blocked = blockedInCurrency(acc);
                 const available = Math.max(0, Number(acc.balance) - blocked);
                 const hasBlocked = blocked > 0.001;
-                const isMenuOpen = menuOpenId === acc.id;
                 return (
                   <article key={acc.id} className={`rounded-xl border transition-colors ${
                     isOpen ? "border-slate-600 bg-slate-900/80" : "border-slate-800 bg-slate-900 hover:border-slate-700"
@@ -366,33 +309,6 @@ export default function AccountsPage({ params }: Props) {
                       </div>
 
                       <ChevronDown size={18} className={`shrink-0 text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-
-                      {/* "..." menu — stop click propagation so it doesn't toggle expand */}
-                      <div className="z-20 shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => setMenuOpenId(isMenuOpen ? null : acc.id)}
-                          aria-label="Options du compte"
-                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
-                        >
-                          <MoreHorizontal size={14} />
-                        </button>
-                        {isMenuOpen && (
-                          <div className="absolute right-0 top-full z-30 mt-1 w-36 rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-xl">
-                            <button
-                              onClick={() => { openEdit(acc.id); setMenuOpenId(null); }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700"
-                            >
-                              <Pencil size={11} /> Modifier
-                            </button>
-                            <button
-                              onClick={() => { setDeleteId(acc.id); setMenuOpenId(null); }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-slate-700"
-                            >
-                              <Trash2 size={11} /> Supprimer
-                            </button>
-                          </div>
-                        )}
-                      </div>
                     </button>
 
                     {/* Expanded detail: Liquidité + Disponible/Bloqué */}

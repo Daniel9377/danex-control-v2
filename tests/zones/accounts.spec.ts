@@ -188,9 +188,10 @@ async function editAccountAvailability(page: Page, accountName: string, availabi
   await page.waitForLoadState("networkidle");
   const card = page.locator("article").filter({ hasText: accountName }).first();
   await expect(card).toBeVisible();
-  await card.getByRole("button", { name: /Options du compte/i }).click();
-  await card.locator("button").filter({ hasText: /Modifier/ }).click();
-  // Scoped to the form: avoid clicking the filter pill on the page behind the modal
+  // Expand the card to show "Modifier" button (menu removed in redesign cleanup)
+  await card.click();
+  await page.waitForTimeout(300);
+  await card.getByRole("button", { name: /Modifier/ }).click();
   const form = page.locator("form").first();
   await form.locator("button").filter({ hasText: availabilityLabel }).first().click();
   await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
