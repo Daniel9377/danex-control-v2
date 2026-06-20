@@ -330,11 +330,12 @@ async function openTransactionDetails(page: Page, rowText: RegExp) {
   const row = transactionRows(page).filter({ hasText: rowText }).first();
   await expect(row, `Transaction introuvable dans la liste: ${rowText}`).toBeVisible();
   await row.click();
-  await expect(page.getByRole("button", { name: /Supprimer cette transaction/i })).toBeVisible();
+  // Inline expansion uses "Supprimer", legacy drawer uses "Supprimer cette transaction"
+  await expect(page.getByRole("button", { name: /Supprimer/i })).toBeVisible();
 }
 
 async function deleteOpenTransaction(page: Page) {
-  await page.getByRole("button", { name: /Supprimer cette transaction/i }).click();
+  await page.getByRole("button", { name: /Supprimer/i }).last().click();
   const confirm = page.getByRole("button", { name: /^Supprimer$/ });
   await expect(confirm).toBeVisible();
   await confirm.click();

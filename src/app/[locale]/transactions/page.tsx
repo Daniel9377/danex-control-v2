@@ -81,7 +81,7 @@ export default function TransactionsPage({ params }: Props) {
   const [showTechStats, setShowTechStats]     = useState(false);
   const [showAll, setShowAll]                 = useState(false);
   const [openDropdown, setOpenDropdown]       = useState<"account" | "subtype" | null>(null);
-  const [detailTxId, setDetailTxId]           = useState<string | null>(null);
+  const [expandedId, setExpandedId]           = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget]       = useState<{
     id: string; accountId: string | null; type: TransactionType; amount: number;
   } | null>(null);
@@ -153,8 +153,8 @@ export default function TransactionsPage({ params }: Props) {
   }, [adjAccount, adjTargetBalance]);
 
   const detailTx = useMemo(
-    () => transactions.find((t) => t.id === detailTxId) ?? null,
-    [transactions, detailTxId]
+    () => transactions.find((t) => t.id === expandedId) ?? null,
+    [transactions, expandedId]
   );
 
   // ── Actions ───────────────────────────────────────────────────────────────────
@@ -196,19 +196,13 @@ export default function TransactionsPage({ params }: Props) {
   }
 
   async function handleReclassify() {
-    if (!detailTxId || !reclassifySubType) return;
-    const ok = await reclassify({ transactionId: detailTxId, subType: reclassifySubType as TransactionSubType });
+    if (!expandedId || !reclassifySubType) return;
+    const ok = await reclassify({ transactionId: expandedId, subType: reclassifySubType as TransactionSubType });
     if (ok) {
-      setDetailTxId(null);
+      setExpandedId(null);
       setShowReclassify(false);
       setReclassifySubType("");
     }
-  }
-
-  function closeDrawer() {
-    setDetailTxId(null);
-    setShowReclassify(false);
-    setReclassifySubType("");
   }
 
   // ── Loading ───────────────────────────────────────────────────────────────────
@@ -464,43 +458,129 @@ export default function TransactionsPage({ params }: Props) {
                 const amtColor  = isAdj ? "text-amber-400" : tx.type === "expense" ? "text-red-400" : "text-emerald-400";
                 const amtPrefix = isAdj ? "" : tx.type === "expense" ? "−" : "+";
 
+                const isExpanded = expandedId === tx.id;
                 return (
-                  <li
-                    key={tx.id}
-                    className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-800/25"
-                    onClick={() => setDetailTxId(tx.id)}
-                  >
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <p className="min-w-0 truncate text-sm text-slate-200">
-                          {tx.category ?? tx.note ?? subLabel ?? "—"}
+                  <li key={tx.id}>
+                    <button
+                      className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/25"
+                      onClick={() => setExpandedId(isExpanded ? null : tx.id)}
+                    >
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <p className="min-w-0 truncate text-sm text-slate-200">
+                            {tx.category ?? tx.note ?? subLabel ?? "—"}
+                          </p>
+                          {tx.sub_type === null && (
+                            <span className="shrink-0 rounded-full bg-slate-800/60 px-1.5 py-0.5 text-[9px] text-slate-600">legacy</span>
+                          )}
+                          {subLabel && (tx.accounting_type === "non_income_inflow" || tx.accounting_type === "non_expense_outflow") && (
+                            <span className="shrink-0 rounded-full bg-slate-800/50 px-1.5 py-0.5 text-[9px] text-slate-500">{subLabel}</span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 truncate text-[11px] text-slate-600">
+                          {acc?.name ?? "—"}{" · "}{formatDate(tx.transaction_date)}{client && ` · ${client.name}`}
                         </p>
-                        {tx.sub_type === null && (
-                          <span className="shrink-0 rounded-full bg-slate-800/60 px-1.5 py-0.5 text-[9px] text-slate-600">
-                            legacy
-                          </span>
-                        )}
-                        {subLabel && (tx.accounting_type === "non_income_inflow" || tx.accounting_type === "non_expense_outflow") && (
-                          <span className="shrink-0 rounded-full bg-slate-800/50 px-1.5 py-0.5 text-[9px] text-slate-500">
-                            {subLabel}
-                          </span>
-                        )}
                       </div>
-                      <p className="mt-0.5 truncate text-[11px] text-slate-600">
-                        {acc?.name ?? "—"}
-                        {" · "}{formatDate(tx.transaction_date)}
-                        {client && ` · ${client.name}`}
-                      </p>
-                    </div>
+                      <div className="shrink-0 text-right">
+                        <p className={`font-mono text-sm font-semibold tabular-nums ${amtColor}`}>
+                          {amtPrefix}{formatMoney(tx.amount, tx.currency)}
+                        </p>
+                        <p className="text-[10px] text-slate-700">{tx.currency}</p>
+                      </div>
+                    </button>
 
-                    <div className="shrink-0 text-right">
-                      <p className={`font-mono text-sm font-semibold tabular-nums ${amtColor}`}>
-                        {amtPrefix}{formatMoney(tx.amount, tx.currency)}
-                      </p>
-                      <p className="text-[10px] text-slate-700">{tx.currency}</p>
-                    </div>
+                    {/* Inline expansion — replaces the drawer */}
+                    {isExpanded && (() => {
+                      const detailAcc = acc;
+                      const detailClient = client;
+                      const detailOrder = tx.order_id ? orders.find((o) => o.id === tx.order_id) : null;
+                      const detailSubMeta = tx.sub_type ? SUB_TYPE_META[tx.sub_type] : null;
+                      const detailImpact = tx.accounting_type ? ACCOUNTING_IMPACT[tx.accounting_type] : null;
+                      const detailIsAdj = tx.accounting_type === "adjustment";
+                      return (
+                        <div className="border-t border-slate-800 bg-slate-900/50 px-4 py-3 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-slate-400">{detailIsAdj ? "Correction" : tx.type === "expense" ? "Dépense" : "Revenu"}</span>
+                            <button onClick={() => setExpandedId(null)} className="rounded-lg p-1 text-slate-500 hover:text-slate-300"><X size={14} /></button>
+                          </div>
+                          <div className="rounded-xl border border-slate-800 bg-slate-900/60 divide-y divide-slate-800/60">
+                            {(tx.category || tx.note) && (
+                              <div className="flex items-start justify-between gap-3 px-3.5 py-2.5">
+                                <p className="shrink-0 text-[11px] text-slate-500">Description</p>
+                                <p className="text-right text-xs text-slate-300">{tx.category ?? tx.note}</p>
+                              </div>
+                            )}
+                            {detailAcc && (
+                              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                                <p className="text-[11px] text-slate-500">Compte</p>
+                                <p className="text-xs text-slate-300">{detailAcc.name}</p>
+                              </div>
+                            )}
+                            {detailSubMeta ? (
+                              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                                <p className="text-[11px] text-slate-500">Sous-type</p>
+                                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">{detailSubMeta.label}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                                <p className="text-[11px] text-slate-500">Sous-type</p>
+                                <span className="rounded-full bg-slate-800/50 px-2 py-0.5 text-[10px] text-slate-600">legacy</span>
+                              </div>
+                            )}
+                            {detailClient && (
+                              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                                <p className="text-[11px] text-slate-500">Client</p>
+                                <p className="text-xs text-slate-300">{detailClient.name}</p>
+                              </div>
+                            )}
+                            {detailOrder && (
+                              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                                <p className="text-[11px] text-slate-500">Commande</p>
+                                <p className="text-xs text-slate-300">{detailOrder.product_name}</p>
+                              </div>
+                            )}
+                            {detailImpact && (
+                              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                                <p className="text-[11px] text-slate-500">Impact</p>
+                                <p className={`text-right text-xs ${detailImpact.color}`}>{detailImpact.label}</p>
+                              </div>
+                            )}
+                            {tx.balance_after !== null && (
+                              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                                <p className="text-[11px] text-slate-500">Solde après</p>
+                                <p className="font-mono text-xs tabular-nums text-slate-300">{formatMoney(tx.balance_after, tx.currency)}</p>
+                              </div>
+                            )}
+                          </div>
+                          {tx.sub_type === null && (
+                            <button
+                              onClick={() => { setReclassifySubType(""); setShowReclassify(true); }}
+                              className="flex w-full items-center justify-center gap-1.5 py-2 text-xs text-slate-500 transition-colors hover:text-slate-300"
+                            >
+                              <RefreshCw size={11} /> Reclasser cette transaction
+                            </button>
+                          )}
+                          <div className="flex gap-2">
+                            {detailClient && (
+                              <Link href={`/fr/clients`} className="flex items-center gap-1 rounded-lg border border-slate-800 px-2.5 py-1.5 text-[10px] text-slate-500 hover:border-slate-700 hover:text-slate-300"><ExternalLink size={10} />Voir le client</Link>
+                            )}
+                            {detailOrder && (
+                              <Link href={`/fr/orders`} className="flex items-center gap-1 rounded-lg border border-slate-800 px-2.5 py-1.5 text-[10px] text-slate-500 hover:border-slate-700 hover:text-slate-300"><ExternalLink size={10} />Voir la commande</Link>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setExpandedId(null);
+                              setDeleteTarget({ id: tx.id, accountId: tx.account_id, type: tx.type, amount: tx.amount });
+                            }}
+                            className="flex w-full items-center justify-center gap-1.5 py-2 text-xs text-red-500/60 transition-colors hover:text-red-400"
+                          >
+                            <Trash2 size={11} /> Supprimer
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </li>
                 );
               })}
@@ -526,240 +606,6 @@ export default function TransactionsPage({ params }: Props) {
         )}
       </div>
 
-      {/* ── Transaction detail drawer ─────────────────────────────────────────── */}
-      {detailTx && (() => {
-        const acc      = accounts.find((a) => a.id === detailTx.account_id);
-        const client   = detailTx.client_id ? clients.find((c) => c.id === detailTx.client_id) : null;
-        const order    = detailTx.order_id  ? orders.find((o) => o.id === detailTx.order_id)   : null;
-        const subMeta  = detailTx.sub_type  ? SUB_TYPE_META[detailTx.sub_type] : null;
-        const impact   = detailTx.accounting_type ? ACCOUNTING_IMPACT[detailTx.accounting_type] : null;
-        const isAdj    = detailTx.accounting_type === "adjustment";
-        const amtColor = isAdj ? "text-amber-400" : detailTx.type === "expense" ? "text-red-400" : "text-emerald-400";
-        const amtPfx   = isAdj ? "" : detailTx.type === "expense" ? "−" : "+";
-
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm md:items-center"
-            onClick={closeDrawer}
-          >
-            <div
-              className="flex max-h-[88vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 md:rounded-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Drag handle */}
-              <div className="flex justify-center pt-2.5 md:hidden">
-                <div className="h-1 w-10 rounded-full bg-slate-700" />
-              </div>
-
-              {/* Header */}
-              <div className="flex items-start justify-between gap-3 border-b border-slate-800 px-5 py-3.5">
-                <div className="min-w-0">
-                  <p className={`font-mono text-2xl font-bold tabular-nums ${amtColor}`}>
-                    {amtPfx}{formatMoney(detailTx.amount, detailTx.currency)}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {detailTx.currency} · {formatDate(detailTx.transaction_date)}
-                  </p>
-                </div>
-                <button
-                  onClick={closeDrawer}
-                  className="shrink-0 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Scrollable content */}
-              <div className="flex-1 overflow-y-auto px-5 py-4">
-                <div className="space-y-4">
-
-                  {/* Main info block */}
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/60 divide-y divide-slate-800/60">
-                    {(detailTx.category || detailTx.note) && (
-                      <div className="flex items-start justify-between gap-3 px-3.5 py-2.5">
-                        <p className="shrink-0 text-[11px] text-slate-500">Description</p>
-                        <p className="text-right text-xs text-slate-300">
-                          {detailTx.category ?? detailTx.note}
-                        </p>
-                      </div>
-                    )}
-                    {acc && (
-                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                        <p className="text-[11px] text-slate-500">Compte</p>
-                        <p className="text-xs text-slate-300">{acc.name}</p>
-                      </div>
-                    )}
-                    {subMeta ? (
-                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                        <p className="text-[11px] text-slate-500">Sous-type</p>
-                        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">
-                          {subMeta.label}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                        <p className="text-[11px] text-slate-500">Sous-type</p>
-                        <span className="rounded-full bg-slate-800/50 px-2 py-0.5 text-[10px] text-slate-600">
-                          legacy
-                        </span>
-                      </div>
-                    )}
-                    {client && (
-                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                        <p className="text-[11px] text-slate-500">Client</p>
-                        <p className="text-xs text-slate-300">{client.name}</p>
-                      </div>
-                    )}
-                    {order && (
-                      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                        <p className="text-[11px] text-slate-500">Commande</p>
-                        <p className="text-xs text-slate-300">{order.product_name}</p>
-                      </div>
-                    )}
-                    {detailTx.note && detailTx.category && (
-                      <div className="flex items-start justify-between gap-3 px-3.5 py-2.5">
-                        <p className="shrink-0 text-[11px] text-slate-500">Note</p>
-                        <p className="text-right text-[11px] text-slate-500">{detailTx.note}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Accounting impact block */}
-                  <div>
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                      Impact comptable
-                    </p>
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/40 divide-y divide-slate-800/60">
-                      <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
-                        <p className="text-[11px] text-slate-500">Solde physique</p>
-                        <p className={`text-[11px] font-medium ${
-                          detailTx.affects_physical_balance ? "text-slate-300" : "text-slate-600"
-                        }`}>
-                          {detailTx.affects_physical_balance ? "Modifié" : "Non modifié"}
-                        </p>
-                      </div>
-                      {impact && (
-                        <div className="flex items-start justify-between gap-3 px-3.5 py-2.5">
-                          <p className="shrink-0 text-[11px] text-slate-500">Comptabilité</p>
-                          <p className={`text-right text-[11px] font-medium ${impact.color}`}>
-                            {impact.label}
-                          </p>
-                        </div>
-                      )}
-                      {detailTx.balance_after !== null && (
-                        <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
-                          <p className="text-[11px] text-slate-500">Solde après</p>
-                          <p className={`font-mono text-[11px] tabular-nums ${
-                            detailTx.balance_after < 0 ? "text-red-400" : "text-slate-400"
-                          }`}>
-                            {formatMoney(detailTx.balance_after, detailTx.currency)}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div
-                className="shrink-0 space-y-2 border-t border-slate-800 px-5 pt-3"
-                style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
-              >
-                {/* Client / order links */}
-                {(client || order) && (
-                  <div className="flex gap-4 pb-0.5">
-                    {client && (
-                      <Link
-                        href={`/${locale}/clients`}
-                        className="flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-300"
-                        onClick={closeDrawer}
-                      >
-                        <ExternalLink size={10} />
-                        Voir le client
-                      </Link>
-                    )}
-                    {order && (
-                      <Link
-                        href={`/${locale}/orders`}
-                        className="flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-300"
-                        onClick={closeDrawer}
-                      >
-                        <ExternalLink size={10} />
-                        Voir la commande
-                      </Link>
-                    )}
-                  </div>
-                )}
-
-                {/* Reclassify (legacy only) */}
-                {detailTx.sub_type === null && !showReclassify && (
-                  <button
-                    onClick={() => setShowReclassify(true)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-700 py-2 text-xs text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
-                  >
-                    <RefreshCw size={11} />
-                    Reclasser cette transaction
-                  </button>
-                )}
-                {detailTx.sub_type === null && showReclassify && (
-                  <div className="space-y-2 rounded-xl border border-slate-700 bg-slate-900/60 p-3">
-                    <p className="text-[11px] font-medium text-slate-400">Attribuer un sous-type</p>
-                    <select
-                      value={reclassifySubType}
-                      onChange={(e) => setReclassifySubType(e.target.value as TransactionSubType)}
-                      className="w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none"
-                    >
-                      <option value="">— Choisir —</option>
-                      {SUB_TYPE_GROUPS.map((group) => (
-                        <optgroup key={group.label} label={group.label}>
-                          {group.items.map((st) => (
-                            <option key={st} value={st}>{SUB_TYPE_META[st].label}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => { setShowReclassify(false); setReclassifySubType(""); }}
-                        className="flex-1 rounded-xl border border-slate-700 py-2 text-xs text-slate-400 transition-colors hover:bg-slate-800"
-                      >
-                        Annuler
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleReclassify}
-                        disabled={!reclassifySubType || reclassifying}
-                        className="flex-1 rounded-xl bg-orange-600 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
-                      >
-                        {reclassifying ? "…" : "Appliquer"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Delete */}
-                <button
-                  onClick={() => {
-                    closeDrawer();
-                    setDeleteTarget({
-                      id: detailTx.id,
-                      accountId: detailTx.account_id,
-                      type: detailTx.type,
-                      amount: detailTx.amount,
-                    });
-                  }}
-                  className="flex w-full items-center justify-center gap-1.5 py-2 text-xs text-red-500/60 transition-colors hover:text-red-400"
-                >
-                  <Trash2 size={11} />
-                  Supprimer cette transaction
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ── New operation modal ─────────────────────────────────────────────────── */}
       <TransactionFormModal
