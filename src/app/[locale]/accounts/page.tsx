@@ -352,13 +352,14 @@ export default function AccountsPage({ params }: Props) {
                       </div>
 
                       <div className="flex shrink-0 items-center gap-3">
-                        {sparkByAccount[acc.id]?.length > 1 && (
-                          <span className="hidden sm:inline-flex">
+                        {/* Fixed-width container — keeps balance + chevron aligned across all cards */}
+                        <span className="hidden w-[76px] shrink-0 sm:inline-flex">
+                          {sparkByAccount[acc.id]?.length > 1 && (
                             <Sparkline values={sparkByAccount[acc.id]} />
-                          </span>
-                        )}
-                        <div className="text-right">
-                          <p className={`font-mono text-lg font-bold tabular-nums ${isNeg ? "text-red-400" : "text-slate-50"}`}>
+                          )}
+                        </span>
+                        <div className="w-[100px] shrink-0 text-right">
+                          <p className={`truncate font-mono text-lg font-bold tabular-nums ${isNeg ? "text-red-400" : "text-slate-50"}`}>
                             {formatMoney(acc.balance, acc.currency)}
                           </p>
                         </div>
