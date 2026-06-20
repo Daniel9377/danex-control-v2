@@ -75,6 +75,14 @@ body {
 
 * { box-sizing: border-box; }
 
+/* Suppress browser-native password reveal icon (Chrome/Edge inject their own
+   eye toggle alongside the custom one, creating a confusing double-icon). */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-password-toggle {
+  display: none !important;
+}
+
 /* Navigation progress bar animation */
 @keyframes progress {
   0% { transform: translateX(-100%); width: 50%; }
