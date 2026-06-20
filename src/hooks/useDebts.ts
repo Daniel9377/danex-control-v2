@@ -58,7 +58,7 @@ export function useDebts() {
   ) {
     const supabase = createClient();
 
-    await supabase.from("debts").insert({
+    const { error: insertError } = await supabase.from("debts").insert({
       user_id: userId,
       person_name: personName,
       direction,
@@ -71,19 +71,31 @@ export function useDebts() {
       status: "unpaid",
       affects_balance: affectsBalance,
     });
+    if (insertError) {
+      console.error("[addDebt] insert error:", insertError.code, insertError.message);
+      throw new Error(insertError.message || "Échec de la création de la dette.");
+    }
 
     // Debit account only when money actually left (owes_me + affectsBalance)
     if (direction === "owes_me" && affectsBalance && linkedAccountId) {
-      const { data: acc } = await supabase
+      const { data: acc, error: accFetchErr } = await supabase
         .from("accounts")
         .select("balance")
         .eq("id", linkedAccountId)
         .single();
+      if (accFetchErr) {
+        console.error("[addDebt] account fetch error:", accFetchErr.code, accFetchErr.message);
+        throw new Error("Impossible de lire le solde du compte lié.");
+      }
       if (acc) {
-        await supabase
+        const { error: updateErr } = await supabase
           .from("accounts")
           .update({ balance: Number(acc.balance) - amount })
           .eq("id", linkedAccountId);
+        if (updateErr) {
+          console.error("[addDebt] account debit error:", updateErr.code, updateErr.message);
+          throw new Error(updateErr.message || "Échec du débit du compte lié.");
+        }
       }
       cacheInvalidate("accounts");
     }
@@ -117,10 +129,6 @@ export function useDebts() {
     const supabase = createClient();
 
     // ── Read the FRESH debt state from the DB to avoid stale React cache ────
-    // The `debt` parameter comes from React state which may not have re-rendered
-    // after a previous payment in the same tick, causing `paid_amount` to be stale.
-    // This would silently overwrite the real paid_amount, corrupt the debt status,
-    // and skip the account balance update on subsequent payments.
     const { data: fresh, error: freshError } = await supabase
       .from("debts")
       .select("amount, paid_amount, status, direction")
@@ -216,7 +224,12 @@ export function useDebts() {
       .single();
 
     if (!debt) {
-      await supabase.from("debts").delete().eq("id", id);
+      // Idempotent: already deleted
+      const { error: delErr } = await supabase.from("debts").delete().eq("id", id);
+      if (delErr) {
+        console.error("[deleteDebt] delete error (idempotent):", delErr.code, delErr.message);
+        throw new Error(delErr.message || "Échec de la suppression de la dette.");
+      }
       cacheInvalidate(KEY);
       await load();
       return;
@@ -232,18 +245,26 @@ export function useDebts() {
     if (payments) {
       for (const p of payments) {
         if (p.account_id && p.settlement_method === "real_payment") {
-          const { data: acc } = await supabase
+          const { data: acc, error: accFetchErr } = await supabase
             .from("accounts")
             .select("balance")
             .eq("id", p.account_id)
             .single();
+          if (accFetchErr) {
+            console.error("[deleteDebt] payment reversal fetch error:", accFetchErr.code, accFetchErr.message);
+            throw new Error("Impossible de lire le solde lors de l'annulation d'un paiement.");
+          }
           if (acc) {
             // Reverse: if i_owe, payment debited account → credit back; if owes_me, credited → debit back
             const reversal = debt.direction === "i_owe" ? p.amount : -p.amount;
-            await supabase
+            const { error: revErr } = await supabase
               .from("accounts")
               .update({ balance: Number(acc.balance) + reversal })
               .eq("id", p.account_id);
+            if (revErr) {
+              console.error("[deleteDebt] payment reversal error:", revErr.code, revErr.message);
+              throw new Error(revErr.message || "Échec de l'annulation d'un paiement.");
+            }
           }
         }
       }
@@ -251,22 +272,34 @@ export function useDebts() {
 
     // Reverse initial debit if owes_me + affects_balance
     if (debt.direction === "owes_me" && debt.affects_balance && debt.linked_account_id) {
-      const { data: acc } = await supabase
+      const { data: acc, error: accFetchErr } = await supabase
         .from("accounts")
         .select("balance")
         .eq("id", debt.linked_account_id)
         .single();
+      if (accFetchErr) {
+        console.error("[deleteDebt] initial debit reversal fetch error:", accFetchErr.code, accFetchErr.message);
+        throw new Error("Impossible de lire le solde pour annuler le débit initial.");
+      }
       if (acc) {
         // We had debited the account when creating the debt → add back
-        await supabase
+        const { error: revErr } = await supabase
           .from("accounts")
           .update({ balance: Number(acc.balance) + Number(debt.amount) })
           .eq("id", debt.linked_account_id);
+        if (revErr) {
+          console.error("[deleteDebt] initial debit reversal error:", revErr.code, revErr.message);
+          throw new Error(revErr.message || "Échec de l'annulation du débit initial.");
+        }
       }
     }
 
     // Delete the debt (cascade deletes payments)
-    await supabase.from("debts").delete().eq("id", id);
+    const { error: delErr } = await supabase.from("debts").delete().eq("id", id);
+    if (delErr) {
+      console.error("[deleteDebt] delete error:", delErr.code, delErr.message);
+      throw new Error(delErr.message || "Échec de la suppression de la dette.");
+    }
 
     cacheInvalidate(KEY);
     cacheInvalidate("accounts");

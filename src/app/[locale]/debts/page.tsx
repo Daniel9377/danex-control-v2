@@ -65,6 +65,9 @@ export default function DebtsPage({ params }: Props) {
   const [payments, setPayments]             = useState<DebtPayment[]>([]);
   const [filterOverdue, setFilterOverdue]   = useState(false);
   const [payError, setPayError]             = useState<string | null>(null);
+  const [saving, setSaving]                 = useState(false);
+  const [formError, setFormError]           = useState<string | null>(null);
+  const [deleteError, setDeleteError]       = useState<string | null>(null);
 
   // Debt form
   const [personName, setPersonName]         = useState("");
@@ -132,17 +135,26 @@ export default function DebtsPage({ params }: Props) {
 
   async function handleAddDebt(e: React.FormEvent) {
     e.preventDefault();
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await addDebt(
-      user.id, personName, direction, Number(amount), currency,
-      dueDate || null, note || null, linkedAccountId || null,
-      direction === "owes_me" ? affectsBalance : false
-    );
-    setShowForm(false);
-    setPersonName(""); setAmount(""); setNote("");
-    setDueDate(""); setLinkedAccountId(""); setAffectsBalance(false);
+    if (saving) return;
+    setSaving(true);
+    setFormError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setFormError("Session expirée. Reconnecte-toi."); return; }
+      await addDebt(
+        user.id, personName, direction, Number(amount), currency,
+        dueDate || null, note || null, linkedAccountId || null,
+        direction === "owes_me" ? affectsBalance : false
+      );
+      setShowForm(false);
+      setPersonName(""); setAmount(""); setNote("");
+      setDueDate(""); setLinkedAccountId(""); setAffectsBalance(false);
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "Une erreur est survenue. Réessaie.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handlePayment(e: React.FormEvent, debtId: string) {
@@ -639,6 +651,9 @@ export default function DebtsPage({ params }: Props) {
                 className="shrink-0 border-t border-slate-800 px-5 pt-3"
                 style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
               >
+                {formError && (
+                  <p className="mb-3 rounded-xl bg-red-900/30 px-4 py-2.5 text-center text-xs text-red-400">{formError}</p>
+                )}
                 <div className="flex gap-2.5">
                   <button
                     type="button"
@@ -649,10 +664,10 @@ export default function DebtsPage({ params }: Props) {
                   </button>
                   <button
                     type="submit"
-                    disabled={!personName.trim() || !amount}
+                    disabled={!personName.trim() || !amount || saving}
                     className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
                   >
-                    {tc("save")}
+                    {saving ? "Sauvegarde en cours…" : tc("save")}
                   </button>
                 </div>
               </div>
@@ -870,7 +885,24 @@ export default function DebtsPage({ params }: Props) {
         confirmLabel={tc("delete")}
         cancelLabel={tc("cancel")}
         danger
-        onConfirm={async () => { if (deleteId) await deleteDebt(deleteId); setDeleteId(null); }}
+        onConfirm={async () => {
+          if (!deleteId) return;
+          try {
+            await deleteDebt(deleteId);
+            setDeleteId(null);
+            setDeleteError(null);
+          } catch (err: unknown) {
+            setDeleteError(err instanceof Error ? err.message : "Échec de la suppression.");
+            // Keep dialog open so the user sees the error; they can retry or cancel
+          }
+        }}
+        message={
+          deleteError
+            ? `Erreur : ${deleteError}`
+            : debtToDelete && Number(debtToDelete.paid_amount) > 0
+            ? `Cette dette a ${formatMoney(debtToDelete.paid_amount, debtToDelete.currency)} de paiements enregistrés. Les effets sur les comptes seront annulés. Continuer ?`
+            : "Supprimer cette dette ?"
+        }
         onCancel={() => setDeleteId(null)}
       />
     </PageWrapper>
