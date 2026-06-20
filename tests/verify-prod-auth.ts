@@ -36,11 +36,9 @@ async function main() {
     const resp = await fetch(`${url}/auth/v1/health`);
     if (resp.status === 200) {
       console.log("✓ Production Supabase confirmed:", projectId);
-      process.exit(0);
     }
     // 401 also means the project is alive (just needs auth)
     console.log("✓ Production Supabase confirmed:", projectId, "(health:", resp.status, ")");
-    process.exit(0);
   } catch {
     console.error("FAIL: cannot reach", url);
     process.exit(1);
