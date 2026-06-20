@@ -20,6 +20,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Account, AccountType, AccountAvailability, Transaction } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/utils";
 import { formatMoney } from "@/lib/currency";
+import { computeAccountClientMoney } from "@/lib/financial-calculations";
 import { Plus, Pencil, Trash2, X, AlertTriangle, MoreHorizontal } from "lucide-react";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 
@@ -89,7 +90,7 @@ export default function AccountsPage({ params }: Props) {
   }), [t]);
 
   const { accounts, loading, addAccount, updateAccount, deleteAccount } = useAccounts();
-  const { currencies } = useCurrencies();
+  const { currencies, ratesByCode } = useCurrencies();
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -175,6 +176,19 @@ export default function AccountsPage({ params }: Props) {
       savingRef.current = false;
       setSaving(false);
     }
+  }
+
+  const accountBlocked = useMemo(() => {
+    if (!detailAccount || detailTxs.length === 0) return null;
+    return computeAccountClientMoney(detailTxs, detailAccount.id, ratesByCode);
+  }, [detailAccount, detailTxs, ratesByCode]);
+
+  // Convert blocked USD → account native currency for display
+  function blockedInAccountCurrency(): number {
+    if (!accountBlocked || !detailAccount) return 0;
+    const rateToUSD = Number(ratesByCode[detailAccount.currency] ?? 1);
+    if (!rateToUSD || rateToUSD <= 0) return 0;
+    return accountBlocked.blocked / rateToUSD;
   }
 
   const monthlySummary = useMemo(() => {
@@ -525,6 +539,34 @@ export default function AccountsPage({ params }: Props) {
                   </p>
                   <p className="mt-0.5 text-[11px] text-slate-600">{detailAccount.currency}</p>
                 </div>
+
+                {/* Disponible / Bloqué — same logic as Dashboard "Argent client détenu", per-account */}
+                {accountBlocked && accountBlocked.blocked > 0 && (
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-600">Liquidité</p>
+                    <div className="flex items-stretch gap-4">
+                      <div className="flex flex-1 flex-col gap-1">
+                        <p className="text-[10px] text-slate-500">Disponible</p>
+                        <p className="font-mono text-lg font-bold tabular-nums text-emerald-400">
+                          {formatMoney(
+                            Math.max(0, Number(detailAccount.balance) - blockedInAccountCurrency()),
+                            detailAccount.currency
+                          )}
+                        </p>
+                      </div>
+                      <span className="w-px self-stretch bg-slate-800" />
+                      <div className="flex flex-1 flex-col gap-1">
+                        <p className="text-[10px] text-slate-500">Bloqué</p>
+                        <p className="font-mono text-lg font-bold tabular-nums text-slate-300">
+                          {formatMoney(blockedInAccountCurrency(), detailAccount.currency)}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[10px] leading-tight text-slate-600">
+                      Argent client reçu − coûts − remboursements sur ce compte, converti de USD. Le total «&nbsp;Argent client détenu&nbsp;» du tableau de bord est la somme des bloqués de tous les comptes moins les bénéfices validés.
+                    </p>
+                  </div>
+                )}
 
                 {/* Monthly summary */}
                 {monthlySummary && (
