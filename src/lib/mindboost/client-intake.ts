@@ -112,10 +112,14 @@ export async function updateIntakeSession(
 
   const merged = { ...(existing?.data ?? {}), ...data };
 
-  await supabase
+  const { error } = await supabase
     .from("mindboost_client_intake")
     .update({ data: merged, updated_at: new Date().toISOString() })
     .eq("session_id", sessionId);
+  if (error) {
+    console.error("[updateIntakeSession] update error:", error.code, error.message);
+    throw new Error("Erreur lors de la sauvegarde de ta réponse. Réessaie.");
+  }
 }
 
 export async function closeIntakeSession(
@@ -123,10 +127,14 @@ export async function closeIntakeSession(
   status: "confirmed" | "cancelled"
 ): Promise<void> {
   const supabase = createAdminClient();
-  await supabase
+  const { error } = await supabase
     .from("mindboost_client_intake")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("session_id", sessionId);
+  if (error) {
+    console.error("[closeIntakeSession] update error:", error.code, error.message);
+    throw new Error("Erreur lors de la fermeture de la session.");
+  }
 }
 
 export async function createMindboostTask(
@@ -136,13 +144,17 @@ export async function createMindboostTask(
   data: Record<string, unknown>
 ): Promise<void> {
   const supabase = createAdminClient();
-  await supabase.from("mindboost_tasks").insert({
+  const { error } = await supabase.from("mindboost_tasks").insert({
     user_id: userId,
     type,
     title,
     data,
     status: "pending",
   });
+  if (error) {
+    console.error("[createMindboostTask] insert error:", error.code, error.message);
+    throw new Error(`Échec de la création du rappel de suivi : ${error.message}`);
+  }
 }
 
 export function getNextQuestion(data: ClientIntakeData): string {
@@ -330,19 +342,28 @@ export async function createClientAndOrder(
     .eq("id", account.id);
   if (balErr) throw new Error(`Account balance update error: ${balErr.message}`);
 
-  // Step D — Mindboost task log
-  await supabase.from("mindboost_tasks").insert({
-    user_id: userId,
-    type: "client_order",
-    title: `Commande ${data.client_name}`,
-    data: { ...data, client_id: clientId, order_id: order.id },
-    status: "pending",
-  });
+  // Step D — Mindboost task log (non-bloquant : client/commande/transaction OK)
+  let taskWarning = "";
+  try {
+    const { error: taskErr } = await supabase.from("mindboost_tasks").insert({
+      user_id: userId,
+      type: "client_order",
+      title: `Commande ${data.client_name}`,
+      data: { ...data, client_id: clientId, order_id: order.id },
+      status: "pending",
+    });
+    if (taskErr) {
+      console.error("[createClientAndOrder] task insert error:", taskErr.code, taskErr.message);
+      taskWarning = "\n⚠️ Le rappel de suivi n'a pas pu être créé — à vérifier manuellement.";
+    }
+  } catch {
+    taskWarning = "\n⚠️ Le rappel de suivi n'a pas pu être créé — à vérifier manuellement.";
+  }
 
   if (isNewClient) {
-    return `Client ${data.client_name} enregistré. Commande ${data.product ?? "produit"} créée. Avance ${data.amount_received ?? 0} ${data.currency_received ?? ""} enregistrée.\nStatut : sourcing en cours.`;
+    return `Client ${data.client_name} enregistré. Commande ${data.product ?? "produit"} créée. Avance ${data.amount_received ?? 0} ${data.currency_received ?? ""} enregistrée.\nStatut : sourcing en cours.${taskWarning}`;
   }
-  return `Nouvelle commande ajoutée pour ${data.client_name}. Avance enregistrée.`;
+  return `Nouvelle commande ajoutée pour ${data.client_name}. Avance enregistrée.${taskWarning}`;
 }
 
 export async function updateIntakeClientName(sessionId: string, clientName: string): Promise<void> {
