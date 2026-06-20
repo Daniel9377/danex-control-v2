@@ -95,7 +95,7 @@ test("Dashboard - transactions vides affichent des zeros propres sans NaN", asyn
   await wipeTransactionsOnly();
   await page.goto("/fr/dashboard");
 
-  const bodyText = normalizeText((await page.locator("body").textContent()) ?? "");
+  const bodyText = normalizeText((await page.locator("body").innerText()) ?? "");
   console.log(`Dashboard S5 - etat vide: ${bodyText.slice(0, 500)}`);
   expect(bodyText, "Le dashboard ne doit jamais afficher NaN.").not.toMatch(/NaN/i);
   expect(bodyText, "Le dashboard ne doit jamais afficher undefined.").not.toMatch(/undefined/i);

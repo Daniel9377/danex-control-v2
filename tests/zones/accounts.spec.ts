@@ -190,7 +190,7 @@ async function editAccountAvailability(page: Page, accountName: string, availabi
   const card = page.locator("article").filter({ hasText: accountName }).first();
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: /Options du compte/i }).click();
-  await card.locator("button").filter({ hasText: /^Modifier$/ }).click();
+  await card.locator("button").filter({ hasText: /Modifier/ }).click();
   await page.getByRole("button", { name: availabilityLabel }).click();
   await saveByName(page, /^Sauvegarder$/);
 }
