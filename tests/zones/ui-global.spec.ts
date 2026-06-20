@@ -104,16 +104,20 @@ test.skip("UI globale - textes tres longs restent contenus dans les cartes", asy
 });
 
 test("UI globale - tous les liens sidebar ouvrent la bonne page", async ({ page }) => {
+  test.setTimeout(90_000); // 12 links × ~5s each
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/fr/dashboard");
-  await page.waitForLoadState("networkidle");
+  await page.goto("/fr/dashboard", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("main").first()).toBeVisible({ timeout: 10_000 });
 
   for (const item of sidebarLinks) {
-    await page.getByRole("link", { name: item.label }).click();
-    await page.waitForLoadState("networkidle");
-    await expect(page, `Navigation ${item.label} doit aller vers ${item.href}.`).toHaveURL(
-      new RegExp(`/fr${item.href}$`)
-    );
+    // Scroll sidebar to ensure the link is visible (some links may be below fold)
+    const link = page.getByRole("link", { name: item.label });
+    await link.scrollIntoViewIfNeeded();
+    await link.click();
+    // Soft navigation updates the URL quickly; waitForURL with default
+    // waitUntil:'load' can time out on pages with continuous polling.
+    await page.waitForURL(new RegExp(`/fr${item.href}$`), { timeout: 8_000, waitUntil: "domcontentloaded" });
+    await expect(page.locator("main").first()).toBeVisible({ timeout: 8_000 });
     const body = normalizeText((await page.locator("body").innerText()) ?? "");
     console.log(`UI S5 - ${item.label}: ${page.url()}`);
     expect(body, `${item.label} ne doit pas afficher de 404.`).not.toMatch(/404|not found|introuvable/i);
@@ -135,6 +139,7 @@ const mainRoutes = [
   "settings",
 ];
 
+// Design-v2 sidebar: 9 links (Rapports, Export, Migration removed)
 const sidebarLinks = [
   { label: /Tableau de bord/i, href: "/dashboard" },
   { label: /^Comptes$/i, href: "/accounts" },
@@ -143,9 +148,6 @@ const sidebarLinks = [
   { label: /^Commandes$/i, href: "/orders" },
   { label: /Dettes/i, href: "/debts" },
   { label: /^Transferts$/i, href: "/transfers" },
-  { label: /^Rapports$/i, href: "/reports" },
-  { label: /^Export$/i, href: "/export" },
-  { label: /^Migration$/i, href: "/legacy" },
   { label: /^Alertes$/i, href: "/alerts" },
   { label: /^Param.tres$/i, href: "/settings" },
 ];
