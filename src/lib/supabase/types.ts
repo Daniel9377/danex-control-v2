@@ -104,6 +104,8 @@ export type Transaction = {
   migration_status: "pending_review" | "reviewed" | "archived" | "ignored_modern_reports" | null;
   legacy_reviewed_at: string | null;
   legacy_review_note: string | null;
+  // Unexpected expense flag (migration 005)
+  is_unexpected: boolean;
   created_at: string;
 };
 

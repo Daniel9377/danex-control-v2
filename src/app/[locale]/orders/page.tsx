@@ -654,6 +654,11 @@ export default function OrdersPage({ params }: Props) {
               const isDeficit = costs.balance < 0 && (costs.received > 0 || costs.productCost > 0);
               const stepIdx   = TIMELINE_STEPS.indexOf(order.status);
               const hasCosts  = costs.received > 0 || costs.productCost > 0;
+              // Unexpected expenses (migration 005) — display-only signal
+              const unexpectedTotal = transactions
+                .filter((tx) => tx.order_id === order.id && tx.is_unexpected === true)
+                .reduce((s, tx) => s + Number(tx.amount), 0);
+              const hasUnexpected = unexpectedTotal > 0;
 
               return (
                 <Card
@@ -744,8 +749,15 @@ export default function OrdersPage({ params }: Props) {
                               </span>
                             )}
                             {(costs.productCost + costs.fees) > 0 && (
-                              <span className="rounded-full bg-red-950/30 px-2 py-0.5 text-[10px] font-medium text-red-400">
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                hasUnexpected
+                                  ? "bg-amber-950/30 text-amber-400"
+                                  : "bg-red-950/30 text-red-400"
+                              }`}>
                                 −{formatMoney(costs.productCost + costs.fees, order.currency)}
+                                {hasUnexpected && (
+                                  <span className="ml-1" title={`Dont ${formatMoney(unexpectedTotal, order.currency)} imprévu`}>⚠</span>
+                                )}
                               </span>
                             )}
                             {hasCosts && (
@@ -843,6 +855,14 @@ export default function OrdersPage({ params }: Props) {
                                   </div>
                                 ))}
                             </div>
+                            {hasUnexpected && (
+                              <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-amber-800/40 bg-amber-950/20 px-3 py-1.5">
+                                <span className="text-xs text-amber-400">⚠ Dont dépense imprévue</span>
+                                <span className="font-mono text-xs font-semibold text-amber-400 tabular-nums">
+                                  {formatMoney(unexpectedTotal, order.currency)}
+                                </span>
+                              </div>
+                            )}
                             <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2">
                               <span className="text-xs text-slate-400">Solde client restant</span>
                               <span className={`font-mono text-sm font-bold tabular-nums ${

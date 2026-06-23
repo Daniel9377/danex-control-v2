@@ -148,13 +148,16 @@ export function TransactionFormModal({
   const [allocations, setAllocations]   = useState<AllocationRow[]>([]);
   const [allocMethod, setAllocMethod]   = useState<"equal" | "manual">("equal");
 
+  // Unexpected expense flag (only for client_shipping_fee)
+  const [isUnexpected, setIsUnexpected] = useState(false);
+
   // Reset when subType changes
   useEffect(() => {
     if (!subType) return;
     setAmount(""); setCategory(""); setNote("");
     setPersonName(""); setPersonPhone(""); setDueDate("");
     setDebtId(""); setReceivableId(""); setTargetBalance("");
-    setAllocations([]);
+    setAllocations([]); setIsUnexpected(false);
     clearError();
     const acct = accounts.find((a) => a.id === accountId);
     if (acct) setCurrency(acct.currency);
@@ -279,6 +282,7 @@ export function TransactionFormModal({
       debtId:       meta.needsDebtSelect       ? debtId       : undefined,
       receivableId: meta.needsReceivableSelect ? receivableId : undefined,
       targetBalance: subType === "balance_correction" ? Number(targetBalance) : undefined,
+      isUnexpected: subType === "client_shipping_fee" ? isUnexpected : undefined,
       allocations:  meta.needsAllocations
         ? allocations.map((a) => ({
             clientId: a.clientId || undefined,
@@ -818,6 +822,20 @@ export function TransactionFormModal({
                   className={fieldCls}
                 />
               </div>
+
+              {/* Unexpected expense flag (shipping fees only) */}
+              {subType === "client_shipping_fee" && (
+                <label className="flex items-center gap-2 rounded-xl border border-amber-800/40 bg-amber-950/20 px-3.5 py-2.5 cursor-pointer transition-colors hover:border-amber-700/50">
+                  <input
+                    type="checkbox"
+                    checked={isUnexpected}
+                    onChange={(e) => setIsUnexpected(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-700 bg-slate-900 accent-amber-500"
+                  />
+                  <span className="text-xs text-amber-300">Dépense imprévue</span>
+                  <span className="text-[10px] text-slate-500">(surcoût, frais non anticipé)</span>
+                </label>
+              )}
 
               {/* Error */}
               {error && (

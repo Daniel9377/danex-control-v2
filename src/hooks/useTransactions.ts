@@ -32,6 +32,8 @@ export interface CreateOperationInput {
   orderId?: string;
   /** For debt_received / receivable_created: the creditor/debtor name. */
   personName?: string;
+  /** Flag as unexpected expense (migration 005). Display-only — computeOrderCosts ignores this. */
+  isUnexpected?: boolean;
   personPhone?: string;
   /** Optional due date for new debt/receivable. */
   dueDate?: string;
@@ -204,6 +206,7 @@ export function useTransactions(accountId?: string) {
         client_id: input.clientId || null,
         order_id: input.orderId || null,
         idempotency_key: idempotencyKey,
+        is_unexpected: input.isUnexpected === true,
       })
       .select("id")
       .single();
