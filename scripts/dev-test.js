@@ -4,15 +4,22 @@
  * Why a loader script instead of relying on Next's own env files:
  *   `next dev` always runs with NODE_ENV=development, so Next would load
  *   `.env.local` (which points at PRODUCTION). By populating process.env from
- *   .env.test BEFORE Next boots, the test values win — Next never overrides
- *   variables that are already defined in the environment.
+ *   .env.test BEFORE Next boots AND temporarily hiding .env.local, the test
+ *   values are the only ones Next.js sees — no override is possible.
  *
  * Result: `npm run dev:test` runs the whole app against the TEST database and
  * turns on the "Voir la démo" button. `npm run dev` stays on production.
  */
 const path = require("path");
+const fs = require("fs");
 const { spawn } = require("child_process");
-require("dotenv").config({ path: path.resolve(__dirname, "..", ".env.test") });
+
+const ROOT = path.resolve(__dirname, "..");
+const ENV_LOCAL = path.join(ROOT, ".env.local");
+const ENV_LOCAL_HIDE = path.join(ROOT, ".env.local.dev-test-hidden");
+
+// 1. Load test env into process.env
+require("dotenv").config({ path: path.join(ROOT, ".env.test") });
 
 if (process.env.DANEX_ENV !== "test") {
   console.error(
@@ -21,8 +28,55 @@ if (process.env.DANEX_ENV !== "test") {
   process.exit(1);
 }
 
-console.log(`[dev:test] Supabase URL -> ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
-console.log(`[dev:test] Demo button  -> ${process.env.NEXT_PUBLIC_DANEX_ENV === "test" ? "ON" : "off"}`);
+// 2. Hide .env.local so Next.js cannot load its production values on top
+let hidden = false;
+try {
+  fs.renameSync(ENV_LOCAL, ENV_LOCAL_HIDE);
+  hidden = true;
+  console.log("[dev:test] .env.local temporarily hidden");
+} catch (e) {
+  // .env.local might already be hidden (e.g. previous crash)
+  if (fs.existsSync(ENV_LOCAL)) {
+    console.error("[dev:test] Could not hide .env.local:", e.message);
+    process.exit(1);
+  }
+}
 
+console.log(`[dev:test] Supabase URL -> ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
+console.log(
+  `[dev:test] Demo button  -> ${
+    process.env.NEXT_PUBLIC_DANEX_ENV === "test" ? "ON" : "off"
+  }`
+);
+
+// 3. Spawn Next.js — it will only find .env.test values (or nothing)
 const child = spawn("next", ["dev"], { stdio: "inherit", shell: true });
-child.on("exit", (code) => process.exit(code ?? 0));
+
+function restore() {
+  if (!hidden) return;
+  try {
+    fs.renameSync(ENV_LOCAL_HIDE, ENV_LOCAL);
+    console.log("[dev:test] .env.local restored");
+  } catch (e) {
+    console.error("[dev:test] Could not restore .env.local:", e.message);
+    console.error(
+      `[dev:test] Manual restore: mv "${ENV_LOCAL_HIDE}" "${ENV_LOCAL}"`
+    );
+  }
+}
+
+// Always restore .env.local on exit
+child.on("exit", (code) => {
+  restore();
+  process.exit(code ?? 0);
+});
+
+process.on("SIGINT", () => {
+  restore();
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  restore();
+  process.exit(0);
+});
