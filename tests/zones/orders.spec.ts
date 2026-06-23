@@ -197,6 +197,9 @@ async function fillFieldInForm(form: ReturnType<Page['locator']>, page: Page, la
 
 async function openOrderForm(page: Page) {
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
+  // Mode choice screen appears first — click "Simple"
+  await page.waitForTimeout(400);
+  await page.getByRole("button", { name: /^Simple/ }).click();
   await expect(page.getByRole("button", { name: /^Sauvegarder$/ })).toBeVisible();
 }
 

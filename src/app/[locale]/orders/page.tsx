@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useOrders } from "@/hooks/useOrders";
 import { useClients } from "@/hooks/useClients";
 import { useCurrencies } from "@/hooks/useCurrencies";
+import { cacheInvalidatePrefix } from "@/lib/cache";
 import { useOrderItems, computeExpectedMargin } from "@/hooks/useOrderItems";
 import { useTransactions, CreateOperationInput } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -64,7 +65,7 @@ export default function OrdersPage({ params }: Props) {
   const { locale } = use(params);
   const t = useTranslations("orders");
   const tc = useTranslations("common");
-  const { orders, loading, addOrder, updateOrder, deleteOrder } = useOrders();
+  const { orders, loading, addOrder, updateOrder, deleteOrder, reload: reloadOrders } = useOrders();
   const { clients } = useClients();
   const { currencies } = useCurrencies();
   const { accounts } = useAccounts();
@@ -87,7 +88,12 @@ export default function OrdersPage({ params }: Props) {
     orderId?: string;
   }>({});
 
-  // Order form fields
+  // ── Form state ──────────────────────────────────────────────────────────────
+
+  type FormStep = "choose" | "simple" | "detailed";
+  const [formStep, setFormStep] = useState<FormStep>("choose");
+
+  // Simple mode fields
   const [clientId, setClientId]           = useState("");
   const [productName, setProductName]     = useState("");
   const [currency, setCurrency]           = useState("USD");
@@ -100,27 +106,153 @@ export default function OrdersPage({ params }: Props) {
   const [nextAction, setNextAction]       = useState("");
   const [note, setNote]                   = useState("");
 
+  // Detailed mode fields
+  const [detailClientId, setDetailClientId] = useState("");
+  const [detailCurrency, setDetailCurrency] = useState("USD");
+  const [detailAdvance, setDetailAdvance]   = useState("0");
+  const [detailStatus, setDetailStatus]     = useState<OrderStatus>("new");
+  const [detailTracking, setDetailTracking] = useState("");
+  const [detailNextAction, setDetailNextAction] = useState("");
+  const [detailNote, setDetailNote]         = useState("");
+  const [detailItems, setDetailItems]       = useState<DetailItem[]>([
+    emptyItem(),
+  ]);
+
+  type DetailItem = {
+    product_name: string;
+    quantity: string;
+    variant: string;
+    supplier: string;
+    unit_price: string;
+    supplier_unit_cost: string;
+  };
+  function emptyItem(): DetailItem {
+    return { product_name: "", quantity: "1", variant: "", supplier: "", unit_price: "", supplier_unit_cost: "" };
+  }
+
+  const { loadItems } = useOrderItems();
+
+  // ── Form helpers ────────────────────────────────────────────────────────────
+
   function openAdd() {
     setEditing(null);
-    setClientId(clients[0]?.id ?? ""); setProductName(""); setCurrency("USD");
-    setClientPrice(""); setSupplierPrice(""); setQuantity("1"); setAdvance("0");
-    setStatus("new"); setTrackingCode(""); setNextAction(""); setNote("");
+    setFormStep("choose");
+    // Pre-fill both modes with defaults so switching doesn't lose the client
+    setClientId(clients[0]?.id ?? "");
+    setDetailClientId(clients[0]?.id ?? "");
+    setProductName(""); setCurrency("USD"); setClientPrice(""); setSupplierPrice("");
+    setQuantity("1"); setAdvance("0"); setStatus("new");
+    setTrackingCode(""); setNextAction(""); setNote("");
+    setDetailCurrency("USD"); setDetailAdvance("0"); setDetailStatus("new");
+    setDetailTracking(""); setDetailNextAction(""); setDetailNote("");
+    setDetailItems([emptyItem()]);
     setShowForm(true);
   }
 
-  function openEdit(id: string) {
+  function openSimple() {
+    setFormStep("simple");
+  }
+
+  function openDetailed() {
+    setFormStep("detailed");
+  }
+
+  function backToChoose() {
+    setFormStep("choose");
+  }
+
+  async function openEdit(id: string) {
     const o = orders.find((or) => or.id === id);
     if (!o) return;
     setEditing(id);
-    setClientId(o.client_id); setProductName(o.product_name); setCurrency(o.currency);
-    setClientPrice(o.client_price != null ? String(o.client_price) : "");
-    setSupplierPrice(o.supplier_price != null ? String(o.supplier_price) : "");
-    setQuantity(String(o.quantity));
-    setAdvance(String(o.advance_received)); setStatus(o.status);
-    setTrackingCode(o.tracking_code ?? ""); setNextAction(o.next_action ?? "");
-    setNote(o.note ?? "");
+
+    // Load order_items to determine mode
+    try {
+      const items = await loadItems(id);
+      if (items.length > 1) {
+        // Detailed mode
+        setFormStep("detailed");
+        setDetailClientId(o.client_id);
+        setDetailCurrency(o.currency);
+        setDetailAdvance(String(o.advance_received));
+        setDetailStatus(o.status);
+        setDetailTracking(o.tracking_code ?? "");
+        setDetailNextAction(o.next_action ?? "");
+        setDetailNote(o.note ?? "");
+        setDetailItems(items.map((it) => ({
+          product_name: it.product_name,
+          quantity: String(it.quantity),
+          variant: it.variant ?? "",
+          supplier: it.supplier ?? "",
+          unit_price: it.unit_price != null ? String(it.unit_price) : "",
+          supplier_unit_cost: it.supplier_unit_cost != null ? String(it.supplier_unit_cost) : "",
+        })));
+      } else {
+        // Simple mode (1 item)
+        setFormStep("simple");
+        setClientId(o.client_id); setProductName(o.product_name); setCurrency(o.currency);
+        setClientPrice(o.client_price != null ? String(o.client_price) : "");
+        setSupplierPrice(o.supplier_price != null ? String(o.supplier_price) : "");
+        setQuantity(String(o.quantity));
+        setAdvance(String(o.advance_received)); setStatus(o.status);
+        setTrackingCode(o.tracking_code ?? ""); setNextAction(o.next_action ?? "");
+        setNote(o.note ?? "");
+      }
+    } catch {
+      // Fallback: treat as simple mode
+      setFormStep("simple");
+      setClientId(o.client_id); setProductName(o.product_name); setCurrency(o.currency);
+      setClientPrice(o.client_price != null ? String(o.client_price) : "");
+      setSupplierPrice(o.supplier_price != null ? String(o.supplier_price) : "");
+      setQuantity(String(o.quantity));
+      setAdvance(String(o.advance_received)); setStatus(o.status);
+      setTrackingCode(o.tracking_code ?? ""); setNextAction(o.next_action ?? "");
+      setNote(o.note ?? "");
+    }
     setShowForm(true);
   }
+
+  // ── Detailed items helpers ──────────────────────────────────────────────────
+
+  function updateDetailItem(idx: number, field: keyof DetailItem, value: string) {
+    setDetailItems((prev) => prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
+  }
+  function addDetailItem() {
+    setDetailItems((prev) => [...prev, emptyItem()]);
+  }
+  function removeDetailItem(idx: number) {
+    setDetailItems((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev));
+  }
+
+  function detailItemsForCompute(): Array<{ quantity: number; unit_price: number | null; supplier_unit_cost: number | null }> {
+    return detailItems.map((it) => ({
+      quantity: parseInt(it.quantity, 10) || 1,
+      unit_price: it.unit_price ? Number(it.unit_price) : null,
+      supplier_unit_cost: it.supplier_unit_cost ? Number(it.supplier_unit_cost) : null,
+    }));
+  }
+
+  /** Build the denormalised orders.* cache from detailed items. */
+  function buildDetailCache(): { product_name: string; quantity: number; client_price: number | null; supplier_price: number | null } {
+    const qty = detailItems.reduce((s, it) => s + (parseInt(it.quantity, 10) || 1), 0);
+    const totalClient = detailItems.reduce((s, it) => s + (Number(it.unit_price || 0) * (parseInt(it.quantity, 10) || 1)), 0);
+    const totalSupplier = detailItems.reduce((s, it) => s + (Number(it.supplier_unit_cost || 0) * (parseInt(it.quantity, 10) || 1)), 0);
+    const firstName = detailItems[0]?.product_name?.trim() || "Commande";
+    const name = detailItems.length === 1
+      ? firstName
+      : `${firstName} + ${detailItems.length - 1} autre${detailItems.length > 2 ? "s" : ""}`;
+    // Store client_price as the AVERAGE unit price so denormMargin(cp, sp, qty)
+    // = cp × qty − sp = totalClient − totalSupplier = correct margin.
+    const avgUnitPrice = qty > 0 && totalClient > 0 ? Math.round(totalClient / qty * 100) / 100 : null;
+    return {
+      product_name: name,
+      quantity: qty,
+      client_price: avgUnitPrice,
+      supplier_price: totalSupplier > 0 ? totalSupplier : null,
+    };
+  }
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -128,19 +260,92 @@ export default function OrdersPage({ params }: Props) {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const cp = clientPrice ? Number(clientPrice) : null;
-      const sp = supplierPrice ? Number(supplierPrice) : null;
-      const qty = parseInt(quantity, 10) || 1;
-      if (editing) {
-        await updateOrder(editing, {
-          client_id: clientId, product_name: productName, currency,
-          client_price: cp, supplier_price: sp, quantity: qty,
-          advance_received: Number(advance), status,
-          tracking_code: trackingCode || null, next_action: nextAction || null, note: note || null,
-        });
+
+      if (formStep === "detailed") {
+        // Build items for the API
+        const items = detailItems
+          .filter((it) => it.product_name.trim())
+          .map((it) => ({
+            product_name: it.product_name.trim(),
+            variant: it.variant || null,
+            supplier: it.supplier || null,
+            quantity: parseInt(it.quantity, 10) || 1,
+            unit_price: it.unit_price ? Number(it.unit_price) : null,
+            supplier_unit_cost: it.supplier_unit_cost ? Number(it.supplier_unit_cost) : null,
+          }));
+
+        if (items.length === 0) return;
+
+        const cache = buildDetailCache();
+
+        if (editing) {
+          await updateOrder(editing, {
+            client_id: detailClientId,
+            product_name: cache.product_name,
+            currency: detailCurrency,
+            client_price: cache.client_price,
+            supplier_price: cache.supplier_price,
+            quantity: cache.quantity,
+            advance_received: Number(detailAdvance),
+            status: detailStatus,
+            tracking_code: detailTracking || null,
+            next_action: detailNextAction || null,
+            note: detailNote || null,
+          }, items);
+        } else {
+          // Create the order first, then insert its items
+          const { data: created, error: orderErr } = await supabase
+            .from("orders")
+            .insert({
+              user_id: user.id,
+              client_id: detailClientId,
+              product_name: cache.product_name,
+              currency: detailCurrency,
+              client_price: cache.client_price,
+              supplier_price: cache.supplier_price,
+              quantity: cache.quantity,
+              advance_received: Number(detailAdvance),
+              status: detailStatus,
+              tracking_code: detailTracking || null,
+              next_action: detailNextAction || null,
+              note: detailNote || null,
+              last_update: new Date().toISOString().split("T")[0],
+            })
+            .select("id")
+            .single();
+
+          if (orderErr || !created) {
+            throw new Error(orderErr?.message || "Échec de la création de la commande.");
+          }
+
+          const { error: itemErr } = await supabase.from("order_items").insert(
+            items.map((it) => ({ order_id: created.id, ...it }))
+          );
+          if (itemErr) {
+            await supabase.from("orders").delete().eq("id", created.id);
+            throw new Error(itemErr.message || "Échec de l'enregistrement des produits.");
+          }
+          // Invalidate cache then refresh so the new order appears
+          cacheInvalidatePrefix("orders");
+          await reloadOrders();
+        }
       } else {
-        await addOrder(user.id, clientId, productName, currency, cp, sp,
-          Number(advance), status, qty, trackingCode || null, nextAction || null, note || null);
+        // Simple mode
+        const cp = clientPrice ? Number(clientPrice) : null;
+        const sp = supplierPrice ? Number(supplierPrice) : null;
+        const qty = parseInt(quantity, 10) || 1;
+
+        if (editing) {
+          await updateOrder(editing, {
+            client_id: clientId, product_name: productName, currency,
+            client_price: cp, supplier_price: sp, quantity: qty,
+            advance_received: Number(advance), status,
+            tracking_code: trackingCode || null, next_action: nextAction || null, note: note || null,
+          });
+        } else {
+          await addOrder(user.id, clientId, productName, currency, cp, sp,
+            Number(advance), status, qty, trackingCode || null, nextAction || null, note || null);
+        }
       }
       setShowForm(false);
     });
@@ -185,8 +390,6 @@ export default function OrdersPage({ params }: Props) {
   const activeClientLabel = filterClient
     ? (clients.find((c) => c.id === filterClient)?.name ?? "Client")
     : "Tous les clients";
-
-  const canSave = !!clientId && !!productName.trim();
 
   if (loading) return <PageWrapper locale={locale}><LoadingPage /></PageWrapper>;
 
@@ -645,242 +848,300 @@ export default function OrdersPage({ params }: Props) {
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 pb-3 pt-4">
-              <h2 className="text-base font-bold text-slate-50">
-                {editing ? tc("edit") : t("add")}
-              </h2>
+              <div className="flex items-center gap-2 min-w-0">
+                {formStep !== "choose" && (
+                  <button
+                    type="button"
+                    onClick={backToChoose}
+                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300 shrink-0"
+                  >
+                    <ChevronDown size={16} className="rotate-90" />
+                  </button>
+                )}
+                <h2 className="text-base font-bold text-slate-50 truncate">
+                  {formStep === "choose"
+                    ? (editing ? tc("edit") : t("add"))
+                    : formStep === "simple"
+                    ? "Simple"
+                    : "Détaillé"}
+                </h2>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300 shrink-0"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto px-5 pb-2">
-                <div className="space-y-4 py-1">
-
-                  {/* Client */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("client")}
-                    </label>
-                    <select
-                      value={clientId}
-                      onChange={(e) => setClientId(e.target.value)}
-                      required
-                      className={fieldCls}
-                    >
-                      <option value="">— Sélectionner —</option>
-                      {clients.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Product name */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("product")}
-                    </label>
-                    <input
-                      value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
-                      required
-                      placeholder="Nom du produit ou commande"
-                      className={fieldCls}
-                    />
-                  </div>
-
-                  {/* Status */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("status")}
-                    </label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as OrderStatus)}
-                      className={fieldCls}
-                    >
-                      {ORDER_STATUSES.map((s) => (
-                        <option key={s} value={s}>{t(`statuses.${s}`)}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Currency + Client price + Supplier price */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">Devise</label>
-                    <select
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className={fieldCls}
-                    >
-                      {currencies.map((c) => (
-                        <option key={c.code} value={c.code}>{c.code}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                        {t("client_price")}
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={clientPrice}
-                        onChange={(e) => setClientPrice(e.target.value)}
-                        placeholder="0.00"
-                        className={`${fieldCls} font-mono tabular-nums`}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                        {t("supplier_price")}
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={supplierPrice}
-                        onChange={(e) => setSupplierPrice(e.target.value)}
-                        placeholder="0.00"
-                        className={`${fieldCls} font-mono tabular-nums`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Quantity */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("quantity")}
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="1"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      placeholder="1"
-                      className={`${fieldCls} font-mono tabular-nums w-24`}
-                    />
-                  </div>
-
-                  {/* Live margin preview */}
-                  {(clientPrice || supplierPrice) && (() => {
-                    const cp = parseFloat(clientPrice) || 0;
-                    const sp = parseFloat(supplierPrice) || 0;
-                    const qty = parseInt(quantity, 10) || 1;
-                    const total = cp * qty;
-                    const margin = (cp > 0 || sp > 0) ? denormMargin(cp || null, sp || null, qty) : null;
-                    return (
-                      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 space-y-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                          {t("expected_margin")}
-                        </p>
-                        {cp > 0 && (
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs text-slate-500">Total client</span>
-                            <span className="font-mono text-xs text-slate-300">
-                              {formatMoney(cp, currency)} × {qty} = {formatMoney(total, currency)}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-2">
-                          <span className="text-xs text-slate-500">Marge</span>
-                          <span className={`font-mono text-sm font-bold tabular-nums ${
-                            margin !== null && margin >= 0 ? "text-emerald-400" : "text-red-400"
-                          }`}>
-                            {margin !== null
-                              ? `${margin >= 0 ? "+" : "−"}${formatMoney(Math.abs(margin), currency)}`
-                              : "—"}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Advance */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("advance")} <span className="text-slate-600">(acompte reçu)</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={advance}
-                      onChange={(e) => setAdvance(e.target.value)}
-                      placeholder="0.00"
-                      className={`${fieldCls} font-mono tabular-nums`}
-                    />
-                  </div>
-
-                  {/* Tracking */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("tracking")} <span className="text-slate-600">(optionnel)</span>
-                    </label>
-                    <input
-                      value={trackingCode}
-                      onChange={(e) => setTrackingCode(e.target.value)}
-                      placeholder="Ex : CN123456789"
-                      className={fieldCls}
-                    />
-                  </div>
-
-                  {/* Next action */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("next_action")} <span className="text-slate-600">(optionnel)</span>
-                    </label>
-                    <input
-                      value={nextAction}
-                      onChange={(e) => setNextAction(e.target.value)}
-                      placeholder="Ex : Contacter le fournisseur"
-                      className={fieldCls}
-                    />
-                  </div>
-
-                  {/* Note */}
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("note")} <span className="text-slate-600">(optionnel)</span>
-                    </label>
-                    <input
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder="Remarque interne…"
-                      className={fieldCls}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div
-                className="shrink-0 border-t border-slate-800 px-5 pt-3"
-                style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
-              >
-                <div className="flex gap-2.5">
+            {/* ── Step: Choose mode ─────────────────────────────────────────── */}
+            {formStep === "choose" && (
+              <div className="px-5 pb-5">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setShowForm(false)}
-                    className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                    onClick={openSimple}
+                    className="flex flex-col items-start gap-2 rounded-xl border border-slate-700 bg-slate-900 p-5 text-left transition-colors hover:border-orange-700/50 hover:bg-slate-800/50"
                   >
-                    {tc("cancel")}
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-slate-400">
+                      <Plus size={18} />
+                    </span>
+                    <span className="text-sm font-bold text-slate-100">Simple</span>
+                    <span className="text-[11px] text-slate-500">Un seul produit, totaux uniquement</span>
                   </button>
                   <button
-                    type="submit"
-                    disabled={submitting || !canSave}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                    type="button"
+                    onClick={openDetailed}
+                    className="flex flex-col items-start gap-2 rounded-xl border border-slate-700 bg-slate-900 p-5 text-left transition-colors hover:border-orange-700/50 hover:bg-slate-800/50"
                   >
-                    {submitting ? "Enregistrement…" : tc("save")}
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-slate-400">
+                      <Pencil size={18} />
+                    </span>
+                    <span className="text-sm font-bold text-slate-100">Détaillé</span>
+                    <span className="text-[11px] text-slate-500">Plusieurs produits, variantes, fournisseurs</span>
                   </button>
                 </div>
               </div>
-            </form>
+            )}
+
+            {/* ── Step: Simple form ──────────────────────────────────────────── */}
+            {formStep === "simple" && (
+              <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto px-5 pb-2">
+                  <div className="space-y-4 py-1">
+                    {/* Client */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("client")}</label>
+                      <select value={clientId} onChange={(e) => setClientId(e.target.value)} required className={fieldCls}>
+                        <option value="">— Sélectionner —</option>
+                        {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                      </select>
+                    </div>
+                    {/* Product */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("product")}</label>
+                      <input value={productName} onChange={(e) => setProductName(e.target.value)} required placeholder="Nom du produit ou commande" className={fieldCls} />
+                    </div>
+                    {/* Status */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("status")}</label>
+                      <select value={status} onChange={(e) => setStatus(e.target.value as OrderStatus)} className={fieldCls}>
+                        {ORDER_STATUSES.map((s) => (<option key={s} value={s}>{t(`statuses.${s}`)}</option>))}
+                      </select>
+                    </div>
+                    {/* Currency */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">Devise</label>
+                      <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={fieldCls}>
+                        {currencies.map((c) => (<option key={c.code} value={c.code}>{c.code}</option>))}
+                      </select>
+                    </div>
+                    {/* Prices + Quantity */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("client_price")}</label>
+                        <input type="number" step="0.01" value={clientPrice} onChange={(e) => setClientPrice(e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono tabular-nums`} />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("supplier_price")}</label>
+                        <input type="number" step="0.01" value={supplierPrice} onChange={(e) => setSupplierPrice(e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono tabular-nums`} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("quantity")}</label>
+                      <input type="number" step="1" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="1" className={`${fieldCls} font-mono tabular-nums w-24`} />
+                    </div>
+
+                    {/* Live margin */}
+                    {(clientPrice || supplierPrice) && (() => {
+                      const cp = parseFloat(clientPrice) || 0;
+                      const sp = parseFloat(supplierPrice) || 0;
+                      const qty = parseInt(quantity, 10) || 1;
+                      const margin = (cp > 0 || sp > 0) ? denormMargin(cp || null, sp || null, qty) : null;
+                      return (
+                        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 space-y-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">{t("expected_margin")}</p>
+                          {cp > 0 && (
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-xs text-slate-500">Total client</span>
+                              <span className="font-mono text-xs text-slate-300">{formatMoney(cp, currency)} × {qty} = {formatMoney(cp * qty, currency)}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-2">
+                            <span className="text-xs text-slate-500">Marge</span>
+                            <span className={`font-mono text-sm font-bold tabular-nums ${margin !== null && margin >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                              {margin !== null ? `${margin >= 0 ? "+" : "−"}${formatMoney(Math.abs(margin), currency)}` : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Advance */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("advance")} <span className="text-slate-600">(acompte reçu)</span></label>
+                      <input type="number" step="0.01" value={advance} onChange={(e) => setAdvance(e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono tabular-nums`} />
+                    </div>
+                    {/* Tracking */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("tracking")} <span className="text-slate-600">(optionnel)</span></label>
+                      <input value={trackingCode} onChange={(e) => setTrackingCode(e.target.value)} placeholder="Ex : CN123456789" className={fieldCls} />
+                    </div>
+                    {/* Next action */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("next_action")} <span className="text-slate-600">(optionnel)</span></label>
+                      <input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="Ex : Contacter le fournisseur" className={fieldCls} />
+                    </div>
+                    {/* Note */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("note")} <span className="text-slate-600">(optionnel)</span></label>
+                      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Remarque interne…" className={fieldCls} />
+                    </div>
+                  </div>
+                </div>
+                {/* Footer */}
+                <div className="shrink-0 border-t border-slate-800 px-5 pt-3" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
+                  <div className="flex gap-2.5">
+                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200">{tc("cancel")}</button>
+                    <button type="submit" disabled={submitting || !(!!clientId && !!productName.trim())} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">{submitting ? "Enregistrement…" : tc("save")}</button>
+                  </div>
+                </div>
+              </form>
+            )}
+
+            {/* ── Step: Detailed form ────────────────────────────────────────── */}
+            {formStep === "detailed" && (
+              <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto px-5 pb-2">
+                  <div className="space-y-4 py-1">
+                    {/* Client */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("client")}</label>
+                      <select value={detailClientId} onChange={(e) => setDetailClientId(e.target.value)} required className={fieldCls}>
+                        <option value="">— Sélectionner —</option>
+                        {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                      </select>
+                    </div>
+                    {/* Status */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("status")}</label>
+                      <select value={detailStatus} onChange={(e) => setDetailStatus(e.target.value as OrderStatus)} className={fieldCls}>
+                        {ORDER_STATUSES.map((s) => (<option key={s} value={s}>{t(`statuses.${s}`)}</option>))}
+                      </select>
+                    </div>
+                    {/* Currency */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">Devise</label>
+                      <select value={detailCurrency} onChange={(e) => setDetailCurrency(e.target.value)} className={fieldCls}>
+                        {currencies.map((c) => (<option key={c.code} value={c.code}>{c.code}</option>))}
+                      </select>
+                    </div>
+
+                    {/* ── Products ── */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">Produits</label>
+                      <div className="space-y-3">
+                        {detailItems.map((it, idx) => (
+                          <div key={idx} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <input
+                                value={it.product_name}
+                                onChange={(e) => updateDetailItem(idx, "product_name", e.target.value)}
+                                required
+                                placeholder="Nom du produit"
+                                className={`${fieldCls} flex-1`}
+                              />
+                              {detailItems.length > 1 && (
+                                <button type="button" onClick={() => removeDetailItem(idx)} className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-800 hover:text-red-400 shrink-0">
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                              <div>
+                                <label className="mb-0.5 block text-[10px] text-slate-600">Qté</label>
+                                <input type="number" step="1" min="1" value={it.quantity} onChange={(e) => updateDetailItem(idx, "quantity", e.target.value)} placeholder="1" className={`${fieldCls} font-mono text-xs`} />
+                              </div>
+                              <div>
+                                <label className="mb-0.5 block text-[10px] text-slate-600">Variante</label>
+                                <input value={it.variant} onChange={(e) => updateDetailItem(idx, "variant", e.target.value)} placeholder="—" className={`${fieldCls} text-xs`} />
+                              </div>
+                              <div>
+                                <label className="mb-0.5 block text-[10px] text-slate-600">Fournisseur</label>
+                                <input value={it.supplier} onChange={(e) => updateDetailItem(idx, "supplier", e.target.value)} placeholder="—" className={`${fieldCls} text-xs`} />
+                              </div>
+                              <div>
+                                <label className="mb-0.5 block text-[10px] text-slate-600">Prix unit.</label>
+                                <input type="number" step="0.01" value={it.unit_price} onChange={(e) => updateDetailItem(idx, "unit_price", e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono text-xs`} />
+                              </div>
+                            </div>
+                            {/* Coût fournisseur for this item */}
+                            <div>
+                              <label className="mb-0.5 block text-[10px] text-slate-600">Coût fournisseur</label>
+                              <input type="number" step="0.01" value={it.supplier_unit_cost} onChange={(e) => updateDetailItem(idx, "supplier_unit_cost", e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono text-xs w-36`} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <button type="button" onClick={addDetailItem} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-700 py-2 text-xs text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-400">
+                        <Plus size={13} /> Ajouter un produit
+                      </button>
+                    </div>
+
+                    {/* Live margin — computed from order_items */}
+                    {detailItems.some((it) => it.product_name.trim() || it.unit_price) && (() => {
+                      const margin = computeExpectedMargin(detailItemsForCompute());
+                      const totalQty = detailItems.reduce((s, it) => s + (parseInt(it.quantity, 10) || 1), 0);
+                      const totalClient = detailItems.reduce((s, it) => s + (Number(it.unit_price || 0) * (parseInt(it.quantity, 10) || 1)), 0);
+                      return (
+                        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 space-y-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">{t("expected_margin")}</p>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs text-slate-500">{detailItems.filter((it) => it.product_name.trim()).length} produit{detailItems.filter((it) => it.product_name.trim()).length !== 1 ? "s" : ""} · {totalQty} unités</span>
+                            <span className="font-mono text-xs text-slate-300">{formatMoney(totalClient, detailCurrency)}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-2">
+                            <span className="text-xs text-slate-500">Marge totale</span>
+                            <span className={`font-mono text-sm font-bold tabular-nums ${margin !== null && margin >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                              {margin !== null ? `${margin >= 0 ? "+" : "−"}${formatMoney(Math.abs(margin), detailCurrency)}` : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Advance */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("advance")} <span className="text-slate-600">(acompte reçu)</span></label>
+                      <input type="number" step="0.01" value={detailAdvance} onChange={(e) => setDetailAdvance(e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono tabular-nums`} />
+                    </div>
+                    {/* Tracking */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("tracking")} <span className="text-slate-600">(optionnel)</span></label>
+                      <input value={detailTracking} onChange={(e) => setDetailTracking(e.target.value)} placeholder="Ex : CN123456789" className={fieldCls} />
+                    </div>
+                    {/* Next action */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("next_action")} <span className="text-slate-600">(optionnel)</span></label>
+                      <input value={detailNextAction} onChange={(e) => setDetailNextAction(e.target.value)} placeholder="Ex : Contacter le fournisseur" className={fieldCls} />
+                    </div>
+                    {/* Note */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("note")} <span className="text-slate-600">(optionnel)</span></label>
+                      <input value={detailNote} onChange={(e) => setDetailNote(e.target.value)} placeholder="Remarque interne…" className={fieldCls} />
+                    </div>
+                  </div>
+                </div>
+                {/* Footer */}
+                <div className="shrink-0 border-t border-slate-800 px-5 pt-3" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
+                  <div className="flex gap-2.5">
+                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200">{tc("cancel")}</button>
+                    <button type="submit" disabled={submitting || !(!!detailClientId && detailItems.some((it) => it.product_name.trim()))} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">{submitting ? "Enregistrement…" : tc("save")}</button>
+                  </div>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
