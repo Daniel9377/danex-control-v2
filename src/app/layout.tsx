@@ -36,8 +36,17 @@ export default function RootLayout({
     <html
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="h-full bg-slate-950 text-slate-200">{children}</body>
+      <head>
+        {/* Apply theme BEFORE first paint — prevents flash of wrong theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("danex-theme")||"dark";document.documentElement.className+=" "+t}catch(e){}})()`,
+          }}
+        />
+      </head>
+      <body className="h-full">{children}</body>
     </html>
   );
 }

@@ -189,3 +189,62 @@
     radial-gradient(ellipse 60% 40% at 95% 95%, rgba(99,102,241,0.035) 0%, transparent 60%),
     var(--slate-950);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT THEME — applied via .light class on <html>
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.light {
+  /* ── Surfaces ────────────────────────────────────────────────────────── */
+  --bg-app:           #f8fafc;       /* slate-50  */
+  --surface-card:     #ffffff;       /* white     */
+  --surface-raised:   #ffffff;
+  --surface-sunken:   #f1f5f9;       /* slate-100 */
+  --surface-glass:    rgba(255, 255, 255, 0.8);
+  --surface-chip:     rgba(241, 245, 249, 0.8);
+  --surface-hover:    rgba(241, 245, 249, 0.6);
+
+  /* ── Borders ─────────────────────────────────────────────────────────── */
+  --border-default:   #e2e8f0;       /* slate-200 */
+  --border-strong:    #cbd5e1;       /* slate-300 */
+  --border-subtle:    rgba(226, 232, 240, 0.8);
+
+  /* ── Text ────────────────────────────────────────────────────────────── */
+  --text-strong:      #0f172a;       /* slate-900 */
+  --text-body:        #334155;       /* slate-700 */
+  --text-muted:       #64748b;       /* slate-500 */
+  --text-label:       #94a3b8;       /* slate-400 */
+  --text-faint:       #cbd5e1;       /* slate-300 */
+
+  /* ── Brand ───────────────────────────────────────────────────────────── */
+  --brand-text:       #ea580c;       /* orange-600 — darker for light bg */
+
+  /* ── Money / status ──────────────────────────────────────────────────── */
+  --money-neutral:    #0f172a;       /* slate-900 */
+
+  /* ── Status tints (lighter backgrounds for light theme) ──────────────── */
+  --tint-success-bg:  rgba(16, 185, 129, 0.1);
+  --tint-success-fg:  #059669;
+  --tint-danger-bg:   rgba(239, 68, 68, 0.1);
+  --tint-danger-fg:   #dc2626;
+  --tint-warning-bg:  rgba(249, 115, 22, 0.1);
+  --tint-warning-fg:  #ea580c;
+  --tint-info-bg:     rgba(96, 165, 250, 0.1);
+  --tint-info-fg:     #2563eb;
+  --tint-orange-bg:   rgba(249, 115, 22, 0.1);
+  --tint-orange-fg:   #ea580c;
+  --tint-default-bg:  rgba(203, 213, 225, 0.4);
+  --tint-default-fg:  #334155;
+
+  /* ── Shadows ─────────────────────────────────────────────────────────── */
+  --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md:   0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+  /* ── Premium background ──────────────────────────────────────────────── */
+  --bg-danex:
+    radial-gradient(ellipse 70% 50% at 5% 5%,  rgba(234,88,12,0.04)  0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(99,102,241,0.03) 0%, transparent 60%),
+    #f8fafc;
+}

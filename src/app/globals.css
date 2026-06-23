@@ -1,11 +1,13 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
 
+/* ── Theme defaults (dark) ─────────────────────────────────────────────── */
 :root {
   --background: var(--bg-app);
   --foreground: var(--text-body);
 }
 
+/* ── Theme-aware body ──────────────────────────────────────────────────── */
 body {
   background: var(--bg-app);
   color: var(--text-body);

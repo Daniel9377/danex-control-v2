@@ -34,6 +34,19 @@ export default function SettingsPage({ params }: Props) {
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
 
+  // Theme toggle
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  useEffect(() => {
+    setTheme((localStorage.getItem("danex-theme") as "dark" | "light") || "dark");
+  }, []);
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    document.documentElement.classList.remove("dark", "light");
+    document.documentElement.classList.add(next);
+    localStorage.setItem("danex-theme", next);
+    setTheme(next);
+  }
+
   const [rates, setRates]           = useState<Record<string, string>>({});
   const [savedCodes, setSavedCodes] = useState<Set<string>>(new Set());
 
@@ -200,6 +213,40 @@ export default function SettingsPage({ params }: Props) {
                 {profileSaving ? "Enregistrement…" : profileSaved ? t("saved") : tc("save")}
               </button>
             </form>
+          </Card>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* Section: Apparence                                                 */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <section>
+          <SectionHeader label="Apparence" />
+          <Card className="overflow-hidden p-0">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="text-sm font-medium text-slate-200">Thème</span>
+              <div className="flex rounded-lg bg-slate-800 p-0.5">
+                <button
+                  onClick={() => theme !== "dark" && toggleTheme()}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    theme === "dark"
+                      ? "bg-slate-700 text-slate-100 shadow-sm"
+                      : "text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  Sombre
+                </button>
+                <button
+                  onClick={() => theme !== "light" && toggleTheme()}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    theme === "light"
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  Clair
+                </button>
+              </div>
+            </div>
           </Card>
         </section>
 
