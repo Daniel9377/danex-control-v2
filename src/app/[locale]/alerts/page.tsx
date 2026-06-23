@@ -156,25 +156,30 @@ function CategoryIcon({ category }: { category: AlertCategory }) {
   }
 }
 
-// ── Alert card ────────────────────────────────────────────────────────────────
+// ── Alert row (unified list item) ──────────────────────────────────────────────
 
-function AlertCard({ alert, locale }: { alert: SmartAlert; locale: string }) {
+function AlertRow({ alert, locale }: { alert: SmartAlert; locale: string }) {
   const cfg = SEVERITY_CONFIG[alert.severity];
   const { Icon } = cfg;
   const { title, message } = getAlertMessages(alert);
 
+  // Severity border-left accent (matching the severity color)
+  const severityBorder = {
+    critical: "border-l-2 border-red-500/60",
+    high:     "border-l-2 border-orange-500/50",
+    medium:   "border-l-2 border-yellow-500/40",
+    low:      "",
+  }[alert.severity];
+
   return (
-    <div className={cn(
-      "rounded-xl border p-3.5 transition-colors hover:brightness-110",
-      cfg.bg, cfg.border
-    )}>
-      <div className="flex items-start gap-3">
+    <li className={cn("transition-colors hover:bg-slate-800/20", severityBorder)}>
+      <div className="flex items-start gap-3 px-4 py-3">
         <Icon size={15} className={cn("mt-0.5 shrink-0", cfg.color)} />
 
         <div className="min-w-0 flex-1">
           {/* Title row */}
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className={cn("min-w-0 truncate text-sm font-semibold", cfg.color)}>
+            <span className="min-w-0 truncate text-sm font-semibold text-slate-100">
               {title}
             </span>
             <span className={cn(
@@ -198,7 +203,7 @@ function AlertCard({ alert, locale }: { alert: SmartAlert; locale: string }) {
           Voir <ArrowRight size={11} />
         </Link>
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -447,10 +452,12 @@ export default function AlertsPage({ params }: Props) {
             <p className="text-sm text-slate-500">{t("empty")}</p>
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {displayedAlerts.map((alert) => (
-              <AlertCard key={alert.id} alert={alert} locale={locale} />
-            ))}
+          <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+            <ul className="divide-y divide-slate-800/50">
+              {displayedAlerts.map((alert) => (
+                <AlertRow key={alert.id} alert={alert} locale={locale} />
+              ))}
+            </ul>
           </div>
         )}
       </div>
