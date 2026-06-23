@@ -307,176 +307,262 @@ export default function DebtsPage({ params }: Props) {
           <div className="space-y-2">
             {filteredActive.length > 0 && <SectionHeader label="En cours" />}
 
-            {[...filteredActive, ...(!filterOverdue ? paid : [])].map((debt, idx) => {
-              const showPaidHeader =
-                !filterOverdue && idx === filteredActive.length && paid.length > 0;
-              const remaining  = Number(debt.amount) - Number(debt.paid_amount);
-              const progress   = Math.min((Number(debt.paid_amount) / Number(debt.amount)) * 100, 100);
-              const isExpanded = expandedId === debt.id;
-              const overdue    = debt.due_date && isOverdue(debt.due_date) && debt.status !== "paid";
-              const soon       = !overdue && debt.due_date && (() => {
-                const d = Math.ceil((new Date(debt.due_date).getTime() - Date.now()) / 86400000);
-                return d >= 0 && d <= 7;
-              })();
+            {filteredActive.length > 0 && (
+              <Card className="overflow-hidden p-0">
+                <ul className="divide-y divide-slate-800/50">
+                  {filteredActive.map((debt) => {
+                    const remaining  = Number(debt.amount) - Number(debt.paid_amount);
+                    const progress   = Math.min((Number(debt.paid_amount) / Number(debt.amount)) * 100, 100);
+                    const isExpanded = expandedId === debt.id;
+                    const overdue    = debt.due_date && isOverdue(debt.due_date) && debt.status !== "paid";
+                    const soon       = !overdue && debt.due_date && (() => {
+                      const d = Math.ceil((new Date(debt.due_date).getTime() - Date.now()) / 86400000);
+                      return d >= 0 && d <= 7;
+                    })();
 
-              return (
-                <div key={debt.id}>
-                  {showPaidHeader && <SectionHeader label="Réglées" />}
-
-                  <Card className={`transition-colors hover:border-slate-600 ${
-                    overdue ? "border-red-900/30" : ""
-                  }`}>
-                    <article>
-                      {/* ── Top row ── */}
-                      <div className="flex items-start gap-3">
-                        <div className="min-w-0 flex-1">
-                          {/* Name + badges */}
-                          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                            <h3 className="min-w-0 truncate text-sm font-semibold text-slate-100">
-                              {debt.person_name}
-                            </h3>
-                            <Badge variant={statusVariant[debt.status]}>
-                              {t(`statuses.${debt.status}`)}
-                            </Badge>
-                            {overdue && (
-                              <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-red-950/50 px-2 py-0.5 text-[10px] font-medium text-red-300">
-                                <AlertTriangle size={8} />
-                                {t("overdue")}
-                              </span>
-                            )}
-                            {soon && (
-                              <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-amber-950/40 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-                                <Clock size={8} />
-                                Bientôt
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Due date */}
-                          {debt.due_date && (
-                            <p className={`mt-0.5 text-[11px] ${
-                              overdue ? "text-red-400/70" : "text-slate-600"
-                            }`}>
-                              {t("due_date")}: {formatDate(debt.due_date)}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Amount + actions */}
-                        <div className="flex shrink-0 items-start gap-0.5">
-                          <div className="mr-1.5 text-right">
-                            <p className={`font-mono text-sm font-bold tabular-nums ${
-                              debt.status === "paid"
-                                ? "text-slate-500"
-                                : tab === "i_owe" ? "text-red-400" : "text-emerald-400"
-                            }`}>
-                              {formatMoney(remaining, debt.currency)}
-                            </p>
-                            {Number(debt.paid_amount) > 0 && (
-                              <p className="text-[10px] text-slate-700">
-                                / {formatMoney(Number(debt.amount), debt.currency)}
-                              </p>
-                            )}
-                          </div>
-                          {debt.status !== "paid" && (
-                            <button
-                              onClick={() => openPaymentForm(debt.id)}
-                              aria-label={t("add_payment")}
-                              title={t("add_payment")}
-                              className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-orange-400"
-                            >
-                              <CreditCard size={13} />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => loadPayments(debt.id)}
-                            aria-label={isExpanded ? "Réduire" : "Voir historique"}
-                            className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
-                          >
-                            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(debt.id)}
-                            aria-label="Supprimer"
-                            className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Progress bar */}
-                      {Number(debt.amount) > 0 && Number(debt.paid_amount) > 0 && (
-                        <div className="mt-2.5">
-                          <div className="h-1 w-full rounded-full bg-slate-800">
-                            <div
-                              className={`h-1 rounded-full transition-all ${
-                                debt.status === "paid" ? "bg-emerald-500" : "bg-orange-500"
-                              }`}
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                          <p className="mt-0.5 text-right text-[10px] text-slate-700">
-                            {Math.round(progress)}% remboursé
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Note */}
-                      {debt.note && (
-                        <p className="mt-1.5 truncate text-[11px] text-slate-700">{debt.note}</p>
-                      )}
-                    </article>
-
-                    {/* ── Payment history ── */}
-                    {isExpanded && (
-                      <div className="mt-3 border-t border-slate-800 pt-3">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                          {t("payment_history")}
-                        </p>
-                        {payments.length === 0 ? (
-                          <p className="text-xs text-slate-600">Aucun paiement enregistré.</p>
-                        ) : (
-                          <ul className="space-y-1.5">
-                            {payments.map((p) => {
-                              const payAcc = accounts.find((a) => a.id === p.account_id);
-                              const method = p.settlement_method as SettlementMethod;
-                              return (
-                                <li key={p.id} className="flex items-center justify-between gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <span className="text-xs text-slate-400">
-                                      {formatDate(p.payment_date)}
-                                    </span>
-                                    {payAcc && (
-                                      <span className="ml-2 text-[11px] text-slate-500">
-                                        · {payAcc.name}
-                                      </span>
-                                    )}
-                                    {method !== "real_payment" && (
-                                      <span className="ml-2 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
-                                        {SETTLEMENT_BADGE[method]}
-                                      </span>
-                                    )}
-                                    {p.note && (
-                                      <span className="ml-2 text-[11px] text-slate-600">{p.note}</span>
-                                    )}
+                    return (
+                      <li key={debt.id} className={overdue ? "border-l-2 border-red-800/50" : ""}>
+                        <div className={`transition-colors hover:bg-slate-800/20 px-4 py-3 ${
+                          isExpanded ? "bg-slate-800/30" : ""
+                        }`}>
+                          {/* ── Row ── */}
+                          <div className="flex items-center gap-3">
+                            {/* Identity */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                <span className="min-w-0 truncate text-sm font-semibold text-slate-100">
+                                  {debt.person_name}
+                                </span>
+                                <Badge variant={statusVariant[debt.status]}>
+                                  {t(`statuses.${debt.status}`)}
+                                </Badge>
+                                {overdue && (
+                                  <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-red-950/50 px-2 py-0.5 text-[10px] font-medium text-red-300">
+                                    <AlertTriangle size={8} />
+                                    {t("overdue")}
+                                  </span>
+                                )}
+                                {soon && (
+                                  <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-amber-950/40 px-2 py-0.5 text-[10px] font-medium text-amber-400">
+                                    <Clock size={8} />
+                                    Bientôt
+                                  </span>
+                                )}
+                              </div>
+                              {debt.due_date && (
+                                <p className={`mt-0.5 text-[11px] ${
+                                  overdue ? "text-red-400/70" : "text-slate-600"
+                                }`}>
+                                  {t("due_date")}: {formatDate(debt.due_date)}
+                                </p>
+                              )}
+                              {/* Progress bar on collapsed row */}
+                              {Number(debt.paid_amount) > 0 && (
+                                <div className="mt-2">
+                                  <div className="h-1 w-full rounded-full bg-slate-800">
+                                    <div
+                                      className={`h-1 rounded-full transition-all ${
+                                        debt.status === "paid" ? "bg-emerald-500" : "bg-orange-500"
+                                      }`}
+                                      style={{ width: `${progress}%` }}
+                                    />
                                   </div>
-                                  <MoneyAmount
-                                    amount={p.amount}
-                                    currency={debt.currency}
-                                    className="shrink-0 font-mono text-xs tabular-nums text-emerald-400"
-                                  />
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </div>
-                    )}
-                  </Card>
-                </div>
-              );
-            })}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Amounts */}
+                            <div className="flex shrink-0 items-center gap-3 text-right">
+                              <div>
+                                <p className={`font-mono text-sm font-bold tabular-nums ${
+                                  debt.status === "paid"
+                                    ? "text-slate-500"
+                                    : tab === "i_owe" ? "text-red-400" : "text-emerald-400"
+                                }`}>
+                                  {formatMoney(remaining, debt.currency)}
+                                </p>
+                                {Number(debt.paid_amount) > 0 && (
+                                  <p className="text-[10px] text-slate-700">
+                                    / {formatMoney(Number(debt.amount), debt.currency)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex shrink-0 items-center gap-0.5">
+                              {debt.status !== "paid" && (
+                                <button
+                                  onClick={() => openPaymentForm(debt.id)}
+                                  aria-label={t("add_payment")}
+                                  title={t("add_payment")}
+                                  className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-orange-400"
+                                >
+                                  <CreditCard size={13} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => loadPayments(debt.id)}
+                                aria-label={isExpanded ? "Réduire" : "Voir historique"}
+                                className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                              >
+                                {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                              </button>
+                              <button
+                                onClick={() => setDeleteId(debt.id)}
+                                aria-label="Supprimer"
+                                className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Note */}
+                          {debt.note && !isExpanded && (
+                            <p className="mt-1.5 truncate text-[11px] text-slate-700">{debt.note}</p>
+                          )}
+
+                          {/* ── Payment history (expanded) ── */}
+                          {isExpanded && (
+                            <div className="mt-3 border-t border-slate-800 pt-3">
+                              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                                {t("payment_history")}
+                              </p>
+                              {payments.length === 0 ? (
+                                <p className="text-xs text-slate-600">Aucun paiement enregistré.</p>
+                              ) : (
+                                <ul className="space-y-1.5">
+                                  {payments.map((p) => {
+                                    const payAcc = accounts.find((a) => a.id === p.account_id);
+                                    const method = p.settlement_method as SettlementMethod;
+                                    return (
+                                      <li key={p.id} className="flex items-center justify-between gap-3">
+                                        <div className="min-w-0 flex-1">
+                                          <span className="text-xs text-slate-400">
+                                            {formatDate(p.payment_date)}
+                                          </span>
+                                          {payAcc && (
+                                            <span className="ml-2 text-[11px] text-slate-500">
+                                              · {payAcc.name}
+                                            </span>
+                                          )}
+                                          {method !== "real_payment" && (
+                                            <span className="ml-2 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+                                              {SETTLEMENT_BADGE[method]}
+                                            </span>
+                                          )}
+                                          {p.note && (
+                                            <span className="ml-2 text-[11px] text-slate-600">{p.note}</span>
+                                          )}
+                                        </div>
+                                        <MoneyAmount
+                                          amount={p.amount}
+                                          currency={debt.currency}
+                                          className="shrink-0 font-mono text-xs tabular-nums text-emerald-400"
+                                        />
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Card>
+            )}
+
+            {/* ── Paid items ── */}
+            {!filterOverdue && paid.length > 0 && (
+              <>
+                <SectionHeader label="Réglées" />
+                <Card className="overflow-hidden p-0">
+                  <ul className="divide-y divide-slate-800/50">
+                    {paid.map((debt) => {
+                      const remaining  = Number(debt.amount) - Number(debt.paid_amount);
+                      const isExpanded = expandedId === debt.id;
+
+                      return (
+                        <li key={debt.id}>
+                          <div className={`transition-colors hover:bg-slate-800/20 px-4 py-3 ${
+                            isExpanded ? "bg-slate-800/30" : ""
+                          }`}>
+                            <div className="flex items-center gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                  <span className="min-w-0 truncate text-sm font-semibold text-slate-500">
+                                    {debt.person_name}
+                                  </span>
+                                  <Badge variant="success">
+                                    {t("statuses.paid")}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <p className="font-mono text-sm font-bold tabular-nums text-slate-500">
+                                  {formatMoney(remaining, debt.currency)}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-0.5">
+                                <button
+                                  onClick={() => loadPayments(debt.id)}
+                                  aria-label={isExpanded ? "Réduire" : "Voir historique"}
+                                  className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                                >
+                                  {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                </button>
+                                <button
+                                  onClick={() => setDeleteId(debt.id)}
+                                  aria-label="Supprimer"
+                                  className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {isExpanded && (
+                              <div className="mt-3 border-t border-slate-800 pt-3">
+                                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                                  {t("payment_history")}
+                                </p>
+                                {payments.length === 0 ? (
+                                  <p className="text-xs text-slate-600">Aucun paiement enregistré.</p>
+                                ) : (
+                                  <ul className="space-y-1.5">
+                                    {payments.map((p) => {
+                                      const payAcc = accounts.find((a) => a.id === p.account_id);
+                                      const method = p.settlement_method as SettlementMethod;
+                                      return (
+                                        <li key={p.id} className="flex items-center justify-between gap-3">
+                                          <div className="min-w-0 flex-1">
+                                            <span className="text-xs text-slate-400">{formatDate(p.payment_date)}</span>
+                                            {payAcc && <span className="ml-2 text-[11px] text-slate-500">· {payAcc.name}</span>}
+                                            {method !== "real_payment" && (
+                                              <span className="ml-2 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">{SETTLEMENT_BADGE[method]}</span>
+                                            )}
+                                            {p.note && <span className="ml-2 text-[11px] text-slate-600">{p.note}</span>}
+                                          </div>
+                                          <MoneyAmount amount={p.amount} currency={debt.currency} className="shrink-0 font-mono text-xs tabular-nums text-emerald-400" />
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Card>
+              </>
+            )}
           </div>
         )}
       </div>
