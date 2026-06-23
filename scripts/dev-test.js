@@ -28,18 +28,42 @@ if (process.env.DANEX_ENV !== "test") {
   process.exit(1);
 }
 
-// 2. Hide .env.local so Next.js cannot load its production values on top
+// 2. Hide .env.local so Next.js cannot load its production values on top.
+//    Handle crash recovery: if a previous run left the file hidden, restore
+//    it first so Daniel doesn't end up with a missing .env.local.
 let hidden = false;
-try {
-  fs.renameSync(ENV_LOCAL, ENV_LOCAL_HIDE);
-  hidden = true;
-  console.log("[dev:test] .env.local temporarily hidden");
-} catch (e) {
-  // .env.local might already be hidden (e.g. previous crash)
-  if (fs.existsSync(ENV_LOCAL)) {
+
+if (!fs.existsSync(ENV_LOCAL) && fs.existsSync(ENV_LOCAL_HIDE)) {
+  // Previous crash detected — hidden file still exists, .env.local is gone.
+  console.warn(
+    "[dev:test] ⚠ Previous crash detected — .env.local was left hidden."
+  );
+  try {
+    fs.renameSync(ENV_LOCAL_HIDE, ENV_LOCAL);
+    console.warn("[dev:test] Restored .env.local automatically.");
+  } catch (e) {
+    console.error("[dev:test] Could not restore .env.local:", e.message);
+    console.error(
+      `[dev:test] Manual restore: mv "${ENV_LOCAL_HIDE}" "${ENV_LOCAL}"`
+    );
+    process.exit(1);
+  }
+}
+
+if (fs.existsSync(ENV_LOCAL)) {
+  try {
+    fs.renameSync(ENV_LOCAL, ENV_LOCAL_HIDE);
+    hidden = true;
+    console.log("[dev:test] .env.local temporarily hidden");
+  } catch (e) {
     console.error("[dev:test] Could not hide .env.local:", e.message);
     process.exit(1);
   }
+} else {
+  console.warn(
+    "[dev:test] ⚠ .env.local is missing — running with test env only. " +
+    "Run `npm run dev` (without :test) to restore production env."
+  );
 }
 
 console.log(`[dev:test] Supabase URL -> ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
