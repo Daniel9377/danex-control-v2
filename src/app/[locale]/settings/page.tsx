@@ -350,7 +350,4 @@ export default function SettingsPage({ params }: Props) {
       </div>
     </PageWrapper>
   );
-      </div>
-    </PageWrapper>
-  );
 }
