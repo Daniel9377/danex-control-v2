@@ -220,6 +220,18 @@ export type Order = {
   created_at: string;
 };
 
+export type OrderItem = {
+  id: string;
+  order_id: string;
+  product_name: string;
+  variant: string | null;
+  supplier: string | null;
+  quantity: number;
+  unit_price: number | null;
+  supplier_unit_cost: number | null;
+  created_at: string;
+};
+
 export type AlertType = "budget" | "debt_due" | "negative_balance" | "custom";
 
 export type Alert = {

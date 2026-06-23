@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useOrders } from "@/hooks/useOrders";
 import { useClients } from "@/hooks/useClients";
 import { useCurrencies } from "@/hooks/useCurrencies";
+import { useOrderItems, computeExpectedMargin } from "@/hooks/useOrderItems";
 import { useTransactions, CreateOperationInput } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useDebts } from "@/hooks/useDebts";
@@ -171,7 +172,10 @@ export default function OrdersPage({ params }: Props) {
     return { activeCount: active.length, shippedCount: shipped.length, deficitCount, staleCount };
   }, [filtered, transactions]);
 
-  function calcMargin(cp: number | null, sp: number | null, qty: number): number | null {
+  /** Fast-path margin from the denormalised orders.* columns (list view).
+   *  Always in sync with order_items via addOrder / updateOrder.
+   *  For the canonical value from order_items, use computeExpectedMargin(). */
+  function denormMargin(cp: number | null, sp: number | null, qty: number): number | null {
     if (!cp || !sp) return null;
     return (cp * qty) - sp;
   }
@@ -361,7 +365,7 @@ export default function OrdersPage({ params }: Props) {
             {filtered.map((order) => {
               const client    = clients.find((c) => c.id === order.client_id);
               const qty       = order.quantity;
-              const margin    = calcMargin(order.client_price, order.supplier_price, qty);
+              const margin    = denormMargin(order.client_price, order.supplier_price, qty);
               const stale     = daysSinceUpdate(order.last_update) >= 7
                 && order.status !== "paid" && order.status !== "cancelled";
               const isExpanded = expandedId === order.id;
@@ -770,7 +774,7 @@ export default function OrdersPage({ params }: Props) {
                     const sp = parseFloat(supplierPrice) || 0;
                     const qty = parseInt(quantity, 10) || 1;
                     const total = cp * qty;
-                    const margin = (cp > 0 || sp > 0) ? calcMargin(cp || null, sp || null, qty) : null;
+                    const margin = (cp > 0 || sp > 0) ? denormMargin(cp || null, sp || null, qty) : null;
                     return (
                       <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 space-y-2">
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
