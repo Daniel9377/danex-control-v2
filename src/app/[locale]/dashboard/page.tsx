@@ -508,53 +508,65 @@ export default function DashboardPage({ params }: Props) {
         </button>
 
         {/* ══════════════════════════════════════════════════════════════════
-            3. VUE RÉELLE — Physical / Client / Available
+            3. VUE RÉELLE — Physical / Client / Available + Obligations
             ══════════════════════════════════════════════════════════════════ */}
         <section>
           <SectionHeader label="Vue réelle" />
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => setOpenSheet("physical")} className={`card-interactive ${tileCls()} text-left`}>
-              <p className="text-[11px] font-medium text-slate-500">Physique</p>
-              <p className="mt-1.5 font-mono text-lg font-bold tabular-nums text-slate-100">
-                {formatMoney(physicalBalance.total, "USD")}
-              </p>
-              <p className="mt-0.5 text-[10px] text-slate-600">{accounts.length} comptes</p>
-            </button>
-
-            <button onClick={() => setOpenSheet("client")} className={`card-interactive ${tileCls()} text-left`}>
-              <p className="text-[11px] font-medium text-slate-500">Client détenu</p>
-              <p className={`mt-1.5 font-mono text-lg font-bold tabular-nums ${clientMoney.netHeldUSD < 0 ? "text-red-400" : "text-sky-300"}`}>
-                {formatMoney(clientMoney.netHeldUSD, "USD")}
-              </p>
-              <p className="mt-0.5 text-[10px] text-slate-600">Non validé</p>
-            </button>
-
-            <div className={tileCls()}>
-              <p className="text-[11px] font-medium text-slate-500">Disponible</p>
-              <p className={`mt-1.5 font-mono text-lg font-bold tabular-nums ${availableBalance < 0 ? "text-red-400" : "text-emerald-400"}`}>
-                {formatMoney(availableBalance, "USD")}
-              </p>
-              <p className="mt-0.5 text-[10px] text-slate-600">Physique − client</p>
-            </div>
-          </div>
-
-          {/* Obligations — compact below */}
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button onClick={() => setOpenSheet("debts")} className="card-interactive flex items-center justify-between gap-2 rounded-lg border border-slate-800/70 bg-slate-900/70 px-3 py-2.5 text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500/70" />
-                <span className="text-[11px] font-medium text-slate-500">Dettes à payer</span>
-              </div>
-              <MoneyAmount amount={debtOverview.totalOwedUSD} currency="USD" tone="negative" size="sm" />
-            </button>
-            <button onClick={() => setOpenSheet("receivables")} className="card-interactive flex items-center justify-between gap-2 rounded-lg border border-slate-800/70 bg-slate-900/70 px-3 py-2.5 text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/70" />
-                <span className="text-[11px] font-medium text-slate-500">Créances à recevoir</span>
-              </div>
-              <MoneyAmount amount={debtOverview.totalReceivableUSD} currency="USD" tone="positive" size="sm" />
-            </button>
-          </div>
+          <Card className="overflow-hidden p-0">
+            <ul className="divide-y divide-slate-800/50">
+              <li>
+                <button onClick={() => setOpenSheet("physical")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                  <span className="text-sm text-slate-300">Solde physique</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs text-slate-600">{accounts.length} comptes</span>
+                    <span className="font-mono text-sm font-bold tabular-nums text-slate-100">{formatMoney(physicalBalance.total, "USD")}</span>
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setOpenSheet("client")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                  <span className="text-sm text-slate-300">Argent client détenu</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs text-slate-600">Non validé</span>
+                    <span className={`font-mono text-sm font-bold tabular-nums ${clientMoney.netHeldUSD < 0 ? "text-red-400" : "text-sky-300"}`}>{formatMoney(clientMoney.netHeldUSD, "USD")}</span>
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                  </span>
+                </button>
+              </li>
+              <li className="flex items-center justify-between gap-3 px-4 py-3">
+                <span className="text-sm text-slate-300">Disponible</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-xs text-slate-600">Physique − client</span>
+                  <span className={`font-mono text-sm font-bold tabular-nums ${availableBalance < 0 ? "text-red-400" : "text-emerald-400"}`}>{formatMoney(availableBalance, "USD")}</span>
+                </span>
+              </li>
+              <li>
+                <button onClick={() => setOpenSheet("debts")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500/70" />
+                    <span className="text-sm text-slate-300">Dettes à payer</span>
+                  </div>
+                  <span className="flex items-center gap-2">
+                    <MoneyAmount amount={debtOverview.totalOwedUSD} currency="USD" tone="negative" size="sm" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setOpenSheet("receivables")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/70" />
+                    <span className="text-sm text-slate-300">Créances à recevoir</span>
+                  </div>
+                  <span className="flex items-center gap-2">
+                    <MoneyAmount amount={debtOverview.totalReceivableUSD} currency="USD" tone="positive" size="sm" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </Card>
         </section>
 
         {/* ══════════════════════════════════════════════════════════════════
@@ -580,26 +592,46 @@ export default function DashboardPage({ params }: Props) {
             ══════════════════════════════════════════════════════════════════ */}
         <section>
           <SectionHeader label="Ce mois" />
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => setOpenSheet("income")}
-              className="card-interactive rounded-xl border border-slate-800/60 bg-slate-900/60 p-3 text-left"
-              style={{ borderTop: "2px solid rgba(52,211,153,0.25)" }}>
-              <p className="text-[11px] font-medium text-slate-500">Revenus</p>
-              <MoneyAmount amount={monthlyMetrics.realIncomeUSD} currency="USD" tone="positive" size="md" className="mt-1.5" />
-            </button>
-            <button onClick={() => setOpenSheet("expense")}
-              className="card-interactive rounded-xl border border-slate-800/60 bg-slate-900/60 p-3 text-left"
-              style={{ borderTop: "2px solid rgba(248,113,113,0.25)" }}>
-              <p className="text-[11px] font-medium text-slate-500">Dépenses</p>
-              <MoneyAmount amount={monthlyMetrics.realExpenseUSD} currency="USD" tone={monthlyMetrics.realExpenseUSD > 0 ? "negative" : "muted"} size="md" className="mt-1.5" />
-            </button>
-            <button onClick={() => setOpenSheet("profit")}
-              className="card-interactive rounded-xl border border-slate-800/60 bg-slate-900/60 p-3 text-left"
-              style={{ borderTop: "2px solid rgba(251,146,60,0.25)" }}>
-              <p className="text-[11px] font-medium text-slate-500">Bénéfice</p>
-              <MoneyAmount amount={monthlyMetrics.profitValidatedUSD} currency="USD" tone="warning" size="md" className="mt-1.5" />
-            </button>
-          </div>
+          <Card className="overflow-hidden p-0">
+            <ul className="divide-y divide-slate-800/50">
+              <li>
+                <button onClick={() => setOpenSheet("income")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/70" />
+                    <span className="text-sm text-slate-300">Revenus</span>
+                  </div>
+                  <span className="flex items-center gap-2">
+                    <MoneyAmount amount={monthlyMetrics.realIncomeUSD} currency="USD" tone="positive" size="sm" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setOpenSheet("expense")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500/70" />
+                    <span className="text-sm text-slate-300">Dépenses</span>
+                  </div>
+                  <span className="flex items-center gap-2">
+                    <MoneyAmount amount={monthlyMetrics.realExpenseUSD} currency="USD" tone={monthlyMetrics.realExpenseUSD > 0 ? "negative" : "muted"} size="sm" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                  </span>
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setOpenSheet("profit")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500/70" />
+                    <span className="text-sm text-slate-300">Bénéfice</span>
+                  </div>
+                  <span className="flex items-center gap-2">
+                    <MoneyAmount amount={monthlyMetrics.profitValidatedUSD} currency="USD" tone="warning" size="sm" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                  </span>
+                </button>
+              </li>
+            </ul>
+          </Card>
         </section>
 
         {/* ══════════════════════════════════════════════════════════════════

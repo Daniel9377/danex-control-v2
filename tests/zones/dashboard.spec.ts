@@ -110,6 +110,9 @@ async function createOrder(page: Page, clientName: string, productName: string) 
   await page.goto("/fr/orders");
   await expect(page.getByRole("button", { name: /Nouvelle commande/i })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
+  await page.waitForTimeout(400);
+  // Mode choice screen (Simple/Detailed redesign) — click Simple
+  await page.getByRole("button", { name: /^Simple/ }).click();
   await selectFieldOption(page, /^Client$/, clientName);
   await fillFieldInput(page, /^Produit$/, productName);
   await selectFieldOption(page, /^Devise$/, "USD");
