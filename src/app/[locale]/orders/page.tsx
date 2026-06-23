@@ -761,6 +761,17 @@ export default function OrdersPage({ params }: Props) {
                           </div>
                         )}
 
+                        {/* Profit available indicator (shipped, profit not yet validated) */}
+                        {order.status === "shipped" && costs.balance > 0 && (
+                          <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-emerald-800/40 bg-emerald-950/20 px-2.5 py-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                            <span className="text-[10px] text-slate-400">{t("realized_profit")} disponible</span>
+                            <span className="font-mono text-xs font-bold text-emerald-400 tabular-nums">
+                              +{formatMoney(costs.balance, order.currency)}
+                            </span>
+                          </div>
+                        )}
+
                         {/* Next action */}
                         {order.next_action && (
                           <p className="mt-1.5 truncate text-[11px] text-orange-400/70">
@@ -875,6 +886,27 @@ export default function OrdersPage({ params }: Props) {
                         {/* Quick actions */}
                         {order.status !== "cancelled" && order.status !== "paid" && (
                           <div>
+                            {/* Profit call-to-action for shipped orders */}
+                            {order.status === "shipped" && costs.balance > 0 && (
+                              <div className="mb-3 rounded-xl border border-emerald-800/40 bg-emerald-950/20 p-3">
+                                <p className="text-[11px] font-semibold text-slate-300">
+                                  {t("realized_profit")} disponible
+                                </p>
+                                <p className="mt-0.5 font-mono text-lg font-bold text-emerald-400 tabular-nums">
+                                  +{formatMoney(costs.balance, order.currency)}
+                                </p>
+                                <p className="mt-1 text-[10px] text-slate-500">
+                                  La commande est expédiée. Valide ce bénéfice pour le comptabiliser.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => openOperationForOrder(order, "profit_validated")}
+                                  className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-500"
+                                >
+                                  Valider {formatMoney(costs.balance, order.currency)} de bénéfice
+                                </button>
+                              </div>
+                            )}
                             <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
                               Enregistrer une opération
                             </p>
