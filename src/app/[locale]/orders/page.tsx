@@ -114,7 +114,7 @@ export default function OrdersPage({ params }: Props) {
     setClientId(o.client_id); setProductName(o.product_name); setCurrency(o.currency);
     setClientPrice(o.client_price != null ? String(o.client_price) : "");
     setSupplierPrice(o.supplier_price != null ? String(o.supplier_price) : "");
-    setQuantity(String(o.quantity ?? 1));
+    setQuantity(String(o.quantity));
     setAdvance(String(o.advance_received)); setStatus(o.status);
     setTrackingCode(o.tracking_code ?? ""); setNextAction(o.next_action ?? "");
     setNote(o.note ?? "");
@@ -360,7 +360,7 @@ export default function OrdersPage({ params }: Props) {
           <div className="space-y-2">
             {filtered.map((order) => {
               const client    = clients.find((c) => c.id === order.client_id);
-              const qty       = order.quantity ?? 1;
+              const qty       = order.quantity;
               const margin    = calcMargin(order.client_price, order.supplier_price, qty);
               const stale     = daysSinceUpdate(order.last_update) >= 7
                 && order.status !== "paid" && order.status !== "cancelled";
@@ -435,9 +435,19 @@ export default function OrdersPage({ params }: Props) {
                           </div>
                         )}
 
-                        {/* Cost chips */}
-                        {hasCosts && (
+                        {/* Margin + cost chips */}
+                        {(margin !== null || hasCosts) && (
                           <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            {margin !== null && (
+                              <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px]">
+                                <span className="text-slate-600">{t("expected_margin")}</span>{" "}
+                                <span className={`font-mono font-semibold ${
+                                  margin >= 0 ? "text-emerald-400" : "text-red-400"
+                                }`}>
+                                  {margin >= 0 ? "+" : "−"}{formatMoney(Math.abs(margin), order.currency)}
+                                </span>
+                              </span>
+                            )}
                             {costs.received > 0 && (
                               <span className="rounded-full bg-emerald-950/40 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
                                 +{formatMoney(costs.received, order.currency)}
@@ -448,22 +458,14 @@ export default function OrdersPage({ params }: Props) {
                                 −{formatMoney(costs.productCost + costs.fees, order.currency)}
                               </span>
                             )}
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              isDeficit
-                                ? "bg-red-950/40 text-red-300"
-                                : "bg-slate-800/80 text-slate-400"
-                            }`}>
-                              {isDeficit ? "−" : "="}{formatMoney(Math.abs(costs.balance), order.currency)}
-                              {isDeficit && " ⚠"}
-                            </span>
-                            {margin !== null && (
-                              <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px]">
-                                <span className="text-slate-600">{t("expected_margin")}</span>{" "}
-                                <span className={`font-mono font-semibold ${
-                                  margin >= 0 ? "text-emerald-400" : "text-red-400"
-                                }`}>
-                                  {margin >= 0 ? "+" : "−"}{formatMoney(Math.abs(margin), order.currency)}
-                                </span>
+                            {hasCosts && (
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                isDeficit
+                                  ? "bg-red-950/40 text-red-300"
+                                  : "bg-slate-800/80 text-slate-400"
+                              }`}>
+                                {isDeficit ? "−" : "="}{formatMoney(Math.abs(costs.balance), order.currency)}
+                                {isDeficit && " ⚠"}
                               </span>
                             )}
                           </div>

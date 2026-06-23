@@ -24,10 +24,8 @@ export function useOrders(clientId?: string) {
     if (clientId) query = query.eq("client_id", clientId);
     const { data } = await query;
     if (data) {
-      // Normalize: quantity defaults to 1 for orders created before migration 003
-      const normalized = (data as Order[]).map((o) => ({ ...o, quantity: o.quantity ?? 1 }));
-      cacheSet(key, normalized);
-      setOrders(normalized);
+      cacheSet(key, data as Order[]);
+      setOrders(data as Order[]);
     }
     setLoading(false);
   }, [clientId]);
@@ -51,30 +49,16 @@ export function useOrders(clientId?: string) {
     note: string | null
   ) {
     const supabase = createClient();
-    // Build insert payload — include quantity only if the column exists (migration 003).
-    // Once the migration is applied everywhere, this guarded path can be simplified.
-    const payload: Record<string, unknown> = {
+    const { error } = await supabase.from("orders").insert({
       user_id: userId, client_id: clientId, product_name: productName, currency,
       client_price: clientPrice, supplier_price: supplierPrice,
-      advance_received: advanceReceived, status,
+      advance_received: advanceReceived, status, quantity,
       tracking_code: trackingCode,
       next_action: nextAction, note, last_update: new Date().toISOString().split("T")[0],
-    };
-    // Try with quantity first; if the column doesn't exist yet, omit it
-    try {
-      const { error } = await supabase.from("orders").insert({ ...payload, quantity });
-      if (error) {
-        // If the column doesn't exist (42703), retry without quantity
-        if (error.code === "42703" || error.message?.includes("quantity")) {
-          const { error: err2 } = await supabase.from("orders").insert(payload);
-          if (err2) throw new Error(err2.message);
-        } else {
-          throw new Error(error.message);
-        }
-      }
-    } catch (err: any) {
-      console.error("[addOrder] insert error:", err.message);
-      throw new Error(err.message || "Échec de la création de la commande.");
+    });
+    if (error) {
+      console.error("[addOrder] insert error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la création de la commande.");
     }
     cacheInvalidatePrefix(PREFIX);
     await load();
@@ -85,22 +69,13 @@ export function useOrders(clientId?: string) {
     updates: Partial<Omit<Order, "id" | "user_id" | "created_at">>
   ) {
     const supabase = createClient();
-    const payload = { ...updates, last_update: new Date().toISOString().split("T")[0] };
-    // If quantity is in the update but the column doesn't exist yet, omit it
-    try {
-      const { error } = await supabase.from("orders").update(payload).eq("id", id);
-      if (error) {
-        if (error.code === "42703" || error.message?.includes("quantity")) {
-          const { quantity: _, ...rest } = payload as any;
-          const { error: err2 } = await supabase.from("orders").update(rest).eq("id", id);
-          if (err2) throw new Error(err2.message);
-        } else {
-          throw new Error(error.message);
-        }
-      }
-    } catch (err: any) {
-      console.error("[updateOrder] update error:", err.message);
-      throw new Error(err.message || "Échec de la mise à jour de la commande.");
+    const { error } = await supabase
+      .from("orders")
+      .update({ ...updates, last_update: new Date().toISOString().split("T")[0] })
+      .eq("id", id);
+    if (error) {
+      console.error("[updateOrder] update error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la mise à jour de la commande.");
     }
     cacheInvalidatePrefix(PREFIX);
     await load();
