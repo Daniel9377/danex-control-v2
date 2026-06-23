@@ -25,13 +25,13 @@ export function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
-        <h3 className="text-base font-semibold text-slate-50">{title}</h3>
-        <p className="mt-2 text-sm text-slate-400">{message}</p>
+      <div className="w-full max-w-sm rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 shadow-xl">
+        <h3 className="text-base font-semibold text-[var(--text-strong)]">{title}</h3>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">{message}</p>
         <div className="mt-6 flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800"
+            className="flex-1 rounded-lg border border-[var(--border-strong)] px-4 py-2 text-sm text-[var(--text-body)] transition hover:bg-[var(--surface-chip)]"
           >
             {cancelLabel}
           </button>

@@ -6,13 +6,13 @@ type Props = {
 
 export function Skeleton({ className }: Props) {
   return (
-    <div className={cn("animate-pulse rounded-lg bg-slate-800", className)} />
+    <div className={cn("animate-pulse rounded-lg bg-[var(--surface-chip)]", className)} />
   );
 }
 
 export function SkeletonCard({ rows = 2 }: { rows?: number }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+    <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
       <div className="space-y-2">
         {Array.from({ length: rows }).map((_, i) => (
           <Skeleton key={i} className={`h-4 ${i === 0 ? "w-3/4" : "w-1/2"}`} />

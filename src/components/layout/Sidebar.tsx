@@ -78,8 +78,8 @@ export function Sidebar({ locale, onClose }: Props) {
           className={cn(
             "relative flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
             isActive
-              ? "bg-slate-800/70 text-slate-100 before:absolute before:left-0 before:top-1/2 before:h-5 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-orange-500 before:content-['']"
-              : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
+              ? "bg-[var(--surface-chip)] text-[var(--text-strong)] before:absolute before:left-0 before:top-1/2 before:h-5 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-orange-500 before:content-['']"
+              : "text-[var(--text-muted)] hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
           )}
         >
           <Icon size={18} className="shrink-0" />
@@ -102,7 +102,7 @@ export function Sidebar({ locale, onClose }: Props) {
         {onClose && (
           <button
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] rounded-lg p-1 text-slate-400 hover:bg-slate-800"
+            className="min-h-[44px] min-w-[44px] rounded-lg p-1 text-[var(--text-muted)] hover:bg-[var(--surface-chip)]"
           >
             <X size={18} />
           </button>
@@ -113,7 +113,7 @@ export function Sidebar({ locale, onClose }: Props) {
         {navGroups.map((group, gi) => (
           <div key={gi}>
             {group.labelKey && (
-              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-faint)]">
                 {t(group.labelKey as Parameters<typeof t>[0])}
               </p>
             )}
@@ -124,13 +124,13 @@ export function Sidebar({ locale, onClose }: Props) {
         ))}
       </div>
 
-      <div className="border-t border-slate-800/60 px-2 pb-2 pt-2">
+      <div className="border-t border-[var(--border-subtle)] px-2 pb-2 pt-2">
         <ul className="space-y-0.5">
           {bottomItems.map(renderItem)}
         </ul>
       </div>
 
-      <div className="px-4 py-3 text-xs text-slate-600">v2.0</div>
+      <div className="px-4 py-3 text-xs text-[var(--text-faint)]">v2.0</div>
     </nav>
   );
 }

@@ -13,9 +13,9 @@ type Props = {
 };
 
 const variantCls: Record<Variant, string> = {
-  default:  "border border-slate-800 bg-[var(--surface-card)]",
-  glass:    "border border-slate-700/50 glass-surface",
-  elevated: "border border-slate-700/60 bg-[var(--surface-raised)] shadow-lg shadow-black/30",
+  default:  "border border-[var(--border-default)] bg-[var(--surface-card)]",
+  glass:    "border border-[var(--border-strong)]/50 glass-surface",
+  elevated: "border border-[var(--border-strong)] bg-[var(--surface-raised)] shadow-lg shadow-black/30",
 };
 
 export const Card = memo(function Card({

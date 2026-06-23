@@ -34,7 +34,7 @@ export function PageWrapper({ children, locale }: Props) {
   return (
     <div className="danex-bg flex h-screen overflow-hidden">
       {/* Permanent sidebar: hidden on mobile, visible on md+ via CSS (no hydration flash) */}
-      <aside className="hidden md:flex h-screen w-56 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
+      <aside className="hidden md:flex h-screen w-56 shrink-0 flex-col border-r border-[var(--border-default)] bg-[var(--bg-app)]">
         <Sidebar locale={locale} />
       </aside>
 
@@ -45,7 +45,7 @@ export function PageWrapper({ children, locale }: Props) {
             className="absolute inset-0 bg-black/60"
             onClick={() => setMobileSidebarOpen(false)}
           />
-          <aside className="relative z-50 h-full w-56 border-r border-slate-800 bg-slate-950">
+          <aside className="relative z-50 h-full w-56 border-r border-[var(--border-default)] bg-[var(--bg-app)]">
             <Sidebar locale={locale} onClose={() => setMobileSidebarOpen(false)} />
           </aside>
         </div>

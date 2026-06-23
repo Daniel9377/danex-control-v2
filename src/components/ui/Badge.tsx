@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 type Variant = "default" | "success" | "warning" | "danger" | "info" | "orange";
 
 const variantCls: Record<Variant, string> = {
-  default: "bg-[var(--tint-default-bg)] text-[var(--tint-default-fg)] ring-1 ring-slate-700/50",
+  default: "bg-[var(--tint-default-bg)] text-[var(--tint-default-fg)] ring-1 ring-[var(--border-strong)]/50",
   success: "bg-[var(--tint-success-bg)] text-[var(--tint-success-fg)] ring-1 ring-emerald-800/40",
   warning: "bg-[var(--tint-warning-bg)] text-[var(--tint-warning-fg)] ring-1 ring-amber-800/40",
   danger:  "bg-[var(--tint-danger-bg)]  text-[var(--tint-danger-fg)]  ring-1 ring-red-800/40",

@@ -9,11 +9,11 @@ type Props = {
 
 export const EmptyState = memo(function EmptyState({ message, className }: Props) {
   return (
-    <div className={cn("flex flex-col items-center justify-center py-12 text-slate-600", className)}>
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900">
-        <Inbox size={22} className="text-slate-500" />
+    <div className={cn("flex flex-col items-center justify-center py-12 text-[var(--text-faint)]", className)}>
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)]">
+        <Inbox size={22} className="text-[var(--text-label)]" />
       </div>
-      <p className="text-sm text-slate-500">{message}</p>
+      <p className="text-sm text-[var(--text-label)]">{message}</p>
     </div>
   );
 });

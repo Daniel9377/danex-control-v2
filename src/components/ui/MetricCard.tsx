@@ -39,13 +39,13 @@ export function MetricCard({
     <Tag
       onClick={onClick}
       className={cn(
-        "flex flex-col items-start rounded-xl border border-slate-800 bg-[var(--surface-card)] p-4 text-left",
+        "flex flex-col items-start rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4 text-left",
         onClick && "card-interactive"
       )}
     >
       <div className="mb-2 flex w-full items-center gap-2">
         {icon && (
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-[var(--text-muted)]">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-chip)] text-[var(--text-muted)]">
             {icon}
           </span>
         )}
