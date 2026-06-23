@@ -92,6 +92,7 @@ export default function OrdersPage({ params }: Props) {
   const [currency, setCurrency]           = useState("USD");
   const [clientPrice, setClientPrice]     = useState("");
   const [supplierPrice, setSupplierPrice] = useState("");
+  const [quantity, setQuantity]           = useState("1");
   const [advance, setAdvance]             = useState("0");
   const [status, setStatus]               = useState<OrderStatus>("new");
   const [trackingCode, setTrackingCode]   = useState("");
@@ -101,7 +102,7 @@ export default function OrdersPage({ params }: Props) {
   function openAdd() {
     setEditing(null);
     setClientId(clients[0]?.id ?? ""); setProductName(""); setCurrency("USD");
-    setClientPrice(""); setSupplierPrice(""); setAdvance("0");
+    setClientPrice(""); setSupplierPrice(""); setQuantity("1"); setAdvance("0");
     setStatus("new"); setTrackingCode(""); setNextAction(""); setNote("");
     setShowForm(true);
   }
@@ -113,6 +114,7 @@ export default function OrdersPage({ params }: Props) {
     setClientId(o.client_id); setProductName(o.product_name); setCurrency(o.currency);
     setClientPrice(o.client_price != null ? String(o.client_price) : "");
     setSupplierPrice(o.supplier_price != null ? String(o.supplier_price) : "");
+    setQuantity(String(o.quantity ?? 1));
     setAdvance(String(o.advance_received)); setStatus(o.status);
     setTrackingCode(o.tracking_code ?? ""); setNextAction(o.next_action ?? "");
     setNote(o.note ?? "");
@@ -127,16 +129,17 @@ export default function OrdersPage({ params }: Props) {
       if (!user) return;
       const cp = clientPrice ? Number(clientPrice) : null;
       const sp = supplierPrice ? Number(supplierPrice) : null;
+      const qty = parseInt(quantity, 10) || 1;
       if (editing) {
         await updateOrder(editing, {
           client_id: clientId, product_name: productName, currency,
-          client_price: cp, supplier_price: sp,
+          client_price: cp, supplier_price: sp, quantity: qty,
           advance_received: Number(advance), status,
           tracking_code: trackingCode || null, next_action: nextAction || null, note: note || null,
         });
       } else {
         await addOrder(user.id, clientId, productName, currency, cp, sp,
-          Number(advance), status, trackingCode || null, nextAction || null, note || null);
+          Number(advance), status, qty, trackingCode || null, nextAction || null, note || null);
       }
       setShowForm(false);
     });
@@ -168,10 +171,9 @@ export default function OrdersPage({ params }: Props) {
     return { activeCount: active.length, shippedCount: shipped.length, deficitCount, staleCount };
   }, [filtered, transactions]);
 
-  function calcMargin(cp: number | null, sp: number | null): string | null {
-    if (!cp || !sp || sp === 0) return null;
-    const pct = ((cp - sp) / sp) * 100;
-    return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+  function calcMargin(cp: number | null, sp: number | null, qty: number): number | null {
+    if (!cp || !sp) return null;
+    return (cp * qty) - sp;
   }
 
   // Dropdown labels
@@ -358,7 +360,8 @@ export default function OrdersPage({ params }: Props) {
           <div className="space-y-2">
             {filtered.map((order) => {
               const client    = clients.find((c) => c.id === order.client_id);
-              const margin    = calcMargin(order.client_price, order.supplier_price);
+              const qty       = order.quantity ?? 1;
+              const margin    = calcMargin(order.client_price, order.supplier_price, qty);
               const stale     = daysSinceUpdate(order.last_update) >= 7
                 && order.status !== "paid" && order.status !== "cancelled";
               const isExpanded = expandedId === order.id;
@@ -453,11 +456,14 @@ export default function OrdersPage({ params }: Props) {
                               {isDeficit ? "−" : "="}{formatMoney(Math.abs(costs.balance), order.currency)}
                               {isDeficit && " ⚠"}
                             </span>
-                            {margin && (
-                              <span className={`font-mono text-[10px] ${
-                                parseFloat(margin) >= 0 ? "text-emerald-500" : "text-red-400"
-                              }`}>
-                                {margin}
+                            {margin !== null && (
+                              <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px]">
+                                <span className="text-slate-600">{t("expected_margin")}</span>{" "}
+                                <span className={`font-mono font-semibold ${
+                                  margin >= 0 ? "text-emerald-400" : "text-red-400"
+                                }`}>
+                                  {margin >= 0 ? "+" : "−"}{formatMoney(Math.abs(margin), order.currency)}
+                                </span>
                               </span>
                             )}
                           </div>
@@ -520,7 +526,7 @@ export default function OrdersPage({ params }: Props) {
                                 { label: "Achat produit",   val: -costs.productCost,      color: "red" },
                                 { label: "Frais",           val: -costs.fees,             color: "red" },
                                 { label: "Remboursé",       val: -costs.refunded,         color: "red" },
-                                { label: "Bénéfice validé", val: costs.profitValidated,   color: "emerald" },
+                                { label: t("realized_profit"), val: costs.profitValidated,   color: "emerald" },
                               ]
                                 .filter((r) => Math.abs(r.val) > 0.01)
                                 .map((r) => (
@@ -739,6 +745,56 @@ export default function OrdersPage({ params }: Props) {
                       />
                     </div>
                   </div>
+
+                  {/* Quantity */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      {t("quantity")}
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="1"
+                      className={`${fieldCls} font-mono tabular-nums w-24`}
+                    />
+                  </div>
+
+                  {/* Live margin preview */}
+                  {(clientPrice || supplierPrice) && (() => {
+                    const cp = parseFloat(clientPrice) || 0;
+                    const sp = parseFloat(supplierPrice) || 0;
+                    const qty = parseInt(quantity, 10) || 1;
+                    const total = cp * qty;
+                    const margin = (cp > 0 || sp > 0) ? calcMargin(cp || null, sp || null, qty) : null;
+                    return (
+                      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                          {t("expected_margin")}
+                        </p>
+                        {cp > 0 && (
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs text-slate-500">Total client</span>
+                            <span className="font-mono text-xs text-slate-300">
+                              {formatMoney(cp, currency)} × {qty} = {formatMoney(total, currency)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-2">
+                          <span className="text-xs text-slate-500">Marge</span>
+                          <span className={`font-mono text-sm font-bold tabular-nums ${
+                            margin !== null && margin >= 0 ? "text-emerald-400" : "text-red-400"
+                          }`}>
+                            {margin !== null
+                              ? `${margin >= 0 ? "+" : "−"}${formatMoney(Math.abs(margin), currency)}`
+                              : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Advance */}
                   <div>

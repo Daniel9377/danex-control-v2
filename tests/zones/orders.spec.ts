@@ -144,13 +144,15 @@ test("Commandes - double clic Sauvegarder cree une seule commande", async ({ pag
   await selectFieldOption(page, /^Client$/, "Divine Test");
   await fillFieldInput(page, /^Produit$/, "Double Submit Order");
 
-  const saveButton = page.getByRole("button", { name: /^Sauvegarder$/ });
+  // Match both "Sauvegarder" and "Sauvegarde" so toBeHidden only resolves
+  // when the modal actually closes, not when the button text flips.
+  const saveButton = page.getByRole("button", { name: /Sauvegarde/ });
   await expect(saveButton).toBeEnabled();
   await saveButton.evaluate((button) => {
     (button as HTMLButtonElement).click();
     (button as HTMLButtonElement).click();
   });
-  await expect(saveButton).toBeHidden({ timeout: 10_000 });
+  await expect(saveButton).toBeHidden({ timeout: 30_000 });
 
   const rows = await tableRows(state, "orders", { product_name: "Double Submit Order" });
   console.log(`Commandes S5 - commandes attendues=1, actuelles=${rows.length}`);

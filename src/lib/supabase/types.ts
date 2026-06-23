@@ -205,6 +205,8 @@ export type Order = {
   supplier_price: number | null;
   currency: string;
   advance_received: number;
+  /** Number of units ordered. Defaults to 1 for orders created before migration 003. */
+  quantity: number;
   status: OrderStatus;
   last_update: string | null;
   next_action: string | null;
