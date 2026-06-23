@@ -98,7 +98,8 @@ test("Transactions - bug Divine: 118 USD reste en USD, jamais en CNY", async ({ 
   await page.goto("/fr/clients");
   await page.waitForLoadState("networkidle");
 
-  const divineCard = page.locator("article").filter({ hasText: "Divine Test" }).first();
+  // Clients page uses <li> rows after unified-list redesign
+  const divineCard = page.locator("li, article").filter({ hasText: "Divine Test" }).first();
   await expect(divineCard).toBeVisible();
   await expect(divineCard, "Le montant client recu doit apparaitre dans la carte Divine.").toContainText(/118/, {
     timeout: 10_000,

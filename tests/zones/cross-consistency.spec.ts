@@ -122,6 +122,8 @@ async function createOrder(page: Page, clientName: string, productName: string, 
   await page.goto("/fr/orders");
   await expect(page.getByRole("button", { name: /Nouvelle commande/i })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
+  await page.waitForTimeout(400);
+  await page.getByRole("button", { name: /^Simple/ }).click();
   // Target fields INSIDE the modal form to avoid matching page-level filter labels
   const form = page.locator("form").first();
   await selectFieldInForm(form, page, /^Client$/, clientName);

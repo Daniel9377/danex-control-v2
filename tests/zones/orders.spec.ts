@@ -107,7 +107,8 @@ test("Commandes - solde commande et solde client suivent recu moins achat", asyn
   await expect(orderCardEl, "Le solde commande attendu est 38.").toContainText("38");
 
   await page.goto("/fr/clients");
-  const divineCard = page.locator("article").filter({ hasText: "Divine Test" }).first();
+  // Clients page uses <li> rows after unified-list redesign
+  const divineCard = page.locator("li, article").filter({ hasText: "Divine Test" }).first();
   await expect(divineCard).toBeVisible({ timeout: 15_000 });
   await expect(divineCard, "Divine doit afficher le total recu 118.").toContainText("118");
   await expect(divineCard, "Divine doit afficher le solde attendu 38.").toContainText("38");
