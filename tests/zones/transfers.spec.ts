@@ -91,14 +91,15 @@ test("Transferts - double clic Sauvegarder cree un seul transfert", async ({ pag
   await fillFieldInput(page, /envoy/i, "10", 'input[type="number"]');
   await fillFieldInput(page, /^Note/, "QA TRANSFER DOUBLE");
 
-  const saveButton = page.getByRole("button", { name: /^Sauvegarder$/ });
+  // Match both "Sauvegarder" and "Sauvegarde en cours…" so toBeHidden
+  // only resolves when the modal actually closes, not when the text flips.
+  const saveButton = page.getByRole("button", { name: /Sauvegarde/ });
   await expect(saveButton).toBeEnabled();
   await saveButton.evaluate((button) => {
     (button as HTMLButtonElement).click();
     (button as HTMLButtonElement).click();
   });
-  await expect(saveButton).toBeHidden({ timeout: 10_000 });
-  await page.waitForLoadState("networkidle");
+  await expect(saveButton).toBeHidden({ timeout: 30_000 });
 
   const rows = await tableRows(state, "transfers", { note: "QA TRANSFER DOUBLE" });
   console.log(`Transferts S3 - transferts attendus=1, actuels=${rows.length}`);
