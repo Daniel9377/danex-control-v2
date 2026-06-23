@@ -161,6 +161,9 @@ async function createOrder(page: Page, clientName: string, productName: string) 
   await page.goto("/fr/orders");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
+  await page.waitForTimeout(400);
+  // Mode choice screen appears first — click "Simple"
+  await page.getByRole("button", { name: /^Simple/ }).click();
   await selectFieldOption(page, /^Client$/, clientName);
   await fillFieldInput(page, /^Produit$/, productName);
   await selectFieldOption(page, /^Devise$/, "USD");

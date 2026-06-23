@@ -202,11 +202,14 @@ export async function openTransactionDetails(page: Page, rowText: RegExp) {
   const row = transactionRows(page).filter({ hasText: rowText }).first();
   await expect(row, `Transaction introuvable dans la liste: ${rowText}`).toBeVisible();
   await row.click();
-  await expect(page.getByRole("button", { name: /Supprimer cette transaction/i })).toBeVisible();
+  // After inline-expansion redesign (10fd775): button text is " Supprimer" (icon + text)
+  await expect(page.getByRole("button", { name: /Supprimer/ })).toBeVisible();
 }
 
 export async function deleteOpenTransaction(page: Page) {
-  await page.getByRole("button", { name: /Supprimer cette transaction/i }).click();
+  // Click the inline "Supprimer" button inside the expanded transaction row
+  // The button contains <Trash2/> Supprimer — text has a leading space
+  await page.locator("main button").filter({ hasText: /Supprimer/ }).first().click();
   const confirm = page.getByRole("button", { name: /^Supprimer$/ });
   await expect(confirm).toBeVisible();
   await confirm.click();
