@@ -66,7 +66,7 @@ export default function OrdersPage({ params }: Props) {
   const t = useTranslations("orders");
   const tc = useTranslations("common");
   const { orders, loading, addOrder, updateOrder, deleteOrder, reload: reloadOrders } = useOrders();
-  const { clients } = useClients();
+  const { clients, addClient } = useClients();
   const { currencies } = useCurrencies();
   const { accounts } = useAccounts();
   const { debts } = useDebts();
@@ -131,6 +131,32 @@ export default function OrdersPage({ params }: Props) {
   }
 
   const { loadItems } = useOrderItems();
+
+  // ── Quick client creation (inline, from the order form) ─────────────────────
+  const [showQuickClient, setShowQuickClient] = useState(false);
+  const [quickClientName, setQuickClientName] = useState("");
+  const [quickClientPhone, setQuickClientPhone] = useState("");
+  const [quickClientSaving, setQuickClientSaving] = useState(false);
+
+  async function handleQuickClientCreate() {
+    if (!quickClientName.trim() || !quickClientPhone.trim()) return;
+    setQuickClientSaving(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await addClient(user.id, quickClientName.trim(), quickClientPhone.trim(), null, null, "standard", null);
+      // Reset inline form and close it
+      setQuickClientName("");
+      setQuickClientPhone("");
+      setShowQuickClient(false);
+      // The clients list auto-updates via the hook; the new client appears in the select
+    } catch (err: any) {
+      // stay open so the user sees the error; the hook's error handling throws
+    } finally {
+      setQuickClientSaving(false);
+    }
+  }
 
   // ── Form helpers ────────────────────────────────────────────────────────────
 
@@ -393,6 +419,58 @@ export default function OrdersPage({ params }: Props) {
 
   if (loading) return <PageWrapper locale={locale}><LoadingPage /></PageWrapper>;
 
+  // ── Inline client quick-create (shared by both Simple and Detailed forms) ──
+  function ClientQuickCreate() {
+    if (showQuickClient) {
+      return (
+        <div className="mt-2 rounded-xl border border-slate-700 bg-slate-900/60 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              value={quickClientName}
+              onChange={(e) => setQuickClientName(e.target.value)}
+              placeholder="Nom"
+              className={`${fieldCls} flex-1`}
+              autoFocus
+            />
+            <input
+              value={quickClientPhone}
+              onChange={(e) => setQuickClientPhone(e.target.value)}
+              placeholder="+243 …"
+              className={`${fieldCls} w-36 font-mono`}
+              inputMode="tel"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleQuickClientCreate}
+              disabled={quickClientSaving || !quickClientName.trim() || !quickClientPhone.trim()}
+              className="flex-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
+            >
+              {quickClientSaving ? "..." : "Ajouter ce client"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowQuickClient(false); setQuickClientName(""); setQuickClientPhone(""); }}
+              className="rounded-lg px-3 py-1.5 text-xs text-slate-500 transition-colors hover:text-slate-300"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => setShowQuickClient(true)}
+        className="mt-1.5 text-[11px] text-orange-400/70 transition-colors hover:text-orange-300"
+      >
+        + Nouveau client
+      </button>
+    );
+  }
+
   return (
     <PageWrapper locale={locale}>
       <div className="space-y-4">
@@ -596,6 +674,11 @@ export default function OrdersPage({ params }: Props) {
                             </h3>
                             <p className="truncate text-[11px] text-slate-500">
                               {client?.name ?? "—"}
+                              {client?.phone && (
+                                <span className="ml-1.5 font-mono text-slate-600">
+                                  · {client.phone}
+                                </span>
+                              )}
                               {order.tracking_code && (
                                 <span className="ml-2 font-mono text-slate-700">
                                   {order.tracking_code}
@@ -915,8 +998,13 @@ export default function OrdersPage({ params }: Props) {
                       <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("client")}</label>
                       <select value={clientId} onChange={(e) => setClientId(e.target.value)} required className={fieldCls}>
                         <option value="">— Sélectionner —</option>
-                        {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                        {clients.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}{c.phone ? ` · ${c.phone}` : ""}
+                          </option>
+                        ))}
                       </select>
+                      <ClientQuickCreate />
                     </div>
                     {/* Product */}
                     <div>
@@ -1020,8 +1108,13 @@ export default function OrdersPage({ params }: Props) {
                       <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("client")}</label>
                       <select value={detailClientId} onChange={(e) => setDetailClientId(e.target.value)} required className={fieldCls}>
                         <option value="">— Sélectionner —</option>
-                        {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                        {clients.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}{c.phone ? ` · ${c.phone}` : ""}
+                          </option>
+                        ))}
                       </select>
+                      <ClientQuickCreate />
                     </div>
                     {/* Status */}
                     <div>
