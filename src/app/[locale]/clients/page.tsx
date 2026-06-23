@@ -96,10 +96,16 @@ export default function ClientsPage({ params }: Props) {
   }
 
   const filtered = useMemo(
-    () => clients.filter((c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.country ?? "").toLowerCase().includes(search.toLowerCase())
-    ),
+    () => {
+      const q = search.toLowerCase().trim();
+      if (!q) return clients;
+      const digits = q.replace(/\D/g, ""); // for phone search by digits only
+      return clients.filter((c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.country ?? "").toLowerCase().includes(q) ||
+        (digits && (c.phone ?? "").replace(/\D/g, "").includes(digits))
+      );
+    },
     [clients, search]
   );
 
@@ -181,184 +187,176 @@ export default function ClientsPage({ params }: Props) {
         ) : filtered.length === 0 ? (
           <EmptyState message="Aucun client ne correspond à la recherche." />
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {filtered.map((client) => {
-              const fin          = financials[client.id];
-              const clientOrders = orders.filter((o) => o.client_id === client.id);
-              const activeOrders = clientOrders.filter(
-                (o) => o.status !== "cancelled" && o.status !== "paid"
-              );
-              const isExpanded   = expandedId === client.id;
-              const hasDeficit   = fin && fin.balance < 0;
-              const hasFinancials = fin && (fin.totalReceived > 0 || fin.balance !== 0);
+          <Card className="overflow-hidden p-0">
+            <ul className="divide-y divide-slate-800/50">
+              {filtered.map((client) => {
+                const fin          = financials[client.id];
+                const clientOrders = orders.filter((o) => o.client_id === client.id);
+                const activeOrders = clientOrders.filter(
+                  (o) => o.status !== "cancelled" && o.status !== "paid"
+                );
+                const isExpanded   = expandedId === client.id;
+                const hasDeficit   = fin && fin.balance < 0;
+                const hasFinancials = fin && (fin.totalReceived > 0 || fin.balance !== 0);
 
-              return (
-                <Card
-                  key={client.id}
-                  variant="elevated"
-                  className={`transition-colors hover:border-slate-600 ${
-                    hasDeficit ? "border-red-900/30" : ""
-                  }`}
-                >
-                  <article>
-                    {/* ── Top row: name + actions ── */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                          <h3 className="min-w-0 truncate text-sm font-bold text-slate-100">
-                            {client.name}
-                          </h3>
-                          <Badge variant={trustVariant[client.trust_level]}>
-                            {t(`trust_levels.${client.trust_level}`)}
-                          </Badge>
-                          {activeOrders.length > 0 && (
-                            <span className="shrink-0 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-400 ring-1 ring-orange-500/20">
-                              {activeOrders.length} cmd
+                return (
+                  <li key={client.id}>
+                    <div
+                      className={`transition-colors hover:bg-slate-800/20 ${
+                        isExpanded ? "bg-slate-800/30" : ""
+                      } ${hasDeficit ? "border-l-2 border-red-800/50" : ""}`}
+                    >
+                      {/* ── Row: phone (primary), name, amounts, actions ── */}
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        {/* Expand toggle */}
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : client.id)}
+                          aria-label={isExpanded ? "Réduire" : "Voir détail"}
+                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300 shrink-0"
+                        >
+                          {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        </button>
+
+                        {/* Identity */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="truncate font-mono text-sm font-semibold tabular-nums text-slate-100">
+                              {client.phone || "—"}
                             </span>
+                            <Badge variant={trustVariant[client.trust_level]}>
+                              {t(`trust_levels.${client.trust_level}`)}
+                            </Badge>
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
+                            <span className="truncate text-xs text-slate-400">
+                              {client.name}
+                            </span>
+                            {client.city && (
+                              <>
+                                <span className="text-slate-700">·</span>
+                                <span className="truncate text-[11px] text-slate-600">
+                                  {client.city}
+                                </span>
+                              </>
+                            )}
+                            {activeOrders.length > 0 && (
+                              <>
+                                <span className="text-slate-700">·</span>
+                                <span className="shrink-0 text-[11px] text-orange-400/80">
+                                  {activeOrders.length} cmd
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Amounts — always visible */}
+                        <div className="flex shrink-0 items-center gap-4 text-right">
+                          {hasFinancials ? (
+                            <>
+                              <div className="hidden sm:block">
+                                <p className="text-[10px] text-slate-600">Reçu</p>
+                                <p className="font-mono text-xs tabular-nums text-slate-300">
+                                  {formatMoney(fin.totalReceived, fin.currency)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-slate-600">Solde</p>
+                                <p className={`font-mono text-sm font-bold tabular-nums ${
+                                  hasDeficit ? "text-red-400" : "text-emerald-400"
+                                }`}>
+                                  {hasDeficit ? "−" : ""}{formatMoney(Math.abs(fin.balance), fin.currency)}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-[11px] text-slate-600">—</span>
                           )}
                         </div>
 
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                          {(client.city || client.country) && (
-                            <span className="flex items-center gap-1 text-[11px] text-slate-600">
-                              <MapPin size={9} />
-                              {[client.city, client.country].filter(Boolean).join(", ")}
-                            </span>
-                          )}
-                          {client.phone && (
-                            <span className="flex items-center gap-1 text-[11px] text-slate-600">
-                              <Phone size={9} />
-                              {client.phone}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        {hasFinancials && (
+                        {/* Actions */}
+                        <div className="flex shrink-0 items-center gap-0.5">
                           <button
-                            onClick={() => setExpandedId(isExpanded ? null : client.id)}
-                            aria-label={isExpanded ? "Réduire" : "Voir détail financier"}
+                            onClick={() => openEdit(client.id)}
+                            aria-label="Modifier"
                             className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
                           >
-                            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                            <Pencil size={12} />
                           </button>
-                        )}
-                        <button
-                          onClick={() => openEdit(client.id)}
-                          aria-label="Modifier"
-                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
-                        >
-                          <Pencil size={12} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteId(client.id)}
-                          aria-label="Supprimer"
-                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                          <button
+                            onClick={() => setDeleteId(client.id)}
+                            aria-label="Supprimer"
+                            className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* ── Compact financials (collapsed) ── */}
-                    {hasFinancials && !isExpanded && (
-                      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-800/60 pt-2.5">
-                        <div>
-                          <p className="text-[10px] text-slate-600">Reçu</p>
-                          <p className="font-mono text-xs font-semibold tabular-nums text-slate-300">
-                            {formatMoney(fin.totalReceived, fin.currency)}
+                      {/* ── Expanded detail ── */}
+                      {isExpanded && fin && (
+                        <div className="border-t border-slate-800/50 px-4 pb-4 pt-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                            Détail financier
                           </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-600">Solde</p>
-                          <p className={`font-mono text-xs font-semibold tabular-nums ${
-                            hasDeficit ? "text-red-400" : "text-orange-300"
-                          }`}>
-                            {hasDeficit ? "−" : ""}{formatMoney(Math.abs(fin.balance), fin.currency)}
-                            {hasDeficit && <span className="ml-0.5 text-[9px]">⚠</span>}
-                          </p>
-                        </div>
-                        {fin.totalProfitValidated > 0 && (
-                          <div>
-                            <p className="text-[10px] text-slate-600">Bénéfice</p>
-                            <p className="font-mono text-xs font-semibold tabular-nums text-emerald-400">
-                              {formatMoney(fin.totalProfitValidated, fin.currency)}
-                            </p>
+                          <div className="space-y-1.5">
+                            <FinRow label="Argent reçu"      value={fin.totalReceived}      currency={fin.currency} color="emerald" />
+                            <FinRow label="Achats produits"  value={-fin.totalProductCost}  currency={fin.currency} color="red" />
+                            <FinRow label="Frais"            value={-fin.totalFees}         currency={fin.currency} color="red" />
+                            {fin.totalRefunded > 0 && (
+                              <FinRow label="Remboursé" value={-fin.totalRefunded} currency={fin.currency} color="red" />
+                            )}
+                            {fin.totalProfitValidated > 0 && (
+                              <FinRow label="Bénéfice validé" value={fin.totalProfitValidated} currency={fin.currency} color="emerald" />
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )}
 
-                    {/* Note (collapsed only) */}
-                    {client.note && !isExpanded && (
-                      <p className="mt-1.5 truncate text-[11px] text-slate-700">{client.note}</p>
-                    )}
+                          <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2">
+                            <span className="text-xs text-slate-400">Solde restant</span>
+                            <span className={`font-mono text-sm font-bold tabular-nums ${
+                              fin.balance >= 0 ? "text-emerald-400" : "text-red-400"
+                            }`}>
+                              {fin.balance >= 0 ? "" : "−"}{formatMoney(Math.abs(fin.balance), fin.currency)}
+                            </span>
+                          </div>
 
-                    {/* ── Expanded detail ── */}
-                    {isExpanded && fin && (
-                      <div className="mt-3 border-t border-slate-800 pt-3">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                          Détail financier
-                        </p>
-                        <div className="space-y-1.5">
-                          <FinRow label="Argent reçu"      value={fin.totalReceived}      currency={fin.currency} color="emerald" />
-                          <FinRow label="Achats produits"  value={-fin.totalProductCost}  currency={fin.currency} color="red" />
-                          <FinRow label="Frais"            value={-fin.totalFees}         currency={fin.currency} color="red" />
-                          {fin.totalRefunded > 0 && (
-                            <FinRow label="Remboursé" value={-fin.totalRefunded} currency={fin.currency} color="red" />
-                          )}
-                          {fin.totalProfitValidated > 0 && (
-                            <FinRow label="Bénéfice validé" value={fin.totalProfitValidated} currency={fin.currency} color="emerald" />
-                          )}
-                        </div>
-
-                        <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2">
-                          <span className="text-xs text-slate-400">Solde restant</span>
-                          <span className={`font-mono text-sm font-bold tabular-nums ${
-                            fin.balance >= 0 ? "text-orange-400" : "text-red-400"
-                          }`}>
-                            {fin.balance >= 0 ? "" : "−"}{formatMoney(Math.abs(fin.balance), fin.currency)}
-                          </span>
-                        </div>
-
-                        {clientOrders.length > 0 && (
-                          <div className="mt-3">
-                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                              Commandes
-                            </p>
-                            <div className="space-y-1">
-                              {clientOrders.map((o) => (
-                                <div key={o.id} className="flex items-center justify-between gap-2">
-                                  <span className="min-w-0 truncate text-xs text-slate-400">
-                                    {o.product_name}
-                                  </span>
-                                  <Badge
-                                    variant={
-                                      o.status === "paid" ? "success"
-                                      : o.status === "cancelled" ? "default"
-                                      : "orange"
-                                    }
-                                  >
-                                    {to(`statuses.${o.status}`)}
-                                  </Badge>
-                                </div>
-                              ))}
+                          {clientOrders.length > 0 && (
+                            <div className="mt-3">
+                              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                                Commandes
+                              </p>
+                              <div className="space-y-1">
+                                {clientOrders.map((o) => (
+                                  <div key={o.id} className="flex items-center justify-between gap-2">
+                                    <span className="min-w-0 truncate text-xs text-slate-400">
+                                      {o.product_name}
+                                    </span>
+                                    <Badge
+                                      variant={
+                                        o.status === "paid" ? "success"
+                                        : o.status === "cancelled" ? "default"
+                                        : "orange"
+                                      }
+                                    >
+                                      {to(`statuses.${o.status}`)}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {client.note && (
-                          <p className="mt-2.5 text-[11px] text-slate-600">{client.note}</p>
-                        )}
-                      </div>
-                    )}
-                  </article>
-                </Card>
-              );
-            })}
-          </div>
+                          {client.note && (
+                            <p className="mt-2.5 text-[11px] text-slate-600">{client.note}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
         )}
       </div>
 

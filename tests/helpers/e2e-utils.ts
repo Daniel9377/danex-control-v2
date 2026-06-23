@@ -136,7 +136,7 @@ export async function createClientUi(page: Page, name: string, city = "Lubumbash
   await fillFieldInput(page, /^Nom$/, name);
   await fillFieldInput(page, /^Ville$/, city);
   await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
-  await expect(page.locator("article").filter({ hasText: name }).first()).toBeVisible();
+  await expect(page.locator("li, article").filter({ hasText: name }).first()).toBeVisible();
 }
 
 export async function createAccountUi(

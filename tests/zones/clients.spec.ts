@@ -145,7 +145,7 @@ test("Clients - solde client = recu moins couts moins remboursements", async ({ 
   await page.waitForLoadState("networkidle");
   const card = clientCard(page, "Joseph Test");
   await expect(card).toBeVisible();
-  const expand = card.getByRole("button", { name: /financier/i });
+  const expand = card.getByRole("button", { name: /détail/i });
   await expect(expand).toBeVisible();
   await expand.click();
 
@@ -169,7 +169,8 @@ async function createOrder(page: Page, clientName: string, productName: string) 
 }
 
 function clientCard(page: Page, clientName: string) {
-  return page.locator("article").filter({ hasText: clientName }).first();
+  // Client rows are <li> elements inside a unified Card (not individual <article>s)
+  return page.locator("li").filter({ hasText: clientName }).first();
 }
 
 async function navigateBySidebar(page: Page, name: RegExp) {
