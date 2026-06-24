@@ -65,6 +65,14 @@ MECANIQUE DE REPONSE — REGLES OBLIGATOIRES
    Exemple : tu peux dire "3 dettes en retard = 850 USD" (chiffre verifie).
    Tu ne peux PAS dire "tu geres mal tes dettes" (jugement sans donnee).
 
+9. URGENCE = DONNEES REELLES, JAMAIS MEMOIRE : une chose n est URGENTE que si les VRAIES donnees Supabase le prouvent.
+   - Une commande en retard = son statut reel (orders.status) et sa vraie date (transactions.transaction_date).
+   - Une dette urgente = sa VRAIE date d echeance (debts.due_date) est proche ou depassee.
+   - Une dette dont l echeance est lointaine n est PAS urgente, meme si la conversation en a parle.
+   - Une mention dans une vieille conversation n est JAMAIS une urgence.
+   Si une info n est NI dans le bloc CONTEXTE SUPABASE NI donnee par Daniel a l instant, TU NE L INVENTES PAS. Tu demandes.
+   Les heures de relance sont exclusivement : "ce soir", "demain matin", "demain soir". Jamais une heure precise inventee.
+
 PHILOSOPHIE DE REPONSE
 Court si simple. Direct si faut stopper. Calme si Daniel est bloque.
 Dur si Daniel fuit. Jamais insultant. Jamais de flatterie. Jamais de motivation sans action.
@@ -72,21 +80,24 @@ Ne repete JAMAIS la meme chose deux fois dans la meme conversation.
 
 PROTOCOLES ACTIFS
 
-STOP : urgence active detectee = couper la distraction, nommer l urgence, ramener Daniel.
-Reponse type : "Daniel, stop. [Urgence]. On revient a ton sujet apres."
+STOP : urgence active detectee (donnees reelles uniquement) = couper la distraction, nommer l urgence, ramener Daniel.
+Reponse type : "Daniel, stop. [Urgence basee sur donnees reelles]. On revient a ton sujet apres."
+Ne JAMAIS inventer une urgence a partir d'une vieille conversation.
 
 BOUCLE : 3 messages sans action = forcer decision binaire immediate.
 Reponse type : "On tourne en rond. Tu fais [action] maintenant ou tu abandonnes. Lequel ?"
+Pas d heure precise inventee.
 
 IDEE : nouvelle idee avec priorite active = repondre PARKING_LIST:[titre de l idee].
 Reponse type : "Idee notee en parking list. On en parle apres [priorite]. Maintenant : [action urgente]."
 
 ACHAT URGENT : client paye + achat non fait + tout pret = exiger l action maintenant.
-Reponse type : "[Nom] a paye. Achat non fait. Fournisseur pret. Fais l achat maintenant. Relance dans 10 min."
-Escalade : 10 min → 5 min → 2 min → demande de preuve → pause 20 min → resume froid.
+Reponse type : "[Nom] a paye. Achat non fait. Fournisseur pret. Fais l achat maintenant."
+Escalade : rappel soir → rappel lendemain matin → resume froid. Pas d heures arbitraires.
 
-DETTE : dette urgente passe avant toute depense plaisir, sans exception.
-Reponse type : "Tu as une dette de [montant]. Cette depense attend. Regle la dette d abord."
+DETTE : une dette n est urgente QUE si sa VRAIE date d echeance (debts.due_date) est proche ou depassee.
+Une dette a echoir dans 3 mois n est PAS urgente — ne pas la traiter comme telle.
+Reponse type (si vraiment overdue) : "Tu as une dette de [montant] echue depuis [X] jours. Cette depense attend. Regle la dette d abord."
 
 ARGENT FUTUR : si Daniel mentionne un argent attendu pour justifier une depense actuelle, bloquer.
 Reponse type : "Cet argent n est pas encore arrive. On ne depense pas sur une promesse."
@@ -150,22 +161,45 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   const iOwe = alerts.debts.filter((d) => d.direction === "i_owe");
   const owesMe = alerts.debts.filter((d) => d.direction === "owes_me");
 
-  const iOweList = iOwe.map((d) => ({
-    person_name: d.person_name,
-    amount: d.amount,
-    currency: d.currency,
-  }));
+  const iOweList = iOwe.map((d) => {
+    const dueInfo = d.daysUntilDue !== null
+      ? (d.daysUntilDue < 0 ? `EN RETARD de ${Math.abs(d.daysUntilDue)} jours` : `echeance dans ${d.daysUntilDue} jours`)
+      : "pas d echeance";
+    return {
+      person_name: d.person_name,
+      amount: d.amount,
+      currency: d.currency,
+      urgence: dueInfo,
+    };
+  });
 
-  const owesMeList = owesMe.map((d) => ({
-    person_name: d.person_name,
-    amount: d.amount,
-    currency: d.currency,
-  }));
+  const owesMeList = owesMe.map((d) => {
+    const dueInfo = d.daysUntilDue !== null
+      ? (d.daysUntilDue < 0 ? `EN RETARD de ${Math.abs(d.daysUntilDue)} jours` : `echeance dans ${d.daysUntilDue} jours`)
+      : "pas d echeance";
+    return {
+      person_name: d.person_name,
+      amount: d.amount,
+      currency: d.currency,
+      urgence: dueInfo,
+    };
+  });
 
   const anonymizedContext = anonymizeContext(map, {
     debts: iOweList,
     owesMe: owesMeList,
   });
+
+  // Build urgency annotations separately (after anonymization, names are tokenized)
+  const urgencyLines: string[] = [];
+  for (const d of iOwe) {
+    const token = map.tokens.get(d.person_name) ?? d.person_name;
+    urgencyLines.push(`${token}: ${d.amount} ${d.currency} — ${d.daysUntilDue !== null ? (d.daysUntilDue < 0 ? `EN RETARD (${Math.abs(d.daysUntilDue)}j)` : `echeance dans ${d.daysUntilDue}j`) : 'pas d echeance'}`);
+  }
+  for (const d of owesMe) {
+    const token = map.tokens.get(d.person_name) ?? d.person_name;
+    urgencyLines.push(`${token}: ${d.amount} ${d.currency} — ${d.daysUntilDue !== null ? (d.daysUntilDue < 0 ? `EN RETARD (${Math.abs(d.daysUntilDue)}j)` : `echeance dans ${d.daysUntilDue}j`) : 'pas d echeance'}`);
+  }
 
   // Heure actuelle en Chine
   const nowChina = new Date(Date.now() + 8 * 60 * 60 * 1000);
@@ -186,7 +220,8 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
     `App completee: ${summary.appCompleted ? "oui" : "non"}`,
     `Transactions: ${summary.transactionCount}`,
     `Vraies depenses: ${summary.realExpenseCount}`,
-    `Alertes dettes: ${alerts.debts.length}`,
+    `Dettes (avec echeance):`,
+    ...(urgencyLines.length > 0 ? urgencyLines : ["Aucune"]),
     `Urgences: ${alerts.hasUrgentIssues ? "oui" : "non"}`,
     anonymizedContext,
     ...(alerts.hasUrgentPurchases
@@ -211,27 +246,36 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
     `IMPORTANT: N invente aucun nom, type ou detail qui ne figure pas dans ce contexte.`,
   ].join("\n");
 
-  // Construire les messages avec historique
+  // Construire les messages — l'historique et le résumé AVANT le contexte Supabase
+  // pour que les données fraîches aient le dernier mot (plus de poids pour DeepSeek).
   const messages: DeepSeekMessage[] = [
     { role: "system", content: MINDBOOST_SYSTEM_PROMPT },
-    { role: "user", content: contextBlock },
   ];
 
-  // Ajouter le résumé des anciennes conversations si disponible
+  // 1. Résumé structuré (contexte de discussion, jamais de chiffres)
   if (conversationSummary) {
     messages.push({
       role: "user",
-      content: `Résumé des conversations précédentes:\n${conversationSummary}`,
+      content: `Résumé des conversations précédentes (contexte de discussion uniquement — les données financières viennent de Supabase, pas d'ici):\n${conversationSummary}`,
     });
   }
 
-  // Ajouter l historique de conversation
+  // 2. Historique de conversation
   for (const msg of history) {
     messages.push({
       role: msg.role as "user" | "assistant",
       content: msg.content,
     });
   }
+
+  // 3. Contexte Supabase FRAIS — injecté EN DERNIER pour poids maximal
+  messages.push({ role: "user", content: contextBlock });
+
+  // 4. RAPPEL explicite avant le message de Daniel
+  messages.push({
+    role: "user",
+    content: `RAPPEL: les seuls faits financiers valides sont ceux du bloc CONTEXTE SUPABASE ci-dessus. Si l'historique de conversation contredit Supabase, Supabase a raison. Si une info n'est NI dans Supabase NI donnee par Daniel a l'instant, tu ne l'inventes pas — tu demandes. Les heures de relance sont "ce soir", "demain matin", ou "demain soir" — jamais une heure precise inventee.`,
+  });
 
   // Étape 1 — Classification d'intention (appel DeepSeek léger, sans contexte lourd)
   const classificationResult = await callDeepSeek([
@@ -284,8 +328,10 @@ Reponds UNIQUEMENT avec le mot et le nom. Pas de phrase. Pas d'explication.`,
     finalResponse = `${finalResponse}\nTache ajoutee : ${savedTask}`;
   }
 
-  // Sauvegarder dans la memoire
-  const exchangeSummary = `Daniel: ${userMessage}\nMindboost: ${finalResponse}`;
+  // Sauvegarder dans la memoire — résumé STRUCTURÉ (contexte de discussion uniquement)
+  // JAMAIS de chiffres financiers, montants, dates d'échéance ou statuts de commande.
+  // Ces faits viennent uniquement de Supabase en temps réel.
+  const exchangeSummary = `Contexte: ${userMessage.slice(0, 150)}`;
   await Promise.all([
     saveConversationMessage(userId, "user", userMessage),
     saveConversationMessage(userId, "assistant", finalResponse),

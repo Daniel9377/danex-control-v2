@@ -30,6 +30,8 @@ type DebtAlert = {
   currency: string;
   daysOld: number;
   status: string;
+  due_date: string | null;
+  daysUntilDue: number | null; // negative = overdue, positive = days left, null = no due date
 };
 
 type ClientMoneyAlert = {
@@ -153,16 +155,29 @@ export async function getMindboostAlerts(): Promise<AlertsReport> {
   const debts = (debtsData ?? []) as Debt[];
 
   const debtAlerts: DebtAlert[] = debts
-    .map((d) => ({
-      id: d.id,
-      person_name: d.person_name,
-      direction: d.direction,
-      amount: d.amount - d.paid_amount,
-      currency: d.currency,
-      daysOld: daysSince(d.created_at),
-      status: d.status,
-    }))
-    .filter((d) => d.daysOld >= 7 || d.amount >= 500);
+    .map((d) => {
+      const daysUntilDue = d.due_date
+        ? Math.ceil((new Date(d.due_date).getTime() - Date.now()) / 86400000)
+        : null;
+      return {
+        id: d.id,
+        person_name: d.person_name,
+        direction: d.direction,
+        amount: d.amount - d.paid_amount,
+        currency: d.currency,
+        daysOld: daysSince(d.created_at),
+        status: d.status,
+        due_date: d.due_date ?? null,
+        daysUntilDue,
+      };
+    })
+    .filter((d) => {
+      // Only include if overdue, near-due (within 14 days), OR high amount (>=500)
+      if (d.daysUntilDue !== null && d.daysUntilDue < 0) return true; // overdue
+      if (d.daysUntilDue !== null && d.daysUntilDue <= 14) return true; // due soon
+      if (d.amount >= 500 && d.daysUntilDue === null) return true; // large, no due date
+      return false;
+    });
 
   const fiveDaysAgo = new Date();
   fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
