@@ -281,8 +281,10 @@ export async function createClientAndOrder(
     isNewClient = true;
   }
 
-  // Step B — Create order
+  // Step B — Create order (aligned with useOrders.addOrder — same fields, same order)
   const nextAction = data.client_contacted ? "Sourcer le produit" : "Contacter le client";
+  const today = new Date().toISOString().slice(0, 10);
+  const quantity = 1;
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .insert({
@@ -293,19 +295,36 @@ export async function createClientAndOrder(
       client_price: data.amount_received ?? 0,
       supplier_price: data.product_price_china ?? null,
       advance_received: data.amount_received ?? 0,
+      quantity,
       status: "new",
       next_action: nextAction,
       note: "Créé via Mindboost intake",
+      last_update: today,
     })
     .select("id")
     .single();
-  if (orderErr) throw new Error(`Order creation error: ${orderErr.message}`);
+  if (orderErr || !order) throw new Error(orderErr?.message || "Order creation error");
+
+  // Step B2 — Create order_items (migration 004: every order MUST have ≥1 item).
+  // Pattern aligned with useOrders.addOrder — same fields, atomic rollback on failure.
+  const { error: itemErr } = await supabase.from("order_items").insert({
+    order_id: order.id,
+    product_name: data.product ?? "Non renseigné",
+    quantity,
+    unit_price: data.amount_received ?? null,
+    supplier_unit_cost: data.product_price_china ?? null,
+  });
+  if (itemErr) {
+    console.error("[createClientAndOrder] order_items insert error:", itemErr.code, itemErr.message);
+    // Rollback: don't leave an orphaned order
+    await supabase.from("orders").delete().eq("id", order.id);
+    throw new Error(`Order items creation error: ${itemErr.message}`);
+  }
 
   // Step C — Create transaction (advance received) + credit the landing account.
   // The advance is real cash that arrived in an account, so it must increase a
   // physical account balance — exactly like a "client_money_received" recorded
   // from the web form.
-  const today = new Date().toISOString().slice(0, 10);
   const advanceAmount = data.amount_received ?? 0;
   const advanceCurrency = data.currency_received ?? "CNY";
 
