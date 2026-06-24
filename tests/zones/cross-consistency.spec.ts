@@ -156,9 +156,10 @@ async function fillFieldInForm(form: ReturnType<Page['locator']>, page: Page, la
 
 async function divineClientText(page: Page) {
   await page.goto("/fr/clients");
-  const card = page.locator("article").filter({ hasText: "Divine Test" }).first();
+  // Clients page uses <li> rows after unified-list redesign
+  const card = page.locator("li, article").filter({ hasText: "Divine Test" }).first();
   await expect(card).toBeVisible();
-  const expand = card.getByRole("button", { name: /financier/i });
+  const expand = card.getByRole("button", { name: /détail/i });
   await expect(expand).toBeVisible();
   await expand.click();
   return normalizeText((await card.textContent()) ?? "");

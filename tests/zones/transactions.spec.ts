@@ -105,7 +105,7 @@ test("Transactions - bug Divine: 118 USD reste en USD, jamais en CNY", async ({ 
     timeout: 10_000,
   });
 
-  const expandButton = divineCard.getByRole("button", { name: /financier/i });
+  const expandButton = divineCard.getByRole("button", { name: /détail/i });
   await expect(expandButton).toBeVisible();
   await expandButton.click();
 
