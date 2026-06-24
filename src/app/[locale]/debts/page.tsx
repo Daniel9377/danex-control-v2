@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -44,7 +44,7 @@ const SETTLEMENT_BADGE: Record<SettlementMethod, string> = {
 };
 
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -65,6 +65,11 @@ export default function DebtsPage({ params }: Props) {
   const [payments, setPayments]             = useState<DebtPayment[]>([]);
   const [filterOverdue, setFilterOverdue]   = useState(false);
   const [payError, setPayError]             = useState<string | null>(null);
+  const [saving, setSaving]                 = useState(false);
+  const [formError, setFormError]           = useState<string | null>(null);
+  const [deleteError, setDeleteError]       = useState<string | null>(null);
+  const savingRef = useRef(false);
+  const payingRef = useRef(false);
 
   // Debt form
   const [personName, setPersonName]         = useState("");
@@ -132,27 +137,40 @@ export default function DebtsPage({ params }: Props) {
 
   async function handleAddDebt(e: React.FormEvent) {
     e.preventDefault();
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await addDebt(
-      user.id, personName, direction, Number(amount), currency,
-      dueDate || null, note || null, linkedAccountId || null,
-      direction === "owes_me" ? affectsBalance : false
-    );
-    setShowForm(false);
-    setPersonName(""); setAmount(""); setNote("");
-    setDueDate(""); setLinkedAccountId(""); setAffectsBalance(false);
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    setFormError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setFormError("Session expirée. Reconnecte-toi."); return; }
+      await addDebt(
+        user.id, personName, direction, Number(amount), currency,
+        dueDate || null, note || null, linkedAccountId || null,
+        direction === "owes_me" ? affectsBalance : false
+      );
+      setShowForm(false);
+      setPersonName(""); setAmount(""); setNote("");
+      setDueDate(""); setLinkedAccountId(""); setAffectsBalance(false);
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "Une erreur est survenue. Réessaie.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   async function handlePayment(e: React.FormEvent, debtId: string) {
     e.preventDefault();
+    if (payingRef.current) return;
+    payingRef.current = true;
     setPayError(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { payingRef.current = false; return; }
     const debt = debts.find((d) => d.id === debtId);
-    if (!debt) return;
+    if (!debt) { payingRef.current = false; return; }
     try {
       await addPayment(
         user.id, debt, Number(payAmount),
@@ -162,11 +180,11 @@ export default function DebtsPage({ params }: Props) {
       setShowPaymentForm(null);
       setPayAmount(""); setPayNote(""); setPayAccountId("");
       setSettlementMethod("real_payment");
-      // Invalidate the Next.js client-side router cache so a subsequent
-      // navigation to /fr/accounts fetches the updated account balance.
       router.refresh();
     } catch (err: unknown) {
       setPayError(err instanceof Error ? err.message : "Erreur lors du paiement.");
+    } finally {
+      payingRef.current = false;
     }
   }
 
@@ -191,10 +209,10 @@ export default function DebtsPage({ params }: Props) {
       <PageWrapper locale={locale}>
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <div className="h-7 w-40 animate-pulse rounded-lg bg-slate-800" />
-            <div className="h-9 w-36 animate-pulse rounded-lg bg-slate-800" />
+            <div className="h-7 w-40 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
+            <div className="h-9 w-36 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
           </div>
-          <div className="h-10 animate-pulse rounded-xl bg-slate-800" />
+          <div className="h-10 animate-pulse rounded-xl bg-[var(--surface-chip)]" />
           <SkeletonList count={4} />
         </div>
       </PageWrapper>
@@ -212,11 +230,11 @@ export default function DebtsPage({ params }: Props) {
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
+          <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
           <button
             onClick={() => { setDirection(tab); setAffectsBalance(false); setShowForm(true); }}
             aria-label={t("add")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--brand-fill)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand)]"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">{t("add")}</span>
@@ -243,21 +261,21 @@ export default function DebtsPage({ params }: Props) {
               color={tab === "i_owe" ? "red" : "green"}
               note={`${tabSummary.activeCount} en cours`}
             />
-            <div className="flex flex-col rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="text-xs font-medium text-slate-400">En retard</p>
+            <div className="flex flex-col rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
+              <p className="text-xs font-medium text-[var(--text-muted)]">En retard</p>
               <p className={`mt-1 font-mono text-xl font-bold tabular-nums ${
-                tabSummary.overdueCount > 0 ? "text-red-400" : "text-slate-600"
+                tabSummary.overdueCount > 0 ? "text-red-400" : "text-[var(--text-faint)]"
               }`}>
                 {tabSummary.overdueCount}
               </p>
               {tabSummary.soonCount > 0 && (
-                <p className="mt-1 flex items-center gap-1 text-[10px] text-amber-400">
+                <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--tint-warning-fg)]">
                   <Clock size={9} />
                   {tabSummary.soonCount} bientôt échu
                 </p>
               )}
               {tabSummary.overdueCount === 0 && tabSummary.soonCount === 0 && (
-                <p className="mt-1 text-[10px] text-slate-600">Tout à jour</p>
+                <p className="mt-1 text-[10px] text-[var(--text-faint)]">Tout à jour</p>
               )}
             </div>
           </div>
@@ -271,7 +289,7 @@ export default function DebtsPage({ params }: Props) {
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 filterOverdue
                   ? "border-red-600/60 bg-red-950/40 text-red-300"
-                  : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                  : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
               }`}
             >
               <AlertTriangle size={9} />
@@ -289,176 +307,262 @@ export default function DebtsPage({ params }: Props) {
           <div className="space-y-2">
             {filteredActive.length > 0 && <SectionHeader label="En cours" />}
 
-            {[...filteredActive, ...(!filterOverdue ? paid : [])].map((debt, idx) => {
-              const showPaidHeader =
-                !filterOverdue && idx === filteredActive.length && paid.length > 0;
-              const remaining  = Number(debt.amount) - Number(debt.paid_amount);
-              const progress   = Math.min((Number(debt.paid_amount) / Number(debt.amount)) * 100, 100);
-              const isExpanded = expandedId === debt.id;
-              const overdue    = debt.due_date && isOverdue(debt.due_date) && debt.status !== "paid";
-              const soon       = !overdue && debt.due_date && (() => {
-                const d = Math.ceil((new Date(debt.due_date).getTime() - Date.now()) / 86400000);
-                return d >= 0 && d <= 7;
-              })();
+            {filteredActive.length > 0 && (
+              <Card className="overflow-hidden p-0">
+                <ul className="divide-y divide-[var(--border-subtle)]">
+                  {filteredActive.map((debt) => {
+                    const remaining  = Number(debt.amount) - Number(debt.paid_amount);
+                    const progress   = Math.min((Number(debt.paid_amount) / Number(debt.amount)) * 100, 100);
+                    const isExpanded = expandedId === debt.id;
+                    const overdue    = debt.due_date && isOverdue(debt.due_date) && debt.status !== "paid";
+                    const soon       = !overdue && debt.due_date && (() => {
+                      const d = Math.ceil((new Date(debt.due_date).getTime() - Date.now()) / 86400000);
+                      return d >= 0 && d <= 7;
+                    })();
 
-              return (
-                <div key={debt.id}>
-                  {showPaidHeader && <SectionHeader label="Réglées" />}
-
-                  <Card className={`transition-colors hover:border-slate-600 ${
-                    overdue ? "border-red-900/30" : ""
-                  }`}>
-                    <article>
-                      {/* ── Top row ── */}
-                      <div className="flex items-start gap-3">
-                        <div className="min-w-0 flex-1">
-                          {/* Name + badges */}
-                          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                            <h3 className="min-w-0 truncate text-sm font-semibold text-slate-100">
-                              {debt.person_name}
-                            </h3>
-                            <Badge variant={statusVariant[debt.status]}>
-                              {t(`statuses.${debt.status}`)}
-                            </Badge>
-                            {overdue && (
-                              <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-red-950/50 px-2 py-0.5 text-[10px] font-medium text-red-300">
-                                <AlertTriangle size={8} />
-                                {t("overdue")}
-                              </span>
-                            )}
-                            {soon && (
-                              <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-amber-950/40 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-                                <Clock size={8} />
-                                Bientôt
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Due date */}
-                          {debt.due_date && (
-                            <p className={`mt-0.5 text-[11px] ${
-                              overdue ? "text-red-400/70" : "text-slate-600"
-                            }`}>
-                              {t("due_date")}: {formatDate(debt.due_date)}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Amount + actions */}
-                        <div className="flex shrink-0 items-start gap-0.5">
-                          <div className="mr-1.5 text-right">
-                            <p className={`font-mono text-sm font-bold tabular-nums ${
-                              debt.status === "paid"
-                                ? "text-slate-500"
-                                : tab === "i_owe" ? "text-red-400" : "text-emerald-400"
-                            }`}>
-                              {formatMoney(remaining, debt.currency)}
-                            </p>
-                            {Number(debt.paid_amount) > 0 && (
-                              <p className="text-[10px] text-slate-700">
-                                / {formatMoney(Number(debt.amount), debt.currency)}
-                              </p>
-                            )}
-                          </div>
-                          {debt.status !== "paid" && (
-                            <button
-                              onClick={() => openPaymentForm(debt.id)}
-                              aria-label={t("add_payment")}
-                              title={t("add_payment")}
-                              className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-orange-400"
-                            >
-                              <CreditCard size={13} />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => loadPayments(debt.id)}
-                            aria-label={isExpanded ? "Réduire" : "Voir historique"}
-                            className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
-                          >
-                            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(debt.id)}
-                            aria-label="Supprimer"
-                            className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Progress bar */}
-                      {Number(debt.amount) > 0 && Number(debt.paid_amount) > 0 && (
-                        <div className="mt-2.5">
-                          <div className="h-1 w-full rounded-full bg-slate-800">
-                            <div
-                              className={`h-1 rounded-full transition-all ${
-                                debt.status === "paid" ? "bg-emerald-500" : "bg-orange-500"
-                              }`}
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                          <p className="mt-0.5 text-right text-[10px] text-slate-700">
-                            {Math.round(progress)}% remboursé
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Note */}
-                      {debt.note && (
-                        <p className="mt-1.5 truncate text-[11px] text-slate-700">{debt.note}</p>
-                      )}
-                    </article>
-
-                    {/* ── Payment history ── */}
-                    {isExpanded && (
-                      <div className="mt-3 border-t border-slate-800 pt-3">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                          {t("payment_history")}
-                        </p>
-                        {payments.length === 0 ? (
-                          <p className="text-xs text-slate-600">Aucun paiement enregistré.</p>
-                        ) : (
-                          <ul className="space-y-1.5">
-                            {payments.map((p) => {
-                              const payAcc = accounts.find((a) => a.id === p.account_id);
-                              const method = p.settlement_method as SettlementMethod;
-                              return (
-                                <li key={p.id} className="flex items-center justify-between gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <span className="text-xs text-slate-400">
-                                      {formatDate(p.payment_date)}
-                                    </span>
-                                    {payAcc && (
-                                      <span className="ml-2 text-[11px] text-slate-500">
-                                        · {payAcc.name}
-                                      </span>
-                                    )}
-                                    {method !== "real_payment" && (
-                                      <span className="ml-2 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
-                                        {SETTLEMENT_BADGE[method]}
-                                      </span>
-                                    )}
-                                    {p.note && (
-                                      <span className="ml-2 text-[11px] text-slate-600">{p.note}</span>
-                                    )}
+                    return (
+                      <li key={debt.id} className={overdue ? "border-l-2 border-red-800/50" : ""}>
+                        <div className={`transition-colors hover:bg-[var(--surface-hover)] px-4 py-3 ${
+                          isExpanded ? "bg-[var(--surface-chip)]" : ""
+                        }`}>
+                          {/* ── Row ── */}
+                          <div className="flex items-center gap-3">
+                            {/* Identity */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                <span className="min-w-0 truncate text-sm font-semibold text-[var(--text-strong)]">
+                                  {debt.person_name}
+                                </span>
+                                <Badge variant={statusVariant[debt.status]}>
+                                  {t(`statuses.${debt.status}`)}
+                                </Badge>
+                                {overdue && (
+                                  <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-red-950/50 px-2 py-0.5 text-[10px] font-medium text-red-300">
+                                    <AlertTriangle size={8} />
+                                    {t("overdue")}
+                                  </span>
+                                )}
+                                {soon && (
+                                  <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-amber-950/40 px-2 py-0.5 text-[10px] font-medium text-[var(--tint-warning-fg)]">
+                                    <Clock size={8} />
+                                    Bientôt
+                                  </span>
+                                )}
+                              </div>
+                              {debt.due_date && (
+                                <p className={`mt-0.5 text-[11px] ${
+                                  overdue ? "text-red-400/70" : "text-[var(--text-faint)]"
+                                }`}>
+                                  {t("due_date")}: {formatDate(debt.due_date)}
+                                </p>
+                              )}
+                              {/* Progress bar on collapsed row */}
+                              {Number(debt.paid_amount) > 0 && (
+                                <div className="mt-2">
+                                  <div className="h-1 w-full rounded-full bg-[var(--surface-chip)]">
+                                    <div
+                                      className={`h-1 rounded-full transition-all ${
+                                        debt.status === "paid" ? "bg-emerald-500" : "bg-[var(--brand)]"
+                                      }`}
+                                      style={{ width: `${progress}%` }}
+                                    />
                                   </div>
-                                  <MoneyAmount
-                                    amount={p.amount}
-                                    currency={debt.currency}
-                                    className="shrink-0 font-mono text-xs tabular-nums text-emerald-400"
-                                  />
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </div>
-                    )}
-                  </Card>
-                </div>
-              );
-            })}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Amounts */}
+                            <div className="flex shrink-0 items-center gap-3 text-right">
+                              <div>
+                                <p className={`font-mono text-sm font-bold tabular-nums ${
+                                  debt.status === "paid"
+                                    ? "text-[var(--text-label)]"
+                                    : tab === "i_owe" ? "text-red-400" : "text-emerald-400"
+                                }`}>
+                                  {formatMoney(remaining, debt.currency)}
+                                </p>
+                                {Number(debt.paid_amount) > 0 && (
+                                  <p className="text-[10px] text-[var(--text-faint)]">
+                                    / {formatMoney(Number(debt.amount), debt.currency)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex shrink-0 items-center gap-0.5">
+                              {debt.status !== "paid" && (
+                                <button
+                                  onClick={() => openPaymentForm(debt.id)}
+                                  aria-label={t("add_payment")}
+                                  title={t("add_payment")}
+                                  className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--brand-text)]"
+                                >
+                                  <CreditCard size={13} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => loadPayments(debt.id)}
+                                aria-label={isExpanded ? "Réduire" : "Voir historique"}
+                                className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
+                              >
+                                {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                              </button>
+                              <button
+                                onClick={() => setDeleteId(debt.id)}
+                                aria-label="Supprimer"
+                                className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-red-400"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Note */}
+                          {debt.note && !isExpanded && (
+                            <p className="mt-1.5 truncate text-[11px] text-[var(--text-faint)]">{debt.note}</p>
+                          )}
+
+                          {/* ── Payment history (expanded) ── */}
+                          {isExpanded && (
+                            <div className="mt-3 border-t border-[var(--border-default)] pt-3">
+                              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+                                {t("payment_history")}
+                              </p>
+                              {payments.length === 0 ? (
+                                <p className="text-xs text-[var(--text-faint)]">Aucun paiement enregistré.</p>
+                              ) : (
+                                <ul className="space-y-1.5">
+                                  {payments.map((p) => {
+                                    const payAcc = accounts.find((a) => a.id === p.account_id);
+                                    const method = p.settlement_method as SettlementMethod;
+                                    return (
+                                      <li key={p.id} className="flex items-center justify-between gap-3">
+                                        <div className="min-w-0 flex-1">
+                                          <span className="text-xs text-[var(--text-muted)]">
+                                            {formatDate(p.payment_date)}
+                                          </span>
+                                          {payAcc && (
+                                            <span className="ml-2 text-[11px] text-[var(--text-label)]">
+                                              · {payAcc.name}
+                                            </span>
+                                          )}
+                                          {method !== "real_payment" && (
+                                            <span className="ml-2 rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]">
+                                              {SETTLEMENT_BADGE[method]}
+                                            </span>
+                                          )}
+                                          {p.note && (
+                                            <span className="ml-2 text-[11px] text-[var(--text-faint)]">{p.note}</span>
+                                          )}
+                                        </div>
+                                        <MoneyAmount
+                                          amount={p.amount}
+                                          currency={debt.currency}
+                                          className="shrink-0 font-mono text-xs tabular-nums text-emerald-400"
+                                        />
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Card>
+            )}
+
+            {/* ── Paid items ── */}
+            {!filterOverdue && paid.length > 0 && (
+              <>
+                <SectionHeader label="Réglées" />
+                <Card className="overflow-hidden p-0">
+                  <ul className="divide-y divide-[var(--border-subtle)]">
+                    {paid.map((debt) => {
+                      const remaining  = Number(debt.amount) - Number(debt.paid_amount);
+                      const isExpanded = expandedId === debt.id;
+
+                      return (
+                        <li key={debt.id}>
+                          <div className={`transition-colors hover:bg-[var(--surface-hover)] px-4 py-3 ${
+                            isExpanded ? "bg-[var(--surface-chip)]" : ""
+                          }`}>
+                            <div className="flex items-center gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                  <span className="min-w-0 truncate text-sm font-semibold text-[var(--text-label)]">
+                                    {debt.person_name}
+                                  </span>
+                                  <Badge variant="success">
+                                    {t("statuses.paid")}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <p className="font-mono text-sm font-bold tabular-nums text-[var(--text-label)]">
+                                  {formatMoney(remaining, debt.currency)}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-0.5">
+                                <button
+                                  onClick={() => loadPayments(debt.id)}
+                                  aria-label={isExpanded ? "Réduire" : "Voir historique"}
+                                  className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
+                                >
+                                  {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                </button>
+                                <button
+                                  onClick={() => setDeleteId(debt.id)}
+                                  aria-label="Supprimer"
+                                  className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-red-400"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {isExpanded && (
+                              <div className="mt-3 border-t border-[var(--border-default)] pt-3">
+                                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+                                  {t("payment_history")}
+                                </p>
+                                {payments.length === 0 ? (
+                                  <p className="text-xs text-[var(--text-faint)]">Aucun paiement enregistré.</p>
+                                ) : (
+                                  <ul className="space-y-1.5">
+                                    {payments.map((p) => {
+                                      const payAcc = accounts.find((a) => a.id === p.account_id);
+                                      const method = p.settlement_method as SettlementMethod;
+                                      return (
+                                        <li key={p.id} className="flex items-center justify-between gap-3">
+                                          <div className="min-w-0 flex-1">
+                                            <span className="text-xs text-[var(--text-muted)]">{formatDate(p.payment_date)}</span>
+                                            {payAcc && <span className="ml-2 text-[11px] text-[var(--text-label)]">· {payAcc.name}</span>}
+                                            {method !== "real_payment" && (
+                                              <span className="ml-2 rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]">{SETTLEMENT_BADGE[method]}</span>
+                                            )}
+                                            {p.note && <span className="ml-2 text-[11px] text-[var(--text-faint)]">{p.note}</span>}
+                                          </div>
+                                          <MoneyAmount amount={p.amount} currency={debt.currency} className="shrink-0 font-mono text-xs tabular-nums text-emerald-400" />
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Card>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -470,21 +574,21 @@ export default function DebtsPage({ params }: Props) {
           onClick={() => setShowForm(false)}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-2.5 md:hidden">
-              <div className="h-1 w-10 rounded-full bg-slate-700" />
+              <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
             </div>
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 pb-3 pt-4">
-              <h2 className="text-base font-bold text-slate-50">{t("add")}</h2>
+              <h2 className="text-base font-bold text-[var(--text-strong)]">{t("add")}</h2>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                className="rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
               >
                 <X size={16} />
               </button>
@@ -496,7 +600,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Person */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("person")}
                     </label>
                     <input
@@ -510,7 +614,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Direction */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       Direction
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -521,8 +625,8 @@ export default function DebtsPage({ params }: Props) {
                           onClick={() => { setDirection(dir); setAffectsBalance(false); }}
                           className={`rounded-xl py-2.5 text-xs font-medium transition-colors ${
                             direction === dir
-                              ? "bg-orange-600 text-white"
-                              : "border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                              ? "bg-[var(--brand-fill)] text-white"
+                              : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                           }`}
                         >
                           {t(dir)}
@@ -534,7 +638,7 @@ export default function DebtsPage({ params }: Props) {
                   {/* Amount + Currency */}
                   <div className="grid grid-cols-3 gap-2">
                     <div className="col-span-2">
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                         {t("amount")}
                       </label>
                       <input
@@ -549,7 +653,7 @@ export default function DebtsPage({ params }: Props) {
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                         Devise
                       </label>
                       <select
@@ -566,8 +670,8 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Due date */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("due_date")} <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      {t("due_date")} <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       type="date"
@@ -579,9 +683,9 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Linked account */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       Compte lié{" "}
-                      <span className="text-slate-600">
+                      <span className="text-[var(--text-faint)]">
                         {direction === "owes_me" ? "(facultatif)" : "(référence)"}
                       </span>
                     </label>
@@ -599,19 +703,19 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Affects balance (owes_me only) */}
                   {direction === "owes_me" && linkedAccountId && (
-                    <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-3.5">
+                    <div className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-glass)] p-3.5">
                       <label className="flex cursor-pointer items-start gap-3">
                         <input
                           type="checkbox"
                           checked={affectsBalance}
                           onChange={(e) => setAffectsBalance(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 accent-orange-500"
+                          className="mt-0.5 h-4 w-4 accent-[var(--brand)]"
                         />
-                        <span className="text-xs text-slate-300">
+                        <span className="text-xs text-[var(--text-body)]">
                           L'argent a réellement quitté ce compte
                         </span>
                       </label>
-                      <p className={`mt-1.5 text-[11px] ${affectsBalance ? "text-amber-400" : "text-slate-600"}`}>
+                      <p className={`mt-1.5 text-[11px] ${affectsBalance ? "text-[var(--tint-warning-fg)]" : "text-[var(--text-faint)]"}`}>
                         {affectsBalance
                           ? `Le solde sera réduit de ${amount || "…"} ${currency}.`
                           : "Déclaration seulement — aucun compte ne sera modifié."}
@@ -621,8 +725,8 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Note */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("note")} <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      {t("note")} <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       value={note}
@@ -636,23 +740,26 @@ export default function DebtsPage({ params }: Props) {
 
               {/* Footer */}
               <div
-                className="shrink-0 border-t border-slate-800 px-5 pt-3"
+                className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3"
                 style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
               >
+                {formError && (
+                  <p className="mb-3 rounded-xl bg-red-900/30 px-4 py-2.5 text-center text-xs text-red-400">{formError}</p>
+                )}
                 <div className="flex gap-2.5">
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
-                    className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                    className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                   >
                     {tc("cancel")}
                   </button>
                   <button
                     type="submit"
-                    disabled={!personName.trim() || !amount}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                    disabled={!personName.trim() || !amount || saving}
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
-                    {tc("save")}
+                    {saving ? "Sauvegarde en cours…" : tc("save")}
                   </button>
                 </div>
               </div>
@@ -668,21 +775,21 @@ export default function DebtsPage({ params }: Props) {
           onClick={() => { setShowPaymentForm(null); setPayError(null); }}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-2.5 md:hidden">
-              <div className="h-1 w-10 rounded-full bg-slate-700" />
+              <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
             </div>
 
             {/* Header */}
             <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
               <div>
-                <h2 className="text-base font-bold text-slate-50">{t("add_payment")}</h2>
-                <p className="mt-0.5 text-xs text-slate-500">
+                <h2 className="text-base font-bold text-[var(--text-strong)]">{t("add_payment")}</h2>
+                <p className="mt-0.5 text-xs text-[var(--text-label)]">
                   {currentDebt.person_name} · Restant :{" "}
-                  <span className="font-mono tabular-nums text-slate-300">
+                  <span className="font-mono tabular-nums text-[var(--text-body)]">
                     {formatMoney(currentRemaining, currentDebt.currency)}
                   </span>
                 </p>
@@ -690,7 +797,7 @@ export default function DebtsPage({ params }: Props) {
               <button
                 type="button"
                 onClick={() => { setShowPaymentForm(null); setPayError(null); }}
-                className="shrink-0 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                className="shrink-0 rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
               >
                 <X size={16} />
               </button>
@@ -705,7 +812,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Settlement method */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       Mode de règlement
                     </label>
                     <div className="space-y-2">
@@ -714,8 +821,8 @@ export default function DebtsPage({ params }: Props) {
                           key={method}
                           className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
                             settlementMethod === method
-                              ? "border-orange-600/60 bg-orange-950/20"
-                              : "border-slate-700/80 hover:border-slate-600"
+                              ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/20"
+                              : "border-[var(--border-strong)] hover:border-[var(--border-strong)]"
                           }`}
                         >
                           <input
@@ -724,13 +831,13 @@ export default function DebtsPage({ params }: Props) {
                             value={method}
                             checked={settlementMethod === method}
                             onChange={() => setSettlementMethod(method)}
-                            className="mt-0.5 accent-orange-500"
+                            className="mt-0.5 accent-[var(--brand)]"
                           />
                           <div>
-                            <p className="text-xs font-medium text-slate-200">
+                            <p className="text-xs font-medium text-[var(--text-body)]">
                               {SETTLEMENT_LABELS[method]}
                             </p>
-                            <p className="mt-0.5 text-[10px] text-slate-500">
+                            <p className="mt-0.5 text-[10px] text-[var(--text-label)]">
                               {SETTLEMENT_DESCRIPTIONS[method]}
                             </p>
                           </div>
@@ -741,7 +848,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Amount */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("amount")}
                     </label>
                     <div className="flex gap-2">
@@ -759,7 +866,7 @@ export default function DebtsPage({ params }: Props) {
                       <button
                         type="button"
                         onClick={() => setPayAmount(currentRemaining.toFixed(2))}
-                        className="shrink-0 rounded-xl border border-orange-700/60 bg-orange-950/30 px-3 py-2.5 text-xs font-medium text-orange-400 transition-colors hover:bg-orange-950/50"
+                        className="shrink-0 rounded-xl border border-orange-700/60 bg-orange-950/30 px-3 py-2.5 text-xs font-medium text-[var(--brand-text)] transition-colors hover:bg-orange-950/50"
                       >
                         Tout
                       </button>
@@ -768,7 +875,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Account */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {settlementMethod === "real_payment"
                         ? t("linked_account")
                         : "Compte (référence seulement)"}
@@ -787,7 +894,7 @@ export default function DebtsPage({ params }: Props) {
                       ))}
                     </select>
                     {settlementMethod !== "real_payment" && (
-                      <p className="mt-1.5 text-[11px] text-amber-400/80">
+                      <p className="mt-1.5 text-[11px] text-[var(--tint-warning-fg)]/80">
                         Aucun mouvement de solde — règlement par compensation.
                       </p>
                     )}
@@ -795,7 +902,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Date */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">Date</label>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Date</label>
                     <input
                       type="date"
                       value={payDate}
@@ -807,8 +914,8 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Note */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("note")} <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      {t("note")} <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       value={payNote}
@@ -833,21 +940,21 @@ export default function DebtsPage({ params }: Props) {
 
               {/* Footer */}
               <div
-                className="shrink-0 border-t border-slate-800 px-5 pt-3"
+                className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3"
                 style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
               >
                 <div className="flex gap-2.5">
                   <button
                     type="button"
                     onClick={() => { setShowPaymentForm(null); setPayError(null); }}
-                    className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                    className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                   >
                     {tc("cancel")}
                   </button>
                   <button
                     type="submit"
                     disabled={!payAmount}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
                     {tc("save")}
                   </button>
@@ -863,14 +970,26 @@ export default function DebtsPage({ params }: Props) {
         open={!!deleteId}
         title={tc("confirm_delete")}
         message={
-          debtToDelete && Number(debtToDelete.paid_amount) > 0
+          deleteError
+            ? `Erreur : ${deleteError}`
+            : debtToDelete && Number(debtToDelete.paid_amount) > 0
             ? `Cette dette a ${formatMoney(debtToDelete.paid_amount, debtToDelete.currency)} de paiements enregistrés. Les effets sur les comptes seront annulés. Continuer ?`
             : "Supprimer cette dette ?"
         }
         confirmLabel={tc("delete")}
         cancelLabel={tc("cancel")}
         danger
-        onConfirm={async () => { if (deleteId) await deleteDebt(deleteId); setDeleteId(null); }}
+        onConfirm={async () => {
+          if (!deleteId) return;
+          try {
+            await deleteDebt(deleteId);
+            setDeleteId(null);
+            setDeleteError(null);
+          } catch (err: unknown) {
+            setDeleteError(err instanceof Error ? err.message : "Échec de la suppression.");
+            // Keep dialog open so the user sees the error; they can retry or cancel
+          }
+        }}
         onCancel={() => setDeleteId(null)}
       />
     </PageWrapper>

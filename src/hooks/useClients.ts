@@ -41,7 +41,11 @@ export function useClients() {
     note: string | null
   ) {
     const supabase = createClient();
-    await supabase.from("clients").insert({ user_id: userId, name, phone, country, city, trust_level: trustLevel, note });
+    const { error } = await supabase.from("clients").insert({ user_id: userId, name, phone, country, city, trust_level: trustLevel, note });
+    if (error) {
+      console.error("[addClient] insert error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la création du client.");
+    }
     cacheInvalidate(KEY);
     await load();
   }
@@ -51,14 +55,22 @@ export function useClients() {
     updates: Partial<Omit<Client, "id" | "user_id" | "created_at">>
   ) {
     const supabase = createClient();
-    await supabase.from("clients").update(updates).eq("id", id);
+    const { error } = await supabase.from("clients").update(updates).eq("id", id);
+    if (error) {
+      console.error("[updateClient] update error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la mise à jour du client.");
+    }
     cacheInvalidate(KEY);
     await load();
   }
 
   async function deleteClient(id: string) {
     const supabase = createClient();
-    await supabase.from("clients").delete().eq("id", id);
+    const { error } = await supabase.from("clients").delete().eq("id", id);
+    if (error) {
+      console.error("[deleteClient] delete error:", error.code, error.message);
+      throw new Error(error.message || "Échec de la suppression du client.");
+    }
     cacheInvalidate(KEY);
     await load();
   }

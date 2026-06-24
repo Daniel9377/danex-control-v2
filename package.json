@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:test": "node scripts/dev-test.js",
     "build": "next build",
     "start": "next start",
+    "fast": "next build && next start",
     "lint": "eslint",
     "test:seed": "tsx tests/seed/seed-test-db.ts",
     "test:e2e": "playwright test",

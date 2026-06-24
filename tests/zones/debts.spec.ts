@@ -132,5 +132,6 @@ async function openPaymentForm(page: Page, personName: string) {
 }
 
 function debtCard(page: Page, personName: string) {
-  return page.locator("article").filter({ hasText: personName }).first();
+  // Debts are now in a unified <li> list (redesign — Card > ul > li pattern)
+  return page.locator("li").filter({ hasText: personName }).first();
 }

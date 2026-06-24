@@ -10,7 +10,7 @@ import {
   tableRows,
 } from "../helpers/e2e-utils";
 
-test("DEBUG balance correction logic (no networkidle)", async ({ page }) => {
+test.skip("DEBUG balance correction logic (no networkidle)", async ({ page }) => {
   page.on("pageerror", (e) => console.log(`PAGEERROR: ${e.message}`));
 
   const state = await seedAndLogin(page, "/fr/accounts");

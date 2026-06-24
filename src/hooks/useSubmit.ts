@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 
 /** Generates a UUID v4 suitable for idempotency keys. */
 export function generateIdempotencyKey(): string {
@@ -21,13 +21,17 @@ export function generateIdempotencyKey(): string {
  * - Button should be disabled when `submitting` is true.
  * - If `submit` is called while already submitting, it silently no-ops.
  * - On error, `submitting` resets to false so the button re-enables.
+ * - Uses useRef for synchronous double-click guard (React setState is async
+ *   and cannot prevent two rapid clicks from both entering the handler).
  */
 export function useSubmit() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   const submit = useCallback(async <T>(fn: () => Promise<T>): Promise<T | null> => {
-    if (submitting) return null;
+    if (submittingRef.current) return null;
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -38,9 +42,10 @@ export function useSubmit() {
       setError(message);
       return null;
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [submitting]);
+  }, []);
 
   function clearError() {
     setError(null);

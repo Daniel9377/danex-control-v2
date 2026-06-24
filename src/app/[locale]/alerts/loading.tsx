@@ -11,8 +11,8 @@ export default function AlertsLoading() {
     <PageWrapper locale={locale}>
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <div className="h-7 w-24 animate-pulse rounded-lg bg-slate-800" />
-          <div className="h-9 w-36 animate-pulse rounded-lg bg-slate-800" />
+          <div className="h-7 w-24 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
+          <div className="h-9 w-36 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
         </div>
         <SkeletonList count={4} />
       </div>

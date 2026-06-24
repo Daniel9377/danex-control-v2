@@ -1,22 +1,22 @@
 "use client";
 
-import { formatMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { MoneyAmount } from "@/components/ui/MoneyAmount";
 
-const COLOR_MAP = {
-  default: "text-slate-50",
-  green:   "text-emerald-400",
-  red:     "text-red-400",
-  amber:   "text-amber-400",
-  blue:    "text-sky-400",
-  orange:  "text-orange-400",
-};
+const COLOR_TONES = {
+  default: "default",
+  green:   "positive",
+  red:     "negative",
+  amber:   "warning",
+  blue:    "client",
+  orange:  "default",
+} as const;
 
 export interface MetricCardProps {
   label: string;
   value: number;
   currency?: string;
-  color?: keyof typeof COLOR_MAP;
+  color?: keyof typeof COLOR_TONES;
   note?: string;
   description?: string;
   onClick?: () => void;
@@ -33,34 +33,30 @@ export function MetricCard({
   onClick,
   icon,
 }: MetricCardProps) {
+  const tone = COLOR_TONES[color] as "default" | "positive" | "negative" | "warning" | "client";
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
       onClick={onClick}
       className={cn(
-        "flex flex-col items-start rounded-xl border border-slate-800 bg-slate-900 p-4 text-left",
+        "flex flex-col items-start rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4 text-left",
         onClick && "card-interactive"
       )}
     >
       <div className="mb-2 flex w-full items-center gap-2">
         {icon && (
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-400">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-chip)] text-[var(--text-muted)]">
             {icon}
           </span>
         )}
-        <p className="flex-1 text-xs font-medium text-slate-400">{label}</p>
-        {onClick && (
-          <span className="text-[10px] text-slate-600 transition-colors group-hover:text-slate-400">↗</span>
-        )}
+        <p className="flex-1 text-xs font-medium text-[var(--text-label)]">{label}</p>
       </div>
-      <p className={cn("whitespace-nowrap font-mono text-xl font-bold tabular-nums", COLOR_MAP[color])}>
-        {formatMoney(value, currency)}
-      </p>
+      <MoneyAmount amount={value} currency={currency} tone={tone} size="lg" />
       {note && (
-        <p className="mt-1 text-[10px] font-medium text-slate-500">{note}</p>
+        <p className="mt-1 text-[10px] font-medium text-[var(--text-label)]">{note}</p>
       )}
       {description && (
-        <p className="mt-1.5 text-[10px] leading-relaxed text-slate-600">{description}</p>
+        <p className="mt-1.5 text-[10px] leading-relaxed text-[var(--text-faint)]">{description}</p>
       )}
     </Tag>
   );

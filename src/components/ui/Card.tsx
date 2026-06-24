@@ -9,12 +9,13 @@ type Props = {
   variant?: Variant;
   interactive?: boolean;
   onClick?: () => void;
+  padding?: string;
 };
 
-const variantStyles: Record<Variant, string> = {
-  default:  "border border-slate-800 bg-slate-900",
-  glass:    "border border-slate-700/50 glass-surface",
-  elevated: "border border-slate-700/60 bg-slate-800/80 shadow-lg shadow-black/30",
+const variantCls: Record<Variant, string> = {
+  default:  "border border-[var(--border-default)] bg-[var(--surface-card)]",
+  glass:    "border border-[var(--border-strong)]/50 glass-surface",
+  elevated: "border border-[var(--border-strong)] bg-[var(--surface-raised)] shadow-lg shadow-black/30",
 };
 
 export const Card = memo(function Card({
@@ -23,17 +24,19 @@ export const Card = memo(function Card({
   variant = "default",
   interactive = false,
   onClick,
+  padding,
 }: Props) {
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
       onClick={onClick}
       className={cn(
-        "rounded-xl p-4 text-left",
-        variantStyles[variant],
+        "rounded-xl text-left",
+        variantCls[variant],
         (interactive || onClick) && "card-interactive",
         className
       )}
+      style={padding ? { padding: `var(--${padding})` } : { padding: "var(--space-4)" }}
     >
       {children}
     </Tag>

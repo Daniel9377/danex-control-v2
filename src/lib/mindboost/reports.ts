@@ -14,7 +14,7 @@ export async function saveReport(
   }
 ): Promise<void> {
   const supabase = createAdminClient();
-  await supabase.from("mindboost_reports").insert({
+  const { error } = await supabase.from("mindboost_reports").insert({
     user_id: userId,
     report_type: type,
     report_date: date,
@@ -25,4 +25,9 @@ export async function saveReport(
     urgent_purchases_count: metadata?.urgent_purchases_count ?? null,
     active_debts_count: metadata?.active_debts_count ?? null,
   });
+  if (error) {
+    console.error("[saveReport] insert error:", error.code, error.message);
+    // Non-fatal: report was already generated and shown. Historical reports
+    // will be missing if a dashboard/history view is built later.
+  }
 }

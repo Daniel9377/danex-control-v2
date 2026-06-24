@@ -59,7 +59,7 @@ export async function markUrgentPurchaseAlertSent(userId: string, orderId: strin
   const supabase = admin();
   const endOfDay = new Date();
   endOfDay.setUTCHours(23, 59, 59, 999);
-  await supabase.from("mindboost_memory").upsert(
+  const { error } = await supabase.from("mindboost_memory").upsert(
     {
       user_id: userId,
       memory_type: `urgent_purchase_alert_${orderId}`,
@@ -70,6 +70,11 @@ export async function markUrgentPurchaseAlertSent(userId: string, orderId: strin
     },
     { onConflict: "user_id,memory_type" }
   );
+  if (error) {
+    console.error("[markUrgentPurchaseAlertSent] upsert error:", error.code, error.message);
+    // Non-fatal: sentinel not set → alert may fire again at next poll.
+    // User gets duplicate notification — annoying but not destructive.
+  }
 }
 
 function daysSince(dateStr: string): number {

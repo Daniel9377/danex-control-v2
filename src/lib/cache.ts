@@ -1,4 +1,4 @@
-const TTL = 30_000;
+const TTL = 300_000; // 5 minutes — avoids re-fetching on every SPA navigation
 
 interface Entry<T> {
   data: T;

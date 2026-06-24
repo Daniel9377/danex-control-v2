@@ -88,12 +88,13 @@ export function CategoryPie({ data, currency = "USD" }: Props) {
           </Pie>
           <Tooltip
             contentStyle={{
-              backgroundColor: "#0f172a",
-              border: "1px solid #1e293b",
+              backgroundColor: "var(--surface-card)",
+              border: "1px solid var(--border-default)",
               borderRadius: 8,
               fontSize: 12,
+              color: "var(--text-body)",
             }}
-            labelStyle={{ color: "#94a3b8" }}
+            labelStyle={{ color: "var(--text-muted)" }}
             formatter={(value, name) => [
               formatMoney(Number(value ?? 0), currency),
               String(name),
@@ -112,8 +113,8 @@ export function CategoryPie({ data, currency = "USD" }: Props) {
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ backgroundColor: stableColor(entry.name) }}
               />
-              <span className="truncate text-xs text-slate-400">{entry.name}</span>
-              <span className="ml-auto shrink-0 text-xs tabular-nums text-slate-500">
+              <span className="truncate text-xs text-[var(--text-muted)]">{entry.name}</span>
+              <span className="ml-auto shrink-0 text-xs tabular-nums text-[var(--text-label)]">
                 {pct}%
               </span>
             </div>

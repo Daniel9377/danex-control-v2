@@ -434,18 +434,18 @@ export default function DiagnosticPage({ params }: Props) {
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-slate-50 flex items-center gap-2">
-              <Database size={20} className="text-orange-400" />
+            <h1 className="text-xl font-bold text-[var(--text-strong)] flex items-center gap-2">
+              <Database size={20} className="text-[var(--brand-text)]" />
               Diagnostic Supabase
             </h1>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-[var(--text-label)]">
               Vérifie que toutes les tables et colonnes requises existent dans ta base de données.
             </p>
           </div>
           <button
             onClick={runChecks}
             disabled={running}
-            className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+            className="flex items-center gap-2 rounded-lg border border-[var(--border-strong)] px-3 py-2 text-sm text-[var(--text-body)] hover:bg-[var(--surface-chip)] disabled:opacity-40"
           >
             <RefreshCw size={14} className={running ? "animate-spin" : ""} />
             {running ? "Vérification…" : "Relancer"}
@@ -459,7 +459,7 @@ export default function DiagnosticPage({ params }: Props) {
               ? "border-emerald-800/60 bg-emerald-950/30"
               : failed > 0
               ? "border-red-800/60 bg-red-950/30"
-              : "border-slate-700 bg-slate-900/60"
+              : "border-[var(--border-strong)] bg-[var(--surface-glass)]"
           }`}>
             <div className="flex items-center gap-3">
               {allOk ? (
@@ -470,14 +470,14 @@ export default function DiagnosticPage({ params }: Props) {
                 <AlertCircle size={22} className="text-amber-400 shrink-0" />
               )}
               <div>
-                <p className={`font-semibold ${allOk ? "text-emerald-400" : failed > 0 ? "text-red-400" : "text-slate-200"}`}>
+                <p className={`font-semibold ${allOk ? "text-emerald-400" : failed > 0 ? "text-red-400" : "text-[var(--text-body)]"}`}>
                   {allOk
                     ? "✅ Toutes les vérifications passent — prêt pour Vercel"
                     : failed > 0
                     ? `❌ ${failed} vérification${failed > 1 ? "s" : ""} échouée${failed > 1 ? "s" : ""} — migration incomplète`
                     : "⏳ Vérification en cours…"}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
                   {passed}/{total} OK
                   {lastRun && ` · Dernière vérification : ${lastRun.toLocaleTimeString()}`}
                 </p>
@@ -486,7 +486,7 @@ export default function DiagnosticPage({ params }: Props) {
 
             {/* Migration status quick view */}
             {!running && (
-              <div className="mt-3 flex flex-wrap gap-3 border-t border-slate-800/60 pt-3">
+              <div className="mt-3 flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-3">
                 <MigrationBadge
                   label="Migration 001 (comptabilité)"
                   ok={migration001Ok}
@@ -505,7 +505,7 @@ export default function DiagnosticPage({ params }: Props) {
         {/* Results by group */}
         {Object.values(groups).map((group) => (
           <section key={group.label} className="space-y-1.5">
-            <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+            <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[var(--text-label)]">
               <Columns size={12} />
               {group.label}
             </h2>
@@ -518,48 +518,48 @@ export default function DiagnosticPage({ params }: Props) {
         ))}
 
         {/* Instructions */}
-        <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-200">
+        <section className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-[var(--text-body)]">
             Comment appliquer une migration manquante
           </h2>
 
-          <div className="space-y-3 text-xs text-slate-400 leading-relaxed">
+          <div className="space-y-3 text-xs text-[var(--text-muted)] leading-relaxed">
             <Step n={1} title="Ouvrir Supabase Dashboard">
-              Va sur <span className="text-orange-400">supabase.com → ton projet → SQL Editor</span>
+              Va sur <span className="text-[var(--brand-text)]">supabase.com → ton projet → SQL Editor</span>
             </Step>
             <Step n={2} title="Si migration 001 manque">
-              Ouvre le fichier <code className="rounded bg-slate-800 px-1 text-slate-300">supabase/migrations/001_accounting_improvements.sql</code>,
-              copie tout le contenu, colle-le dans l'éditeur SQL, clique <strong className="text-slate-200">Run</strong>.
+              Ouvre le fichier <code className="rounded bg-[var(--surface-chip)] px-1 text-[var(--text-body)]">supabase/migrations/001_accounting_improvements.sql</code>,
+              copie tout le contenu, colle-le dans l'éditeur SQL, clique <strong className="text-[var(--text-body)]">Run</strong>.
             </Step>
             <Step n={3} title="Si migration 002 manque">
-              Ouvre le fichier <code className="rounded bg-slate-800 px-1 text-slate-300">supabase/migrations/002_client_order_tracking.sql</code>,
-              copie tout le contenu, colle-le dans l'éditeur SQL, clique <strong className="text-slate-200">Run</strong>.
+              Ouvre le fichier <code className="rounded bg-[var(--surface-chip)] px-1 text-[var(--text-body)]">supabase/migrations/002_client_order_tracking.sql</code>,
+              copie tout le contenu, colle-le dans l'éditeur SQL, clique <strong className="text-[var(--text-body)]">Run</strong>.
             </Step>
             <Step n={4} title="Revenir ici">
-              Clique <strong className="text-slate-200">Relancer</strong> en haut pour re-vérifier. Tout doit passer au vert.
+              Clique <strong className="text-[var(--text-body)]">Relancer</strong> en haut pour re-vérifier. Tout doit passer au vert.
             </Step>
             <Step n={5} title="Si une partie était déjà exécutée">
-              Le SQL utilise <code className="rounded bg-slate-800 px-1 text-slate-300">IF NOT EXISTS</code> et <code className="rounded bg-slate-800 px-1 text-slate-300">DROP CONSTRAINT IF EXISTS</code> — tu peux le relancer sans risque même si certaines colonnes existent déjà.
+              Le SQL utilise <code className="rounded bg-[var(--surface-chip)] px-1 text-[var(--text-body)]">IF NOT EXISTS</code> et <code className="rounded bg-[var(--surface-chip)] px-1 text-[var(--text-body)]">DROP CONSTRAINT IF EXISTS</code> — tu peux le relancer sans risque même si certaines colonnes existent déjà.
             </Step>
           </div>
         </section>
 
         {/* Tables reference */}
-        <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+        <section className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-5 space-y-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-body)]">
             <Table2 size={14} />
             Référence : colonnes attendues dans transactions
           </h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-slate-400">
+            <table className="w-full text-xs text-[var(--text-muted)]">
               <thead>
-                <tr className="border-b border-slate-800 text-left text-[10px] uppercase tracking-wider text-slate-600">
+                <tr className="border-b border-[var(--border-default)] text-left text-[10px] uppercase tracking-wider text-[var(--text-faint)]">
                   <th className="pb-1.5 pr-4">Colonne</th>
                   <th className="pb-1.5 pr-4">Type</th>
                   <th className="pb-1.5">Source</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
+              <tbody className="divide-y divide-[var(--border-subtle)]">
                 {[
                   ["id", "UUID PK", "original"],
                   ["user_id", "UUID FK", "original"],
@@ -582,9 +582,9 @@ export default function DiagnosticPage({ params }: Props) {
                   ["created_at", "TIMESTAMPTZ", "original"],
                 ].map(([col, type, source]) => (
                   <tr key={col}>
-                    <td className="py-1 pr-4 font-mono text-slate-300">{col}</td>
-                    <td className="py-1 pr-4 text-slate-500">{type}</td>
-                    <td className={`py-1 ${source.includes("★") ? "text-orange-400" : source.includes("001") ? "text-blue-400" : "text-slate-600"}`}>
+                    <td className="py-1 pr-4 font-mono text-[var(--text-body)]">{col}</td>
+                    <td className="py-1 pr-4 text-[var(--text-label)]">{type}</td>
+                    <td className={`py-1 ${source.includes("★") ? "text-[var(--brand-text)]" : source.includes("001") ? "text-blue-400" : "text-[var(--text-faint)]"}`}>
                       {source}
                     </td>
                   </tr>
@@ -611,7 +611,7 @@ export default function DiagnosticPage({ params }: Props) {
 
 function CheckRow({ result }: { result: CheckResult }) {
   const icons = {
-    pending: <div className="h-4 w-4 animate-pulse rounded-full bg-slate-700" />,
+    pending: <div className="h-4 w-4 animate-pulse rounded-full bg-[var(--border-strong)]" />,
     ok:      <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />,
     error:   <XCircle size={16} className="text-red-400 shrink-0" />,
     warning: <AlertCircle size={16} className="text-amber-400 shrink-0" />,
@@ -622,15 +622,15 @@ function CheckRow({ result }: { result: CheckResult }) {
       result.status === "ok"      ? "border-emerald-900/40 bg-emerald-950/10"
       : result.status === "error" ? "border-red-900/40 bg-red-950/10"
       : result.status === "warning" ? "border-amber-900/40 bg-amber-950/10"
-      : "border-slate-800 bg-slate-900/20"
+      : "border-[var(--border-default)] bg-[var(--surface-card)]/20"
     }`}>
       <div className="mt-0.5">{icons[result.status]}</div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-sm font-mono ${
-            result.status === "ok" ? "text-slate-200"
+            result.status === "ok" ? "text-[var(--text-body)]"
             : result.status === "error" ? "text-red-300"
-            : "text-slate-400"
+            : "text-[var(--text-muted)]"
           }`}>
             {result.label}
           </span>
@@ -644,7 +644,7 @@ function CheckRow({ result }: { result: CheckResult }) {
           <p className="mt-0.5 text-xs text-red-400">{result.detail}</p>
         )}
         {result.hint && result.status === "error" && (
-          <p className="mt-0.5 text-xs text-slate-500">{result.hint}</p>
+          <p className="mt-0.5 text-xs text-[var(--text-label)]">{result.hint}</p>
         )}
       </div>
     </div>
@@ -666,11 +666,11 @@ function MigrationBadge({ label, ok, file }: { label: string; ok: boolean; file:
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-3">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-600/30 text-[10px] font-bold text-orange-400">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-fill)]/30 text-[10px] font-bold text-[var(--brand-text)]">
         {n}
       </span>
       <div>
-        <span className="font-medium text-slate-200">{title} — </span>
+        <span className="font-medium text-[var(--text-body)]">{title} — </span>
         {children}
       </div>
     </div>

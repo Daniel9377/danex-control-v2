@@ -1,0 +1,246 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DANEX Control — Design Tokens
+   Zinc/Graphite neutrals + Indigo brand.
+   Imported once by globals.css.  No selectors — pure custom properties.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Palette (colors) ──────────────────────────────────────────────────── */
+:root {
+  /* Zinc/graphite neutrals */
+  --zinc-950: #0c0c0d;
+  --zinc-900: #18181b;
+  --zinc-800: #242426;
+  --zinc-700: #2c2c2e;
+  --zinc-600: #3f3f42;
+  --zinc-500: #52525b;
+  --zinc-400: #71717a;
+  --zinc-300: #a1a1aa;
+  --zinc-200: #d4d4d8;
+  --zinc-100: #e4e4e7;
+  --zinc-50:  #f4f4f5;
+
+  /* Brand — DANEX indigo */
+  --indigo-300: #a5b4fc;
+  --indigo-400: #818cf8;
+  --indigo-500: #6366f1;
+  --indigo-600: #4f46e5;
+  --indigo-700: #4338ca;
+  --indigo-950: #1e1b4b;
+
+  /* Semantic money & status — UNCHANGED */
+  --emerald-400: #34d399;
+  --emerald-500: #10b981;
+  --emerald-950: #022c22;
+
+  --red-400: #f87171;
+  --red-500: #ef4444;
+  --red-950: #450a0a;
+
+  --amber-400: #fbbf24;
+  --amber-950: #451a03;
+
+  --sky-400: #38bdf8;
+  --sky-300: #7dd3fc;
+  --blue-400: #60a5fa;
+  --blue-950: #172554;
+}
+
+/* ── Semantic aliases — DARK MODE (:root) ─────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg-app:           var(--zinc-950);
+  --surface-card:     var(--zinc-900);
+  --surface-raised:   var(--zinc-800);
+  --surface-sunken:   var(--zinc-950);
+  --surface-glass:    rgba(12, 12, 13, 0.75);
+  --surface-chip:     rgba(36, 36, 38, 0.8);
+  --surface-hover:    rgba(36, 36, 38, 0.5);
+
+  /* Borders */
+  --border-default:   var(--zinc-700);
+  --border-strong:    var(--zinc-600);
+  --border-subtle:    rgba(44, 44, 46, 0.6);
+  --border-focus:     var(--indigo-400);
+
+  /* Text */
+  --text-strong:      var(--zinc-100);
+  --text-body:        var(--zinc-200);
+  --text-muted:       var(--zinc-300);
+  --text-label:       var(--zinc-400);
+  --text-faint:       var(--zinc-500);
+  --text-on-brand:    #ffffff;
+
+  /* Brand — indigo */
+  --brand:            var(--indigo-500);
+  --brand-fill:       var(--indigo-600);
+  --brand-fill-hover: var(--indigo-700);
+  --brand-text:       var(--indigo-400);
+
+  /* Money / status semantics — UNCHANGED except money-neutral */
+  --money-positive:   var(--emerald-400);
+  --money-negative:   var(--red-400);
+  --status-warning:   var(--amber-400);
+  --status-attention: var(--amber-400);
+  --money-client:     var(--sky-400);
+  --money-neutral:    var(--zinc-100);
+
+  /* Status tints */
+  --tint-success-bg:  rgba(2, 44, 34, 0.6);
+  --tint-success-fg:  var(--emerald-400);
+  --tint-danger-bg:   rgba(69, 10, 10, 0.6);
+  --tint-danger-fg:   var(--red-400);
+  --tint-warning-bg:  rgba(69, 26, 3, 0.6);
+  --tint-warning-fg:  var(--amber-400);
+  --tint-info-bg:     rgba(30, 27, 75, 0.5);
+  --tint-info-fg:     var(--indigo-400);
+  --tint-orange-bg:   rgba(69, 26, 3, 0.6);
+  --tint-orange-fg:   var(--amber-400);
+  --tint-default-bg:  rgba(36, 36, 38, 0.6);
+  --tint-default-fg:  var(--zinc-200);
+}
+
+/* ── Typography ────────────────────────────────────────────────────────── */
+:root {
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+               Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "JetBrains Mono",
+               Menlo, monospace;
+
+  --text-2xs:  10px;
+  --text-xs:   11px;
+  --text-sm:   12px;
+  --text-base: 14px;
+  --text-md:   16px;
+  --text-lg:   18px;
+  --text-xl:   20px;
+  --text-2xl:  24px;
+  --text-3xl:  30px;
+  --text-4xl:  36px;
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+  --weight-extrabold:800;
+
+  --leading-tight:   1.15;
+  --leading-snug:    1.3;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.6;
+
+  --tracking-tight:  -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.05em;
+  --tracking-widest: 0.12em;
+}
+
+/* ── Spacing & radii ───────────────────────────────────────────────────── */
+:root {
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+
+  --sidebar-width: 224px;
+  --topbar-height: 56px;
+  --hit-target:    44px;
+  --content-max:   1100px;
+}
+
+/* ── Effects ───────────────────────────────────────────────────────────── */
+:root {
+  --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md:   0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.01), 0 1px 3px rgba(0,0,0,0.4);
+
+  --glow-positive: 0 0 40px -10px rgba(16, 185, 129, 0.10);
+  --glow-warning:  0 0 40px -10px rgba(99, 102, 241, 0.10);
+  --glow-danger:   0 0 40px -10px rgba(239, 68, 68, 0.15);
+
+  --blur-glass: 16px;
+
+  --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard:ease-out;
+  --dur-fast:     0.08s;
+  --dur-quick:    0.14s;
+  --dur-base:     0.22s;
+  --dur-slow:     0.28s;
+
+  /* Premium background — indigo glow (was orange) */
+  --bg-danex:
+    radial-gradient(ellipse 70% 50% at 5% 5%,  rgba(99,102,241,0.045) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(129,140,248,0.03) 0%, transparent 60%),
+    var(--zinc-950);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT THEME — applied via .light class on <html>
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.light {
+  /* ── Surfaces ────────────────────────────────────────────────────────── */
+  --bg-app:           #fafafa;
+  --surface-card:     #ffffff;
+  --surface-raised:   #ffffff;
+  --surface-sunken:   var(--zinc-50);
+  --surface-glass:    rgba(255, 255, 255, 0.85);
+  --surface-chip:     rgba(244, 244, 245, 0.8);
+  --surface-hover:    rgba(244, 244, 245, 0.6);
+
+  /* ── Borders ─────────────────────────────────────────────────────────── */
+  --border-default:   var(--zinc-100);
+  --border-strong:    var(--zinc-200);
+  --border-subtle:    rgba(228, 228, 231, 0.8);
+
+  /* ── Text ────────────────────────────────────────────────────────────── */
+  --text-strong:      var(--zinc-900);
+  --text-body:        var(--zinc-700);
+  --text-muted:       var(--zinc-500);
+  --text-label:       var(--zinc-400);
+  --text-faint:       var(--zinc-300);
+
+  /* ── Brand ───────────────────────────────────────────────────────────── */
+  --brand-text:       var(--indigo-600);
+
+  /* ── Money / status ──────────────────────────────────────────────────── */
+  --money-neutral:    var(--zinc-900);
+
+  /* ── Status tints ────────────────────────────────────────────────────── */
+  --tint-success-bg:  rgba(16, 185, 129, 0.2);
+  --tint-success-fg:  #047857;
+  --tint-danger-bg:   rgba(239, 68, 68, 0.2);
+  --tint-danger-fg:   #b91c1c;
+  --tint-warning-bg:  rgba(249, 115, 22, 0.2);
+  --tint-warning-fg:  #c2410c;
+  --tint-info-bg:     rgba(79, 70, 229, 0.15);
+  --tint-info-fg:     var(--indigo-700);
+  --tint-orange-bg:   rgba(249, 115, 22, 0.2);
+  --tint-orange-fg:   #c2410c;
+  --tint-default-bg:  rgba(228, 228, 231, 0.5);
+  --tint-default-fg:  var(--zinc-700);
+
+  /* ── Shadows ─────────────────────────────────────────────────────────── */
+  --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md:   0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+  /* ── Premium background ──────────────────────────────────────────────── */
+  --bg-danex:
+    radial-gradient(ellipse 70% 50% at 5% 5%,  rgba(99,102,241,0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(129,140,248,0.02) 0%, transparent 60%),
+    #fafafa;
+}

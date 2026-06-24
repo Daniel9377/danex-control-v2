@@ -200,6 +200,35 @@ export function computeClientMoneyOverview(
   };
 }
 
+/**
+ * Per-account breakdown of client money held — same logic as
+ * computeClientMoneyOverview, scoped to a single account_id.
+ *
+ * "Bloqué sur ce compte" = reçu des clients − coûts engagés − remboursements.
+ * profit_validated has no account_id (accounting-only), so it is excluded here.
+ * The sum of blockedAmount across all accounts equals
+ * totalReceivedUSD − totalCostsUSD − totalRefundsUSD from the global overview.
+ */
+export function computeAccountClientMoney(
+  transactions: Transaction[],
+  accountId: string,
+  ratesByCode: Record<string, number | string | null>
+): { received: number; costs: number; refunds: number; blocked: number } {
+  let received = 0;
+  let costs = 0;
+  let refunds = 0;
+
+  for (const tx of transactions) {
+    if (tx.account_id !== accountId) continue;
+    const usd = toUSD(Number(tx.amount), tx.currency, ratesByCode);
+    if (isClientMoneyIn(tx)) received += usd;
+    if (isClientCost(tx)) costs += usd;
+    if (isClientRefund(tx)) refunds += usd;
+  }
+
+  return { received, costs, refunds, blocked: received - costs - refunds };
+}
+
 // ── Debt / receivable overview ────────────────────────────────────────────────
 
 export interface DebtOverview {

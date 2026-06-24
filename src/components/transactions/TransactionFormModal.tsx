@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { Account, Client, Order, Debt, TransactionSubType } from "@/lib/supabase/types";
+import { formatMoney } from "@/lib/currency";
 import {
   SUB_TYPE_META,
   SUB_TYPE_GROUPS,
@@ -87,23 +88,23 @@ const ICONS: Record<TransactionSubType, React.ReactNode> = {
 const GROUP_COLORS: Record<string, string> = {
   personnel: "text-blue-400",
   business:  "text-violet-400",
-  client:    "text-orange-400",
-  dette:     "text-amber-400",
-  autre:     "text-slate-400",
+  client:    "text-[var(--brand-text)]",
+  dette:     "text-[var(--tint-warning-fg)]",
+  autre:     "text-[var(--text-muted)]",
 };
 
 const ITEM_COLORS: Record<string, string> = {
   personnel: "border-blue-800/40 bg-blue-950/20 hover:border-blue-600/60 hover:bg-blue-950/40 text-blue-300",
   business:  "border-violet-800/40 bg-violet-950/20 hover:border-violet-600/60 hover:bg-violet-950/40 text-violet-300",
-  client:    "border-orange-800/40 bg-orange-950/20 hover:border-orange-600/60 hover:bg-orange-950/40 text-orange-300",
-  dette:     "border-amber-800/40 bg-amber-950/20 hover:border-amber-600/60 hover:bg-amber-950/40 text-amber-300",
-  autre:     "border-slate-700/60 bg-slate-900/40 hover:border-slate-600 hover:bg-slate-800/60 text-slate-300",
+  client:    "border-orange-800/40 bg-[var(--indigo-950)]/20 hover:border-[var(--brand-fill)]/60 hover:bg-[var(--indigo-950)]/40 text-[var(--brand-text)]",
+  dette:     "border-amber-800/40 bg-amber-950/20 hover:border-amber-600/60 hover:bg-amber-950/40 text-[var(--tint-warning-fg)]",
+  autre:     "border-[var(--border-strong)] bg-[var(--surface-glass)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-chip)] text-[var(--text-body)]",
 };
 
 // ── Field style helper ────────────────────────────────────────────────────────
 
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -147,13 +148,16 @@ export function TransactionFormModal({
   const [allocations, setAllocations]   = useState<AllocationRow[]>([]);
   const [allocMethod, setAllocMethod]   = useState<"equal" | "manual">("equal");
 
+  // Unexpected expense flag (only for client_shipping_fee)
+  const [isUnexpected, setIsUnexpected] = useState(false);
+
   // Reset when subType changes
   useEffect(() => {
     if (!subType) return;
     setAmount(""); setCategory(""); setNote("");
     setPersonName(""); setPersonPhone(""); setDueDate("");
     setDebtId(""); setReceivableId(""); setTargetBalance("");
-    setAllocations([]);
+    setAllocations([]); setIsUnexpected(false);
     clearError();
     const acct = accounts.find((a) => a.id === accountId);
     if (acct) setCurrency(acct.currency);
@@ -278,6 +282,7 @@ export function TransactionFormModal({
       debtId:       meta.needsDebtSelect       ? debtId       : undefined,
       receivableId: meta.needsReceivableSelect ? receivableId : undefined,
       targetBalance: subType === "balance_correction" ? Number(targetBalance) : undefined,
+      isUnexpected: subType === "client_shipping_fee" ? isUnexpected : undefined,
       allocations:  meta.needsAllocations
         ? allocations.map((a) => ({
             clientId: a.clientId || undefined,
@@ -304,20 +309,20 @@ export function TransactionFormModal({
         onClick={onClose}
       >
         <div
-          className="flex max-h-[90vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+          className="flex max-h-[90vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Drag handle */}
           <div className="flex justify-center pt-2.5 md:hidden">
-            <div className="h-1 w-10 rounded-full bg-slate-700" />
+            <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
           </div>
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 pb-2 pt-4">
-            <h2 className="text-base font-bold text-slate-50">Nouvelle opération</h2>
+            <h2 className="text-base font-bold text-[var(--text-strong)]">Nouvelle opération</h2>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+              className="rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
             >
               <X size={16} />
             </button>
@@ -325,18 +330,18 @@ export function TransactionFormModal({
 
           {/* Search */}
           <div className="px-5 pb-3">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5">
-              <Search size={13} className="shrink-0 text-slate-600" />
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2.5">
+              <Search size={13} className="shrink-0 text-[var(--text-faint)]" />
               <input
                 value={typeSearch}
                 onChange={(e) => setTypeSearch(e.target.value)}
                 placeholder="Rechercher un type d'opération…"
-                className="flex-1 bg-transparent text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none"
+                className="flex-1 bg-transparent text-sm text-[var(--text-body)] placeholder:text-[var(--text-faint)] focus:outline-none"
               />
               {typeSearch && (
                 <button
                   onClick={() => setTypeSearch("")}
-                  className="shrink-0 text-slate-600 transition-colors hover:text-slate-400"
+                  className="shrink-0 text-[var(--text-faint)] transition-colors hover:text-[var(--text-muted)]"
                 >
                   <X size={12} />
                 </button>
@@ -349,7 +354,7 @@ export function TransactionFormModal({
             {searchResults ? (
               /* Search results */
               searchResults.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-600">Aucun résultat.</p>
+                <p className="py-6 text-center text-sm text-[var(--text-faint)]">Aucun résultat.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {searchResults.map((st) => {
@@ -372,7 +377,7 @@ export function TransactionFormModal({
               <div className="space-y-5">
                 {/* Fréquents */}
                 <div>
-                  <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                  <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                     Fréquents
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -436,12 +441,12 @@ export function TransactionFormModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+        className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-2.5 md:hidden">
-          <div className="h-1 w-10 rounded-full bg-slate-700" />
+          <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
         </div>
 
         {/* Header */}
@@ -449,24 +454,24 @@ export function TransactionFormModal({
           <button
             type="button"
             onClick={handleBack}
-            className="shrink-0 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+            className="shrink-0 rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
           >
             <ArrowLeft size={16} />
           </button>
-          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-50">
+          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-strong)]">
             {meta!.label}
           </h2>
           <button
             onClick={onClose}
-            className="shrink-0 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+            className="shrink-0 rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Hint */}
-        <div className="mx-5 mb-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-2.5">
-          <p className="text-xs text-slate-400">{meta!.hint}</p>
+        <div className="mx-5 mb-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] px-3.5 py-2.5">
+          <p className="text-xs text-[var(--text-muted)]">{meta!.hint}</p>
         </div>
 
         {/* Scrollable form */}
@@ -477,7 +482,7 @@ export function TransactionFormModal({
               {/* Account */}
               {meta!.needsAccount && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Compte</label>
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Compte</label>
                   <select
                     value={accountId}
                     onChange={(e) => {
@@ -491,7 +496,7 @@ export function TransactionFormModal({
                     <option value="">—</option>
                     {accounts.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.name} ({a.currency} · {Number(a.balance).toFixed(2)})
+                        {a.name} ({formatMoney(Number(a.balance), a.currency)})
                       </option>
                     ))}
                   </select>
@@ -501,7 +506,7 @@ export function TransactionFormModal({
               {/* Balance correction */}
               {subType === "balance_correction" ? (
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                     Solde réel observé
                   </label>
                   <input
@@ -514,17 +519,17 @@ export function TransactionFormModal({
                   />
                   {correctionDiff !== null && Math.abs(correctionDiff) >= 0.001 && (
                     <p className={`mt-1.5 text-xs ${correctionDiff > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                      Correction : {correctionDiff > 0 ? "+" : ""}{correctionDiff.toFixed(2)} {selectedAccount?.currency}
+                      Correction : {correctionDiff > 0 ? "+" : ""}{selectedAccount ? formatMoney(correctionDiff, selectedAccount.currency) : `${correctionDiff.toFixed(2)}`}
                     </p>
                   )}
                   {correctionDiff !== null && Math.abs(correctionDiff) < 0.001 && targetBalance !== "" && (
-                    <p className="mt-1.5 text-xs text-slate-500">Aucune correction nécessaire.</p>
+                    <p className="mt-1.5 text-xs text-[var(--text-label)]">Aucune correction nécessaire.</p>
                   )}
                 </div>
               ) : (
                 /* Amount + currency */
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Montant</label>
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Montant</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -541,7 +546,7 @@ export function TransactionFormModal({
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value.toUpperCase())}
                       maxLength={4}
-                      className="w-20 rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-center font-mono text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none"
+                      className="w-20 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2.5 text-center font-mono text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -550,7 +555,7 @@ export function TransactionFormModal({
               {/* Client */}
               {meta!.needsClient && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Client</label>
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Client</label>
                   <select
                     value={clientId}
                     onChange={(e) => { setClientId(e.target.value); setOrderId(""); }}
@@ -568,10 +573,10 @@ export function TransactionFormModal({
               {/* Order */}
               {meta!.needsOrder && clientId && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                     Commande{" "}
                     {(subType === "client_money_received" || subType === "client_refund")
-                      ? <span className="text-slate-600">(optionnel)</span>
+                      ? <span className="text-[var(--text-faint)]">(optionnel)</span>
                       : null}
                   </label>
                   <select
@@ -596,7 +601,7 @@ export function TransactionFormModal({
               {meta!.needsPerson && (
                 <>
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {subType === "debt_received" ? "Créancier (qui te prête)" : "Débiteur (à qui tu prêtes)"}
                     </label>
                     <input
@@ -608,8 +613,8 @@ export function TransactionFormModal({
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      Téléphone <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      Téléphone <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       value={personPhone}
@@ -619,8 +624,8 @@ export function TransactionFormModal({
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      Date limite <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      Date limite <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       type="date"
@@ -635,9 +640,9 @@ export function TransactionFormModal({
               {/* Debt select */}
               {meta!.needsDebtSelect && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Dette à rembourser</label>
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Dette à rembourser</label>
                   {openDebts.length === 0 ? (
-                    <p className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-3.5 py-2.5 text-xs text-amber-400">
+                    <p className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-3.5 py-2.5 text-xs text-[var(--tint-warning-fg)]">
                       Aucune dette active. Crée d'abord une «&nbsp;Dette prise&nbsp;».
                     </p>
                   ) : (
@@ -650,7 +655,7 @@ export function TransactionFormModal({
                       <option value="">Sélectionner</option>
                       {openDebts.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.person_name} — {Number(d.amount - d.paid_amount).toFixed(2)} {d.currency} restant
+                          {d.person_name} — {formatMoney(Number(d.amount) - Number(d.paid_amount), d.currency)} restant
                         </option>
                       ))}
                     </select>
@@ -661,9 +666,9 @@ export function TransactionFormModal({
               {/* Receivable select */}
               {meta!.needsReceivableSelect && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Créance à récupérer</label>
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Créance à récupérer</label>
                   {openReceivables.length === 0 ? (
-                    <p className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-3.5 py-2.5 text-xs text-amber-400">
+                    <p className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-3.5 py-2.5 text-xs text-[var(--tint-warning-fg)]">
                       Aucune créance active. Crée d'abord une «&nbsp;Créance créée&nbsp;».
                     </p>
                   ) : (
@@ -676,7 +681,7 @@ export function TransactionFormModal({
                       <option value="">Sélectionner</option>
                       {openReceivables.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.person_name} — {Number(d.amount - d.paid_amount).toFixed(2)} {d.currency} à recevoir
+                          {d.person_name} — {formatMoney(Number(d.amount) - Number(d.paid_amount), d.currency)} à recevoir
                         </option>
                       ))}
                     </select>
@@ -688,7 +693,7 @@ export function TransactionFormModal({
               {meta!.needsAllocations && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-slate-400">Répartition par client</label>
+                    <label className="text-xs font-medium text-[var(--text-muted)]">Répartition par client</label>
                     <div className="flex gap-1">
                       {(["equal", "manual"] as const).map((m) => (
                         <button
@@ -697,8 +702,8 @@ export function TransactionFormModal({
                           onClick={() => setAllocMethod(m)}
                           className={`rounded-lg px-2.5 py-1 text-xs transition-colors ${
                             allocMethod === m
-                              ? "bg-orange-600 text-white"
-                              : "border border-slate-700 text-slate-400 hover:bg-slate-800"
+                              ? "bg-[var(--brand-fill)] text-white"
+                              : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:bg-[var(--surface-chip)]"
                           }`}
                         >
                           {m === "equal" ? "Égal" : "Manuel"}
@@ -714,7 +719,7 @@ export function TransactionFormModal({
                         <select
                           value={row.clientId}
                           onChange={(e) => updateAllocation(row.id, "clientId", e.target.value)}
-                          className="flex-1 rounded-xl border border-slate-700/80 bg-slate-900 px-2.5 py-2 text-xs text-slate-100 focus:border-orange-500/70 focus:outline-none"
+                          className="flex-1 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                         >
                           <option value="">Client</option>
                           {clients.map((c) => (
@@ -725,7 +730,7 @@ export function TransactionFormModal({
                           <select
                             value={row.orderId}
                             onChange={(e) => updateAllocation(row.id, "orderId", e.target.value)}
-                            className="flex-1 rounded-xl border border-slate-700/80 bg-slate-900 px-2.5 py-2 text-xs text-slate-100 focus:border-orange-500/70 focus:outline-none"
+                            className="flex-1 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                           >
                             <option value="">Commande</option>
                             {rowOrders.map((o) => (
@@ -741,12 +746,12 @@ export function TransactionFormModal({
                           onChange={(e) => updateAllocation(row.id, "amount", e.target.value)}
                           disabled={allocMethod === "equal"}
                           placeholder="Part"
-                          className="w-20 rounded-xl border border-slate-700/80 bg-slate-900 px-2.5 py-2 text-right text-xs text-slate-100 tabular-nums focus:border-orange-500/70 focus:outline-none disabled:opacity-40"
+                          className="w-20 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-right text-xs text-[var(--text-strong)] tabular-nums focus:border-[var(--brand)]/70 focus:outline-none disabled:opacity-40"
                         />
                         <button
                           type="button"
                           onClick={() => removeAllocationRow(row.id)}
-                          className="shrink-0 rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                          className="shrink-0 rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-red-400"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -757,7 +762,7 @@ export function TransactionFormModal({
                   <button
                     type="button"
                     onClick={addAllocationRow}
-                    className="flex items-center gap-1.5 text-xs text-orange-400 transition-colors hover:text-orange-300"
+                    className="flex items-center gap-1.5 text-xs text-[var(--brand-text)] transition-colors hover:text-[var(--brand-text)]"
                   >
                     <Plus size={12} />
                     Ajouter un client
@@ -769,7 +774,7 @@ export function TransactionFormModal({
                         ? "border border-emerald-900/40 bg-emerald-950/20 text-emerald-400"
                         : "border border-red-900/40 bg-red-950/20 text-red-400"
                     }`}>
-                      Total réparti : {allocTotal.toFixed(2)} / {amountNum.toFixed(2)} {currency}
+                      Total réparti : {formatMoney(allocTotal, currency)} / {formatMoney(amountNum, currency)}
                       {Math.abs(allocTotal - amountNum) >= 0.01 && " ← doit égaler le montant total"}
                     </div>
                   )}
@@ -779,7 +784,7 @@ export function TransactionFormModal({
               {/* Category */}
               {categories.length > 0 && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">Catégorie</label>
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Catégorie</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
@@ -795,7 +800,7 @@ export function TransactionFormModal({
 
               {/* Date */}
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">Date</label>
+                <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Date</label>
                 <input
                   type="date"
                   value={date}
@@ -807,8 +812,8 @@ export function TransactionFormModal({
 
               {/* Note */}
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                  Note <span className="text-slate-600">(optionnel)</span>
+                <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                  Note <span className="text-[var(--text-faint)]">(optionnel)</span>
                 </label>
                 <input
                   value={note}
@@ -817,6 +822,20 @@ export function TransactionFormModal({
                   className={fieldCls}
                 />
               </div>
+
+              {/* Unexpected expense flag (shipping fees only) */}
+              {subType === "client_shipping_fee" && (
+                <label className="flex items-center gap-2 rounded-xl border border-amber-800/40 bg-amber-950/20 px-3.5 py-2.5 cursor-pointer transition-colors hover:border-amber-700/50">
+                  <input
+                    type="checkbox"
+                    checked={isUnexpected}
+                    onChange={(e) => setIsUnexpected(e.target.checked)}
+                    className="h-4 w-4 rounded border-[var(--border-strong)] bg-[var(--surface-card)] accent-amber-500"
+                  />
+                  <span className="text-xs text-[var(--tint-warning-fg)]">Dépense imprévue</span>
+                  <span className="text-[10px] text-[var(--text-label)]">(surcoût, frais non anticipé)</span>
+                </label>
+              )}
 
               {/* Error */}
               {error && (
@@ -829,14 +848,14 @@ export function TransactionFormModal({
 
           {/* Footer */}
           <div
-            className="shrink-0 border-t border-slate-800 px-5 pt-3"
+            className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3"
             style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
           >
             <div className="flex gap-2.5">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
               >
                 Annuler
               </button>
@@ -852,7 +871,7 @@ export function TransactionFormModal({
                   (meta?.needsDebtSelect && openDebts.length === 0) ||
                   (meta?.needsReceivableSelect && openReceivables.length === 0)
                 }
-                className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
               >
                 {submitting ? "Enregistrement…" : "Enregistrer"}
               </button>

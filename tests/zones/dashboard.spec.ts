@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
 test("Dashboard - Solde physique egale la somme des comptes en USD", async ({ page }) => {
   const rates = await currencyRates();
   const expected = sumAccountsUsd(state.accounts, rates);
-  const actual = await readDashboardCardValue(page, /Solde physique/i);
+  const actual = await readDashboardCardValue(page, /Physique/i);
 
   console.log(`Dashboard S1 - Solde physique attendu=${expected} USD, actuel=${actual} USD`);
   expect(actual, `Solde physique attendu ${expected} USD, actuel ${actual} USD.`).toBeCloseTo(expected, 2);
@@ -51,7 +51,7 @@ test("Dashboard - Argent client detenu egale recu moins couts moins remboursemen
   });
 
   const expected = 118 - 80;
-  const actual = await readDashboardCardValue(page, /Argent client d.tenu/i);
+  const actual = await readDashboardCardValue(page, /Client d.tenu/i);
   console.log(`Dashboard S2 - Argent client detenu attendu=${expected} USD, actuel=${actual} USD`);
   expect(actual, `Argent client detenu attendu ${expected} USD, actuel ${actual} USD.`).toBeCloseTo(expected, 2);
 });
@@ -95,21 +95,24 @@ test("Dashboard - transactions vides affichent des zeros propres sans NaN", asyn
   await wipeTransactionsOnly();
   await page.goto("/fr/dashboard");
 
-  const bodyText = normalizeText((await page.locator("body").textContent()) ?? "");
+  const bodyText = normalizeText((await page.locator("body").innerText()) ?? "");
   console.log(`Dashboard S5 - etat vide: ${bodyText.slice(0, 500)}`);
   expect(bodyText, "Le dashboard ne doit jamais afficher NaN.").not.toMatch(/NaN/i);
   expect(bodyText, "Le dashboard ne doit jamais afficher undefined.").not.toMatch(/undefined/i);
 
-  expect(await readDashboardCardValue(page, /Argent client d.tenu/i), "Argent client detenu attendu 0.").toBeCloseTo(0, 2);
-  expect(await readDashboardCardValue(page, /Revenus r.els/i), "Revenus reels attendus 0.").toBeCloseTo(0, 2);
-  expect(await readDashboardCardValue(page, /D.penses r.elles/i), "Depenses reelles attendues 0.").toBeCloseTo(0, 2);
-  expect(await readDashboardCardValue(page, /B.n.fice valid/i), "Benefice valide attendu 0.").toBeCloseTo(0, 2);
+  expect(await readDashboardCardValue(page, /Client d.tenu/i), "Argent client detenu attendu 0.").toBeCloseTo(0, 2);
+  expect(await readDashboardCardValue(page, /Revenus/i), "Revenus reels attendus 0.").toBeCloseTo(0, 2);
+  expect(await readDashboardCardValue(page, /D.penses/i), "Depenses reelles attendues 0.").toBeCloseTo(0, 2);
+  expect(await readDashboardCardValue(page, /B.n.fice/i), "Benefice valide attendu 0.").toBeCloseTo(0, 2);
 });
 
 async function createOrder(page: Page, clientName: string, productName: string) {
   await page.goto("/fr/orders");
   await expect(page.getByRole("button", { name: /Nouvelle commande/i })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
+  await page.waitForTimeout(400);
+  // Mode choice screen (Simple/Detailed redesign) — click Simple
+  await page.getByRole("button", { name: /^Simple/ }).click();
   await selectFieldOption(page, /^Client$/, clientName);
   await fillFieldInput(page, /^Produit$/, productName);
   await selectFieldOption(page, /^Devise$/, "USD");
@@ -128,7 +131,7 @@ async function readDashboardCardValue(page: Page, label: RegExp) {
 
 async function readHeroPersonalEstimate(page: Page) {
   await page.goto("/fr/dashboard");
-  const hero = page.locator("main > div > div").filter({ hasText: /Situation/i }).first();
+  const hero = page.locator("button").filter({ hasText: /Solde personnel/i }).first();
   await expect(hero, "Carte hero Situation introuvable.").toBeVisible({ timeout: 15_000 });
   return firstMoneyNumber((await hero.textContent()) ?? "");
 }

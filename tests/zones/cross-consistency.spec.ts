@@ -51,7 +51,7 @@ test("Coherence - Divine affiche le meme 118 USD partout", async ({ page }) => {
 
   const clientText = await divineClientText(page);
   const orderText = await orderDetailText(page, "Divine Consistency Order");
-  const dashboardClientHeld = await readDashboardCardValue(page, /Argent client d.tenu/i);
+  const dashboardClientHeld = await readDashboardCardValue(page, /Client d.tenu/i);
   const mercuryBalance = await readAccountBalance(page, "Mercury Test");
 
   console.log(`Cross S1 - DB attendu=118 USD, actuel=${txRows[0].amount} ${txRows[0].currency}`);
@@ -63,9 +63,9 @@ test("Coherence - Divine affiche le meme 118 USD partout", async ({ page }) => {
   expect(Number(txRows[0].amount), `DB attendue 118, actuelle ${txRows[0]?.amount}.`).toBe(118);
   expect(txRows[0].currency, `DB attendue USD, actuelle ${txRows[0]?.currency}.`).toBe("USD");
   expect(clientText, `Clients: Divine doit afficher 118 USD. Texte: ${clientText}`).toMatch(/118/);
-  expect(clientText, `Clients: Divine doit afficher USD ou $US. Texte: ${clientText}`).toMatch(/USD|\$US|US\$/i);
+  expect(clientText, `Clients: Divine doit afficher USD, $US ou $. Texte: ${clientText}`).toMatch(/USD|US\$|\$\d/i);
   expect(orderText, `Orders: la commande liee doit afficher 118 USD. Texte: ${orderText}`).toMatch(/118/);
-  expect(orderText, `Orders: la commande liee doit afficher USD ou $US. Texte: ${orderText}`).toMatch(/USD|\$US|US\$/i);
+  expect(orderText, `Orders: la commande liee doit afficher USD, $US ou $. Texte: ${orderText}`).toMatch(/USD|US\$|\$\d/i);
   expect(dashboardClientHeld, `Dashboard attendu 118 USD, actuel ${dashboardClientHeld} USD.`).toBeCloseTo(118, 2);
   expect(mercuryBalance, `Mercury attendu ${mercury.balance + 118} USD, actuel ${mercuryBalance} USD.`).toBe(
     mercury.balance + 118
@@ -122,6 +122,8 @@ async function createOrder(page: Page, clientName: string, productName: string, 
   await page.goto("/fr/orders");
   await expect(page.getByRole("button", { name: /Nouvelle commande/i })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
+  await page.waitForTimeout(400);
+  await page.getByRole("button", { name: /^Simple/ }).click();
   // Target fields INSIDE the modal form to avoid matching page-level filter labels
   const form = page.locator("form").first();
   await selectFieldInForm(form, page, /^Client$/, clientName);
@@ -154,9 +156,10 @@ async function fillFieldInForm(form: ReturnType<Page['locator']>, page: Page, la
 
 async function divineClientText(page: Page) {
   await page.goto("/fr/clients");
-  const card = page.locator("article").filter({ hasText: "Divine Test" }).first();
+  // Clients page uses <li> rows after unified-list redesign
+  const card = page.locator("li, article").filter({ hasText: "Divine Test" }).first();
   await expect(card).toBeVisible();
-  const expand = card.getByRole("button", { name: /financier/i });
+  const expand = card.getByRole("button", { name: /détail/i });
   await expect(expand).toBeVisible();
   await expand.click();
   return normalizeText((await card.textContent()) ?? "");

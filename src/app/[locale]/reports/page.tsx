@@ -76,18 +76,18 @@ function ReportRow({ label, value, indent, bold, color = "default", note, separa
   const colorClass =
     color === "green" ? "text-emerald-400"
     : color === "red" ? "text-red-400"
-    : color === "orange" ? "text-orange-400"
-    : "text-slate-100";
+    : color === "orange" ? "text-[var(--brand-text)]"
+    : "text-[var(--text-strong)]";
 
   return (
     <>
-      {separator && <div className="my-2 border-t border-slate-800" />}
+      {separator && <div className="my-2 border-t border-[var(--border-default)]" />}
       <div className={`flex items-center justify-between gap-4 py-1.5 ${indent ? "pl-4" : ""}`}>
         <div className="min-w-0">
-          <p className={`text-sm ${bold ? "font-semibold text-slate-100" : "text-slate-400"}`}>
+          <p className={`text-sm ${bold ? "font-semibold text-[var(--text-strong)]" : "text-[var(--text-muted)]"}`}>
             {label}
           </p>
-          {note && <p className="text-[10px] text-slate-600">{note}</p>}
+          {note && <p className="text-[10px] text-[var(--text-faint)]">{note}</p>}
         </div>
         <p className={`shrink-0 font-mono text-sm tabular-nums ${bold ? "font-bold" : ""} ${colorClass}`}>
           {value >= 0 ? "+" : ""}
@@ -101,7 +101,7 @@ function ReportRow({ label, value, indent, bold, color = "default", note, separa
 
 function AmountCell({ value, currency = "USD" }: { value: number; currency?: string }) {
   const color =
-    value > 0 ? "text-emerald-400" : value < 0 ? "text-red-400" : "text-slate-500";
+    value > 0 ? "text-emerald-400" : value < 0 ? "text-red-400" : "text-[var(--text-label)]";
   return (
     <span className={`font-mono text-xs tabular-nums ${color}`}>
       {formatMoney(Math.abs(value), currency)}
@@ -262,11 +262,11 @@ export default function ReportsPage({ params }: Props) {
     return (
       <PageWrapper locale={locale}>
         <div className="space-y-4">
-          <div className="h-7 w-32 animate-pulse rounded-lg bg-slate-800" />
-          <div className="h-10 w-full animate-pulse rounded-lg bg-slate-800" />
+          <div className="h-7 w-32 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
+          <div className="h-10 w-full animate-pulse rounded-lg bg-[var(--surface-chip)]" />
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 animate-pulse rounded-lg bg-slate-800" />
+              <div key={i} className="h-12 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
             ))}
           </div>
         </div>
@@ -279,7 +279,7 @@ export default function ReportsPage({ params }: Props) {
   return (
     <PageWrapper locale={locale}>
       <div className="space-y-4">
-        <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
+        <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
 
         {/* ── Period filter ── */}
         <div className="space-y-2.5">
@@ -296,8 +296,8 @@ export default function ReportsPage({ params }: Props) {
                 onClick={() => setPeriod(opt.value)}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   period === opt.value
-                    ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
-                    : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                    ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
+                    : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                 }`}
               >
                 {opt.label}
@@ -308,30 +308,30 @@ export default function ReportsPage({ params }: Props) {
                 type="checkbox"
                 checked={includeLegacy}
                 onChange={(e) => setIncludeLegacy(e.target.checked)}
-                className="h-3.5 w-3.5 accent-orange-500"
+                className="h-3.5 w-3.5 accent-[var(--brand)]"
               />
-              <span className="text-xs text-slate-600">{t("include_legacy")}</span>
+              <span className="text-xs text-[var(--text-faint)]">{t("include_legacy")}</span>
             </label>
           </div>
 
           {period === "custom" && (
             <div className="flex flex-wrap items-center gap-3">
               <div>
-                <label className="mb-1 block text-[11px] text-slate-500">{t("from_date")}</label>
+                <label className="mb-1 block text-[11px] text-[var(--text-label)]">{t("from_date")}</label>
                 <input
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none"
+                  className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] text-slate-500">{t("to_date")}</label>
+                <label className="mb-1 block text-[11px] text-[var(--text-label)]">{t("to_date")}</label>
                 <input
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none"
+                  className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                 />
               </div>
             </div>
@@ -366,21 +366,21 @@ export default function ReportsPage({ params }: Props) {
         )}
 
         {/* ── Tab bar ── */}
-        <div className="flex gap-0.5 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 p-1">
+        <div className="flex gap-0.5 overflow-x-auto rounded-xl border border-[var(--border-default)] bg-[var(--bg-app)] p-1">
           {TABS.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
               className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 activeTab === key
-                  ? "bg-slate-800 text-slate-100 shadow-sm"
-                  : "text-slate-500 hover:text-slate-300"
+                  ? "bg-[var(--surface-chip)] text-[var(--text-strong)] shadow-sm"
+                  : "text-[var(--text-label)] hover:text-[var(--text-body)]"
               }`}
             >
               {label}
               {key === "legacy" && legacySummary.total > 0 && (
                 <span className={`ml-1.5 rounded-full px-1.5 text-[10px] ${
-                  activeTab === key ? "bg-amber-800/60 text-amber-300" : "bg-slate-800 text-amber-500"
+                  activeTab === key ? "bg-amber-800/60 text-amber-300" : "bg-[var(--surface-chip)] text-amber-500"
                 }`}>
                   {legacySummary.total}
                 </span>
@@ -400,7 +400,7 @@ export default function ReportsPage({ params }: Props) {
             <Card>
               <div className="mb-2 flex items-center gap-2">
                 <TrendingUp size={14} className="text-emerald-500" />
-                <p className="text-sm font-semibold text-slate-200">{t("income_section")}</p>
+                <p className="text-sm font-semibold text-[var(--text-body)]">{t("income_section")}</p>
               </div>
               <ReportRow
                 label={t("personal_income")}
@@ -429,7 +429,7 @@ export default function ReportsPage({ params }: Props) {
                 color="green"
               />
               {realResult.legacyIncludedUSD > 0 && (
-                <p className="mt-1 text-[10px] text-slate-600">
+                <p className="mt-1 text-[10px] text-[var(--text-faint)]">
                   ↳ {t("legacy_included_note")} : {formatMoney(realResult.legacyIncludedUSD, "USD")}
                 </p>
               )}
@@ -439,7 +439,7 @@ export default function ReportsPage({ params }: Props) {
             <Card>
               <div className="mb-2 flex items-center gap-2">
                 <TrendingDown size={14} className="text-red-500" />
-                <p className="text-sm font-semibold text-slate-200">{t("expense_section")}</p>
+                <p className="text-sm font-semibold text-[var(--text-body)]">{t("expense_section")}</p>
               </div>
               <ReportRow
                 label={t("personal_expense")}
@@ -470,7 +470,7 @@ export default function ReportsPage({ params }: Props) {
                 bold
                 color={realResult.netResultUSD >= 0 ? "green" : "red"}
               />
-              <p className="mt-2 text-[10px] text-slate-600">{t("real_result_note")}</p>
+              <p className="mt-2 text-[10px] text-[var(--text-faint)]">{t("real_result_note")}</p>
             </Card>
           </div>
         )}
@@ -481,7 +481,7 @@ export default function ReportsPage({ params }: Props) {
         {activeTab === "treasury" && (
           <div className="space-y-3">
             <SectionHeader label={t("tab_treasury")} />
-            <p className="text-xs text-slate-500">{t("treasury_note")}</p>
+            <p className="text-xs text-[var(--text-label)]">{t("treasury_note")}</p>
             <Card>
               <ReportRow
                 label={t("physical_inflow")}
@@ -514,15 +514,15 @@ export default function ReportsPage({ params }: Props) {
             <Card className="border-sky-800/20 bg-sky-950/10">
               <p className="text-xs text-sky-400">{t("treasury_vs_result")}</p>
               <div className="mt-2 space-y-1">
-                <div className="flex justify-between text-xs text-slate-400">
+                <div className="flex justify-between text-xs text-[var(--text-muted)]">
                   <span>{t("treasury_includes")}</span>
                   <span>{t("result_excludes")}</span>
                 </div>
                 <div className="flex gap-2 text-[11px]">
-                  <div className="flex-1 rounded bg-slate-800 p-2 text-slate-400">
+                  <div className="flex-1 rounded bg-[var(--surface-chip)] p-2 text-[var(--text-muted)]">
                     {t("treasury_includes_list")}
                   </div>
-                  <div className="flex-1 rounded bg-slate-800 p-2 text-slate-400">
+                  <div className="flex-1 rounded bg-[var(--surface-chip)] p-2 text-[var(--text-muted)]">
                     {t("result_excludes_list")}
                   </div>
                 </div>
@@ -601,12 +601,12 @@ export default function ReportsPage({ params }: Props) {
           <div className="space-y-3">
             <SectionHeader label={t("tab_per_client")} />
             <div className="relative">
-              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
               <input
                 value={clientSearch}
                 onChange={(e) => setClientSearch(e.target.value)}
                 placeholder={t("client_search")}
-                className="w-full rounded-xl border border-slate-700/80 bg-slate-900 py-2.5 pl-8 pr-3 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none"
+                className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-3 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none"
               />
             </div>
             {clientReports.length === 0 ? (
@@ -617,8 +617,8 @@ export default function ReportsPage({ params }: Props) {
                   <Card key={r.clientId}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-slate-100">{r.clientName}</p>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                        <p className="text-sm font-semibold text-[var(--text-strong)]">{r.clientName}</p>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[var(--text-label)]">
                           {r.receivedUSD > 0 && (
                             <span>Reçu : <AmountCell value={r.receivedUSD} /></span>
                           )}
@@ -632,13 +632,13 @@ export default function ReportsPage({ params }: Props) {
                             <span>Remboursé : <AmountCell value={r.refundsUSD} /></span>
                           )}
                           {r.profitValidatedUSD > 0 && (
-                            <span className="text-orange-400/80">Bénéfice : <AmountCell value={r.profitValidatedUSD} /></span>
+                            <span className="text-[var(--brand-text)]">Bénéfice : <AmountCell value={r.profitValidatedUSD} /></span>
                           )}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="text-[10px] text-slate-500">{t("col_balance")}</p>
-                        <p className={`font-mono text-sm font-bold tabular-nums ${r.balanceUSD < 0 ? "text-red-400" : "text-slate-100"}`}>
+                        <p className="text-[10px] text-[var(--text-label)]">{t("col_balance")}</p>
+                        <p className={`font-mono text-sm font-bold tabular-nums ${r.balanceUSD < 0 ? "text-red-400" : "text-[var(--text-strong)]"}`}>
                           {formatMoney(Math.abs(r.balanceUSD), "USD")}
                         </p>
                       </div>
@@ -657,12 +657,12 @@ export default function ReportsPage({ params }: Props) {
           <div className="space-y-3">
             <SectionHeader label={t("tab_per_order")} />
             <div className="relative">
-              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
               <input
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
                 placeholder={t("order_search")}
-                className="w-full rounded-xl border border-slate-700/80 bg-slate-900 py-2.5 pl-8 pr-3 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none"
+                className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-3 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none"
               />
             </div>
             {orderReports.length === 0 ? (
@@ -674,11 +674,11 @@ export default function ReportsPage({ params }: Props) {
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-100">{r.productName}</p>
+                          <p className="text-sm font-semibold text-[var(--text-strong)]">{r.productName}</p>
                           <Badge variant="default" className="text-[10px]">{r.status}</Badge>
                         </div>
-                        <p className="mt-0.5 text-xs text-slate-500">{r.clientName}</p>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                        <p className="mt-0.5 text-xs text-[var(--text-label)]">{r.clientName}</p>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[var(--text-label)]">
                           {r.receivedUSD > 0 && (
                             <span>Reçu : <AmountCell value={r.receivedUSD} /></span>
                           )}
@@ -692,13 +692,13 @@ export default function ReportsPage({ params }: Props) {
                             <span>Estimé : <AmountCell value={r.estimatedProfitUSD} /></span>
                           )}
                           {r.profitValidatedUSD > 0 && (
-                            <span className="text-orange-400/80">Validé : <AmountCell value={r.profitValidatedUSD} /></span>
+                            <span className="text-[var(--brand-text)]">Validé : <AmountCell value={r.profitValidatedUSD} /></span>
                           )}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="text-[10px] text-slate-500">{t("balance_remaining")}</p>
-                        <p className={`font-mono text-sm font-bold tabular-nums ${r.balanceRemainingUSD < 0 ? "text-red-400" : r.balanceRemainingUSD === 0 ? "text-slate-500" : "text-slate-100"}`}>
+                        <p className="text-[10px] text-[var(--text-label)]">{t("balance_remaining")}</p>
+                        <p className={`font-mono text-sm font-bold tabular-nums ${r.balanceRemainingUSD < 0 ? "text-red-400" : r.balanceRemainingUSD === 0 ? "text-[var(--text-label)]" : "text-[var(--text-strong)]"}`}>
                           {formatMoney(Math.abs(r.balanceRemainingUSD), "USD")}
                         </p>
                       </div>
@@ -739,10 +739,10 @@ export default function ReportsPage({ params }: Props) {
                         <div className="flex items-center justify-between gap-4">
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="text-sm text-slate-200">{d.person_name}</p>
+                              <p className="text-sm text-[var(--text-body)]">{d.person_name}</p>
                               {overdue && <Badge variant="danger">{t("overdue")}</Badge>}
                             </div>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-[var(--text-label)]">
                               {d.due_date ? formatDate(d.due_date) : "—"}
                               {d.note ? ` · ${d.note}` : ""}
                             </p>
@@ -782,10 +782,10 @@ export default function ReportsPage({ params }: Props) {
                         <div className="flex items-center justify-between gap-4">
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="text-sm text-slate-200">{d.person_name}</p>
+                              <p className="text-sm text-[var(--text-body)]">{d.person_name}</p>
                               {overdue && <Badge variant="warning">{t("overdue")}</Badge>}
                             </div>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-[var(--text-label)]">
                               {d.due_date ? formatDate(d.due_date) : "—"}
                               {d.note ? ` · ${d.note}` : ""}
                             </p>
@@ -824,51 +824,51 @@ export default function ReportsPage({ params }: Props) {
                     <p className="text-sm text-amber-300">{t("legacy_warning")}</p>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-3 text-center">
-                    <div className="rounded-lg bg-slate-800/60 p-2">
-                      <p className="text-lg font-bold text-slate-100">{legacySummary.total}</p>
-                      <p className="text-[10px] text-slate-500">{t("legacy_count")}</p>
+                    <div className="rounded-lg bg-[var(--surface-chip)]/60 p-2">
+                      <p className="text-lg font-bold text-[var(--text-strong)]">{legacySummary.total}</p>
+                      <p className="text-[10px] text-[var(--text-label)]">{t("legacy_count")}</p>
                     </div>
-                    <div className="rounded-lg bg-slate-800/60 p-2">
+                    <div className="rounded-lg bg-[var(--surface-chip)]/60 p-2">
                       <p className="text-lg font-bold text-sky-400">{legacySummary.classifiedCount}</p>
-                      <p className="text-[10px] text-slate-500">{t("legacy_classified")}</p>
+                      <p className="text-[10px] text-[var(--text-label)]">{t("legacy_classified")}</p>
                     </div>
                     <div className="rounded-lg bg-red-950/40 p-2">
                       <p className="text-lg font-bold text-red-400">{legacySummary.unclassifiedCount}</p>
-                      <p className="text-[10px] text-slate-500">{t("legacy_unclassified")}</p>
+                      <p className="text-[10px] text-[var(--text-label)]">{t("legacy_unclassified")}</p>
                     </div>
                   </div>
                 </Card>
 
                 <Card>
-                  <p className="mb-2 text-xs text-slate-400">{t("legacy_approx_title")}</p>
+                  <p className="mb-2 text-xs text-[var(--text-muted)]">{t("legacy_approx_title")}</p>
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-400">{t("legacy_income_approx")}</span>
+                      <span className="text-sm text-[var(--text-muted)]">{t("legacy_income_approx")}</span>
                       <span className="font-mono text-sm text-emerald-400">
                         {formatMoney(legacySummary.totalIncomeUSD, "USD")}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-400">{t("legacy_expense_approx")}</span>
+                      <span className="text-sm text-[var(--text-muted)]">{t("legacy_expense_approx")}</span>
                       <span className="font-mono text-sm text-red-400">
                         {formatMoney(legacySummary.totalExpenseUSD, "USD")}
                       </span>
                     </div>
                   </div>
-                  <p className="mt-2 text-[10px] text-slate-600">{t("legacy_approx_note")}</p>
+                  <p className="mt-2 text-[10px] text-[var(--text-faint)]">{t("legacy_approx_note")}</p>
                 </Card>
 
                 {legacySummary.recent.length > 0 && (
                   <Card>
-                    <p className="mb-2 text-xs font-medium text-slate-400">{t("legacy_recent")}</p>
-                    <ul className="divide-y divide-slate-800">
+                    <p className="mb-2 text-xs font-medium text-[var(--text-muted)]">{t("legacy_recent")}</p>
+                    <ul className="divide-y divide-[var(--border-default)]">
                       {legacySummary.recent.map((tx) => (
                         <li key={tx.id} className="flex items-center justify-between gap-4 py-2">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm text-slate-300">
+                            <p className="truncate text-sm text-[var(--text-body)]">
                               {tx.category ?? tx.note ?? "—"}
                             </p>
-                            <p className="text-xs text-slate-600">
+                            <p className="text-xs text-[var(--text-faint)]">
                               {formatDate(tx.transaction_date)}
                               {tx.accounting_type ? ` · ${tx.accounting_type}` : " · non classée"}
                             </p>
@@ -885,7 +885,7 @@ export default function ReportsPage({ params }: Props) {
 
                 <Link
                   href={`/${locale}/transactions`}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-orange-600/50 py-2.5 text-sm font-medium text-orange-400 transition-colors hover:bg-orange-950/20"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--brand-fill)]/50 py-2.5 text-sm font-medium text-[var(--brand-text)] transition-colors hover:bg-[var(--indigo-950)]/20"
                 >
                   <ExternalLink size={14} />
                   {t("legacy_action")}

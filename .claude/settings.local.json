@@ -93,7 +93,8 @@
       "PowerShell($ok=$false; for \\($i=0; $i -lt 40; $i++\\) { try { $r=Invoke-WebRequest \"http://localhost:3100/fr/login\" -UseBasicParsing -TimeoutSec 10; if \\($r.StatusCode -eq 200\\) { \"LOGIN READY \\(try $i\\)\"; $ok=$true; break } } catch {}; Start-Sleep -Seconds 3 }; if \\(-not $ok\\) { \"NOT READY YET\" })",
       "PowerShell(foreach \\($p in @\\(\"/fr/transactions\",\"/fr/accounts\",\"/fr/dashboard\"\\)\\) { try { $r=Invoke-WebRequest \"http://localhost:3100$p\" -UseBasicParsing -TimeoutSec 90; \"$p -> $\\($r.StatusCode\\)\" } catch { \"$p -> $\\($_.Exception.Message\\)\" } })",
       "PowerShell($env:PLAYWRIGHT_PORT = \"3100\"; npx playwright test debug-tx.spec.ts --reporter=list --timeout=60000 2>&1 | Out-String)",
-      "PowerShell($env:PLAYWRIGHT_PORT = \"3100\"; npx playwright test debug-tx.spec.ts --reporter=list --timeout=90000 2>&1 | Out-String)"
+      "PowerShell($env:PLAYWRIGHT_PORT = \"3100\"; npx playwright test debug-tx.spec.ts --reporter=list --timeout=90000 2>&1 | Out-String)",
+      "Bash(echo \"---EXIT:$?---\")"
     ]
   }
 }

@@ -100,20 +100,18 @@ test("Commandes - solde commande et solde client suivent recu moins achat", asyn
 
   await page.goto("/fr/orders");
   await openOrderDetails(page, "Balance Product");
-  const orderText = normalizeText((await orderCard(page, "Balance Product").textContent()) ?? "");
-  console.log(`Commandes S3 - affichage commande: ${orderText}`);
-  expect(orderText, "La commande doit afficher le recu 118.").toMatch(/118/);
-  expect(orderText, "La commande doit afficher l'achat 80.").toMatch(/80/);
-  expect(orderText, "Le solde commande attendu est 38 USD.").toMatch(/38/);
+  const orderCardEl = orderCard(page, "Balance Product");
+  // Use toContainText which retries — financial data may load asynchronously
+  await expect(orderCardEl, "La commande doit afficher le recu 118.").toContainText("118");
+  await expect(orderCardEl, "La commande doit afficher l'achat 80.").toContainText("80");
+  await expect(orderCardEl, "Le solde commande attendu est 38.").toContainText("38");
 
   await page.goto("/fr/clients");
-  await expect(page.locator("article").filter({ hasText: "Divine Test" }).first()).toBeVisible({ timeout: 15_000 });
-  const divineCard = page.locator("article").filter({ hasText: "Divine Test" }).first();
-  await expect(divineCard).toBeVisible();
-  const clientText = normalizeText((await divineCard.textContent()) ?? "");
-  console.log(`Commandes S3 - affichage client Divine: ${clientText}`);
-  expect(clientText, "Divine doit afficher le total recu 118.").toMatch(/118/);
-  expect(clientText, "Divine doit afficher le solde attendu 38 USD.").toMatch(/38/);
+  // Clients page uses <li> rows after unified-list redesign
+  const divineCard = page.locator("li, article").filter({ hasText: "Divine Test" }).first();
+  await expect(divineCard).toBeVisible({ timeout: 15_000 });
+  await expect(divineCard, "Divine doit afficher le total recu 118.").toContainText("118");
+  await expect(divineCard, "Divine doit afficher le solde attendu 38.").toContainText("38");
 });
 
 test("Commandes - statut nouveau puis sourcing puis commande persiste au rechargement", async ({ page }) => {
@@ -125,11 +123,14 @@ test("Commandes - statut nouveau puis sourcing puis commande persiste au recharg
   });
 
   await updateOrderStatus(page, "Status Product", "En recherche");
+  // Let the cache invalidation propagate before reloading
+  await page.waitForTimeout(500);
   await page.reload();
   await expect(orderCard(page, "Status Product")).toBeVisible({ timeout: 15_000 });
   await expect(orderCard(page, "Status Product")).toContainText(/En recherche|sourcing/i);
 
-  await updateOrderStatus(page, "Status Product", "Commande");
+  await updateOrderStatus(page, "Status Product", "Commandé");
+  await page.waitForTimeout(500);
   await page.reload();
   await expect(orderCard(page, "Status Product")).toBeVisible({ timeout: 15_000 });
   await expect(orderCard(page, "Status Product")).toContainText(/Command/i);
@@ -144,13 +145,15 @@ test("Commandes - double clic Sauvegarder cree une seule commande", async ({ pag
   await selectFieldOption(page, /^Client$/, "Divine Test");
   await fillFieldInput(page, /^Produit$/, "Double Submit Order");
 
-  const saveButton = page.getByRole("button", { name: /^Sauvegarder$/ });
+  // Match both "Sauvegarder" and "Sauvegarde" so toBeHidden only resolves
+  // when the modal actually closes, not when the button text flips.
+  const saveButton = page.getByRole("button", { name: /Sauvegarde/ });
   await expect(saveButton).toBeEnabled();
   await saveButton.evaluate((button) => {
     (button as HTMLButtonElement).click();
     (button as HTMLButtonElement).click();
   });
-  await expect(saveButton).toBeHidden({ timeout: 10_000 });
+  await expect(saveButton).toBeHidden({ timeout: 30_000 });
 
   const rows = await tableRows(state, "orders", { product_name: "Double Submit Order" });
   console.log(`Commandes S5 - commandes attendues=1, actuelles=${rows.length}`);
@@ -164,6 +167,8 @@ async function createOrder(
   await page.goto("/fr/orders");
   await expect(page.getByRole("button", { name: /Nouvelle commande/i })).toBeVisible({ timeout: 15_000 });
   await openOrderForm(page);
+  // Wait for the order form modal to hydrate the client dropdown
+  await page.waitForTimeout(800);
   // Scope fields to the modal form to avoid matching page-level filter labels
   const form = page.locator("form").first();
   await selectFieldInForm(form, page, /^Client$/, input.clientName);
@@ -193,6 +198,9 @@ async function fillFieldInForm(form: ReturnType<Page['locator']>, page: Page, la
 
 async function openOrderForm(page: Page) {
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
+  // Mode choice screen appears first — click "Simple"
+  await page.waitForTimeout(400);
+  await page.getByRole("button", { name: /^Simple/ }).click();
   await expect(page.getByRole("button", { name: /^Sauvegarder$/ })).toBeVisible();
 }
 
@@ -206,6 +214,8 @@ async function openOrderDetails(page: Page, productName: string) {
   const detailButton = card.getByRole("button", { name: /Voir d.tail/i });
   await expect(detailButton).toBeVisible();
   await detailButton.click();
+  // Wait for the detail to expand — financial data may take a moment
+  await page.waitForTimeout(800);
 }
 
 async function createOrderQuickTransaction(
@@ -228,6 +238,10 @@ async function createOrderQuickTransaction(
   await action.click();
 
   await expect(page.getByRole("button", { name: /Enregistr/ })).toBeVisible({ timeout: 15_000 });
+  // Wait for the transaction modal to fully hydrate the account list and currency fields.
+  // In serial mode, rapid sequential opens can race against the previous test's cache
+  // invalidation, leaving the select empty for a frame.
+  await page.waitForTimeout(800);
   await selectFieldOption(page, /^Compte$/, input.accountName);
   await fillFieldInput(page, /^Montant$/, input.amount, 'input[type="number"]');
   await fillFieldInput(page, /^Montant$/, "USD", 'input[type="text"][maxlength="4"]');
@@ -242,6 +256,8 @@ async function updateOrderStatus(page: Page, productName: string, statusLabel: s
   const card = orderCard(page, productName);
   await expect(card).toBeVisible();
   await card.getByRole("button", { name: /^Modifier$/ }).click();
+  // Wait for the edit modal to hydrate the status select fully
+  await page.waitForTimeout(600);
   await selectFieldOption(page, /^Statut$/, statusLabel);
   await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
 }

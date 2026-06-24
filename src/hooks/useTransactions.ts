@@ -32,6 +32,8 @@ export interface CreateOperationInput {
   orderId?: string;
   /** For debt_received / receivable_created: the creditor/debtor name. */
   personName?: string;
+  /** Flag as unexpected expense (migration 005). Display-only — computeOrderCosts ignores this. */
+  isUnexpected?: boolean;
   personPhone?: string;
   /** Optional due date for new debt/receivable. */
   dueDate?: string;
@@ -103,7 +105,7 @@ export function useTransactions(accountId?: string) {
     const delta = type === "income" ? amount : -amount;
     const balanceAfter = currentBalance + delta;
 
-    await supabase.from("transactions").insert({
+    const { error: insertError } = await supabase.from("transactions").insert({
       user_id: userId,
       account_id: acctId,
       type,
@@ -115,8 +117,16 @@ export function useTransactions(accountId?: string) {
       accounting_type: accountingType,
       balance_after: balanceAfter,
     });
+    if (insertError) {
+      console.error("[addTransaction] insert error:", insertError.code, insertError.message);
+      throw new Error(insertError.message || "Échec de la création de la transaction.");
+    }
 
-    await supabase.from("accounts").update({ balance: balanceAfter }).eq("id", acctId);
+    const { error: updateError } = await supabase.from("accounts").update({ balance: balanceAfter }).eq("id", acctId);
+    if (updateError) {
+      console.error("[addTransaction] account update error:", updateError.code, updateError.message);
+      throw new Error(updateError.message || "Échec de la mise à jour du solde.");
+    }
 
     cacheInvalidatePrefix(PREFIX);
     cacheInvalidate("accounts");
@@ -196,6 +206,7 @@ export function useTransactions(accountId?: string) {
         client_id: input.clientId || null,
         order_id: input.orderId || null,
         idempotency_key: idempotencyKey,
+        is_unexpected: input.isUnexpected === true,
       })
       .select("id")
       .single();
@@ -208,7 +219,11 @@ export function useTransactions(accountId?: string) {
     const txId = txData?.id;
 
     // Update account balance
-    await supabase.from("accounts").update({ balance: balanceAfter }).eq("id", acctId);
+    const { error: balError } = await supabase.from("accounts").update({ balance: balanceAfter }).eq("id", acctId);
+    if (balError) {
+      console.error("[createOperation] balance update error:", balError.code, balError.message);
+      throw new Error(balError.message || "Échec de la mise à jour du solde.");
+    }
 
     // ── Side effects based on sub-type ────────────────────────────────────────
 
@@ -274,7 +289,11 @@ export function useTransactions(accountId?: string) {
         currency,
         allocation_method: "manual" as const,
       }));
-      await supabase.from("shared_fee_allocations").insert(allocs);
+      const { error: allocError } = await supabase.from("shared_fee_allocations").insert(allocs);
+      if (allocError) {
+        console.error("[createOperation] allocation insert error:", allocError.code, allocError.message);
+        throw new Error(allocError.message || "Échec de l'enregistrement des répartitions.");
+      }
     }
 
     cacheInvalidatePrefix(PREFIX);
@@ -294,7 +313,11 @@ export function useTransactions(accountId?: string) {
     amount: number
   ) {
     const supabase = createClient();
-    await supabase.from("transactions").delete().eq("id", id);
+    const { error: delError } = await supabase.from("transactions").delete().eq("id", id);
+    if (delError) {
+      console.error("[deleteTransaction] delete error:", delError.code, delError.message);
+      throw new Error(delError.message || "Échec de la suppression de la transaction.");
+    }
 
     if (acctId) {
       const { data: acc } = await supabase
@@ -305,10 +328,14 @@ export function useTransactions(accountId?: string) {
 
       if (acc) {
         const reversal = type === "income" ? -amount : amount;
-        await supabase
+        const { error: revError } = await supabase
           .from("accounts")
           .update({ balance: Number(acc.balance) + reversal })
           .eq("id", acctId);
+        if (revError) {
+          console.error("[deleteTransaction] reversal error:", revError.code, revError.message);
+          throw new Error(revError.message || "Échec de l'annulation du solde.");
+        }
       }
     }
 
@@ -426,7 +453,11 @@ async function _handleBalanceCorrection(
 
   if (error && error.code !== "23505") throw new Error(error.message);
 
-  await supabase.from("accounts").update({ balance: targetBalance }).eq("id", accountId);
+  const { error: updateError } = await supabase.from("accounts").update({ balance: targetBalance }).eq("id", accountId);
+  if (updateError) {
+    console.error("[_handleBalanceCorrection] account update error:", updateError.code, updateError.message);
+    throw new Error(updateError.message || "Échec de la mise à jour du solde.");
+  }
 }
 
 async function _handleProfitValidated(
@@ -473,7 +504,7 @@ async function _handleProfitValidated(
       .single();
 
     const currentProfit = order ? Number(order.real_profit_amount ?? 0) : 0;
-    await supabase
+    const { error: ordError } = await supabase
       .from("orders")
       .update({
         real_profit_amount: currentProfit + amount,
@@ -481,6 +512,10 @@ async function _handleProfitValidated(
         profit_validated_at: new Date().toISOString(),
       })
       .eq("id", orderId);
+    if (ordError) {
+      console.error("[_handleProfitValidated] order update error:", ordError.code, ordError.message);
+      throw new Error(ordError.message || "Échec de la mise à jour de la commande.");
+    }
   }
 }
 
@@ -500,7 +535,7 @@ async function _createDebtRecord(
     creationTxId: string;
   }
 ) {
-  await supabase.from("debts").insert({
+  const { error } = await supabase.from("debts").insert({
     user_id: userId,
     person_name: opts.personName,
     direction: opts.direction,
@@ -514,6 +549,10 @@ async function _createDebtRecord(
     affects_balance: opts.affectsBalance,
     creation_tx_id: opts.creationTxId,
   });
+  if (error) {
+    console.error("[_createDebtRecord] insert error:", error.code, error.message);
+    throw new Error(error.message || "Échec de la création de la dette associée.");
+  }
 }
 
 async function _recordDebtPayment(
@@ -536,7 +575,7 @@ async function _recordDebtPayment(
 
   if (!debt) return;
 
-  await supabase.from("debt_payments").insert({
+  const { error: pmtError } = await supabase.from("debt_payments").insert({
     user_id: userId,
     debt_id: opts.debtId,
     account_id: opts.accountId,
@@ -546,15 +585,23 @@ async function _recordDebtPayment(
     settlement_method: "real_payment",
     linked_transaction_id: opts.linkedTxId,
   });
+  if (pmtError) {
+    console.error("[_recordDebtPayment] payment insert error:", pmtError.code, pmtError.message);
+    throw new Error(pmtError.message || "Échec de l'enregistrement du paiement.");
+  }
 
   const newPaid = Number(debt.paid_amount) + opts.amount;
   const newStatus =
     newPaid >= Number(debt.amount) ? "paid" : newPaid > 0 ? "partial" : "unpaid";
 
-  await supabase
+  const { error: debtUpdateError } = await supabase
     .from("debts")
     .update({ paid_amount: newPaid, status: newStatus })
     .eq("id", opts.debtId);
+  if (debtUpdateError) {
+    console.error("[_recordDebtPayment] debt update error:", debtUpdateError.code, debtUpdateError.message);
+    throw new Error(debtUpdateError.message || "Échec de la mise à jour de la dette.");
+  }
 }
 
 function _defaultCategory(subType: TransactionSubType, personName?: string): string | null {

@@ -49,10 +49,10 @@ interface ResetStats {
 // ── CSS helpers ───────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none";
 
 const miniInputCls =
-  "rounded-xl border border-slate-700/80 bg-slate-900 px-2.5 py-2 text-xs text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none";
+  "rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none";
 
 // ── CSV parser ────────────────────────────────────────────────────────────────
 
@@ -145,6 +145,7 @@ export default function RecoveryPage({ params }: Props) {
   const [resetting, setResetting]           = useState(false);
   const [resetDone, setResetDone]           = useState(false);
   const [resetError, setResetError]         = useState<string | null>(null);
+  const [zeroError, setZeroError]           = useState<string | null>(null);
 
   // Zero Point
   const [zeroValues, setZeroValues]         = useState<Record<string, string>>({});
@@ -224,21 +225,25 @@ export default function RecoveryPage({ params }: Props) {
 
       // 2. Supprimer les paiements de dettes (liés par debt_id)
       if (debtIds.length > 0) {
-        await supabase.from("debt_payments").delete().in("debt_id", debtIds);
+        const { error: dpErr } = await supabase.from("debt_payments").delete().in("debt_id", debtIds);
+        if (dpErr) throw new Error(`Échec suppression paiements : ${dpErr.message}`);
       }
 
       // 3. Réinitialiser les dettes (paid_amount → 0, status → unpaid)
-      await supabase.from("debts").update({
+      const { error: debtErr } = await supabase.from("debts").update({
         paid_amount: 0,
         status: "unpaid",
         creation_tx_id: null,
       }).eq("user_id", uid);
+      if (debtErr) throw new Error(`Échec réinitialisation dettes : ${debtErr.message}`);
 
       // 4. Supprimer toutes les transactions (CASCADE → shared_fee_allocations)
-      await supabase.from("transactions").delete().eq("user_id", uid);
+      const { error: txErr } = await supabase.from("transactions").delete().eq("user_id", uid);
+      if (txErr) throw new Error(`Échec suppression transactions : ${txErr.message}`);
 
       // 5. Remettre les soldes à 0
-      await supabase.from("accounts").update({ balance: 0 }).eq("user_id", uid);
+      const { error: accErr } = await supabase.from("accounts").update({ balance: 0 }).eq("user_id", uid);
+      if (accErr) throw new Error(`Échec remise à zéro des soldes : ${accErr.message}`);
 
       setResetDone(true);
       setConfirmText("");
@@ -271,7 +276,7 @@ export default function RecoveryPage({ params }: Props) {
 
       if (Math.abs(difference) >= 0.001) {
         const now = new Date().toISOString().split("T")[0];
-        await supabase.from("transactions").insert({
+        const { error: txErr } = await supabase.from("transactions").insert({
           user_id: uid,
           account_id: accountId,
           type: difference > 0 ? "income" : "expense",
@@ -287,10 +292,15 @@ export default function RecoveryPage({ params }: Props) {
           idempotency_key: `zero_${accountId}_${Date.now()}`,
           migration_status: null,
         });
-        await supabase.from("accounts").update({ balance: targetBalance }).eq("id", accountId);
+        if (txErr) throw new Error(`Échec correction point zéro : ${txErr.message}`);
+
+        const { error: accErr } = await supabase.from("accounts").update({ balance: targetBalance }).eq("id", accountId);
+        if (accErr) throw new Error(`Échec mise à jour solde : ${accErr.message}`);
       }
 
       setZeroApplied((prev) => new Set([...prev, accountId]));
+    } catch (err) {
+      setZeroError(err instanceof Error ? err.message : "Erreur lors du point zéro.");
     } finally {
       setZeroApplying(null);
     }
@@ -329,7 +339,7 @@ export default function RecoveryPage({ params }: Props) {
       if (!session) return;
       const uid = session.user.id;
 
-      await supabase.from("transactions").insert({
+      const { error: txErr } = await supabase.from("transactions").insert({
         user_id: uid,
         account_id: null,
         type: row.type,
@@ -345,6 +355,7 @@ export default function RecoveryPage({ params }: Props) {
         idempotency_key: `hist_${rowId}`,
         migration_status: "pending_review",
       });
+      if (txErr) throw new Error(`Échec import transaction : ${txErr.message}`);
 
       setImportQueue((prev) => prev.map((r) => r.id === rowId ? { ...r, status: "validated" } : r));
     } catch (err) {
@@ -396,7 +407,7 @@ export default function RecoveryPage({ params }: Props) {
       for (const split of splitRows) {
         const amt = Number(split.amount);
         if (amt <= 0) continue;
-        await supabase.from("transactions").insert({
+        const { error: splitErr } = await supabase.from("transactions").insert({
           user_id: uid,
           account_id: null,
           type: split.type,
@@ -412,6 +423,7 @@ export default function RecoveryPage({ params }: Props) {
           idempotency_key: `hist_split_${split.id}`,
           migration_status: "pending_review",
         });
+        if (splitErr) throw new Error(`Échec import transaction divisée : ${splitErr.message}`);
       }
 
       setImportQueue((prev) => prev.map((r) => r.id === splitTargetId ? { ...r, status: "validated" } : r));
@@ -450,16 +462,16 @@ export default function RecoveryPage({ params }: Props) {
         <div className="flex items-start gap-3">
           <Link
             href={`/${locale}/settings`}
-            className="mt-1 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+            className="mt-1 rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
             aria-label="Retour aux paramètres"
           >
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-slate-50">
+            <h1 className="text-xl font-bold text-[var(--text-strong)]">
               Réinitialisation & reprise historique
             </h1>
-            <p className="mt-0.5 text-sm text-slate-500">
+            <p className="mt-0.5 text-sm text-[var(--text-label)]">
               Outil avancé — nettoyer les données et reconstruire l&apos;historique proprement.
             </p>
           </div>
@@ -488,9 +500,9 @@ export default function RecoveryPage({ params }: Props) {
                     { label: "Dettes",         value: stats.debtCount },
                     { label: "Paiements dettes", value: stats.debtPaymentCount },
                   ].map(({ label, value }) => (
-                    <div key={label} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-center">
-                      <p className="font-mono text-lg font-bold text-slate-100">{value}</p>
-                      <p className="text-[10px] text-slate-500">{label}</p>
+                    <div key={label} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-3 text-center">
+                      <p className="font-mono text-lg font-bold text-[var(--text-strong)]">{value}</p>
+                      <p className="text-[10px] text-[var(--text-label)]">{label}</p>
                     </div>
                   ))}
                 </div>
@@ -499,7 +511,7 @@ export default function RecoveryPage({ params }: Props) {
               <button
                 onClick={handleDownloadBackup}
                 disabled={backupLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 py-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-chip)] py-3 text-sm font-semibold text-[var(--text-body)] transition-colors hover:bg-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {backupLoading ? (
                   <>
@@ -552,7 +564,7 @@ export default function RecoveryPage({ params }: Props) {
                 ) : (
                   <div className="space-y-4">
                     {/* Impact */}
-                    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3.5">
+                    <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-3.5">
                       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-red-400">
                         Ce qui sera supprimé
                       </p>
@@ -563,10 +575,10 @@ export default function RecoveryPage({ params }: Props) {
                         <li>• Soldes de comptes → remis à 0</li>
                         <li>• Montants remboursés des dettes → remis à 0</li>
                       </ul>
-                      <p className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      <p className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-label)]">
                         Ce qui est conservé
                       </p>
-                      <ul className="space-y-0.5 text-xs text-slate-400">
+                      <ul className="space-y-0.5 text-xs text-[var(--text-muted)]">
                         <li>• Comptes (structure, noms)</li>
                         <li>• Clients &amp; Commandes</li>
                         <li>• Dettes &amp; Créances (structure)</li>
@@ -577,7 +589,7 @@ export default function RecoveryPage({ params }: Props) {
 
                     {/* Confirmation text */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                         Tapez{" "}
                         <span className="font-mono text-red-300">{CONFIRM_WORD}</span>{" "}
                         pour confirmer
@@ -600,7 +612,7 @@ export default function RecoveryPage({ params }: Props) {
                       onClick={handleReset}
                       disabled={!resetReady || resetting}
                       aria-label="Confirmer la réinitialisation"
-                      className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-colors bg-red-700 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-colors bg-red-700 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                     >
                       <RotateCcw size={14} />
                       {resetting ? "Réinitialisation en cours…" : "Confirmer la réinitialisation"}
@@ -618,12 +630,12 @@ export default function RecoveryPage({ params }: Props) {
                 onToggle={() => setActiveSection(activeSection === "zerop" ? null : "zerop")}
               >
                 <div className="space-y-3">
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--text-label)]">
                     Le point zéro permet de repartir avec les vrais soldes actuels sans reconstruire
                     tout le passé. Chaque correction est enregistrée comme ajustement.
                   </p>
                   {accounts.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-slate-600">Aucun compte disponible.</p>
+                    <p className="py-4 text-center text-sm text-[var(--text-faint)]">Aucun compte disponible.</p>
                   ) : (
                     accounts.map((acc) => {
                       const applied  = zeroApplied.has(acc.id);
@@ -631,13 +643,13 @@ export default function RecoveryPage({ params }: Props) {
                       return (
                         <div
                           key={acc.id}
-                          className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3 sm:flex-row sm:items-center"
+                          className="flex flex-col gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-3 sm:flex-row sm:items-center"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-slate-200">{acc.name}</p>
-                            <p className="text-[11px] text-slate-600">
+                            <p className="truncate text-sm font-medium text-[var(--text-body)]">{acc.name}</p>
+                            <p className="text-[11px] text-[var(--text-faint)]">
                               Solde app :{" "}
-                              <span className="font-mono text-slate-400">
+                              <span className="font-mono text-[var(--text-muted)]">
                                 {formatMoney(acc.balance, acc.currency)}
                               </span>
                             </p>
@@ -656,13 +668,13 @@ export default function RecoveryPage({ params }: Props) {
                                   value={zeroValues[acc.id] ?? ""}
                                   onChange={(e) => setZeroValues((prev) => ({ ...prev, [acc.id]: e.target.value }))}
                                   aria-label={`Solde réel pour ${acc.name}`}
-                                  className="w-36 rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2 text-right font-mono text-sm text-slate-100 tabular-nums focus:border-orange-500/70 focus:outline-none"
+                                  className="w-36 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-right font-mono text-sm text-[var(--text-strong)] tabular-nums focus:border-[var(--brand)]/70 focus:outline-none"
                                 />
                                 <button
                                   onClick={() => handleApplyZeroPoint(acc.id)}
                                   disabled={!zeroValues[acc.id] || applying}
                                   aria-label={`Appliquer point zéro pour ${acc.name}`}
-                                  className="rounded-xl bg-sky-700/80 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                                  className="rounded-xl bg-sky-700/80 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                                 >
                                   {applying ? "…" : "Appliquer"}
                                 </button>
@@ -672,6 +684,12 @@ export default function RecoveryPage({ params }: Props) {
                         </div>
                       );
                     })
+                  )}
+
+                  {zeroError && (
+                    <div className="mt-3 rounded-xl border border-red-800/50 bg-red-950/30 px-3.5 py-2.5">
+                      <p className="text-xs text-red-400">{zeroError}</p>
+                    </div>
                   )}
                 </div>
               </OperationCard>
@@ -688,10 +706,10 @@ export default function RecoveryPage({ params }: Props) {
 
                   {/* File upload */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       Fichier CSV ou JSON
                     </label>
-                    <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-900/40 py-4 text-sm text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-300">
+                    <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-glass)] py-4 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-body)]">
                       <Upload size={14} />
                       Choisir un fichier
                       <input
@@ -701,7 +719,7 @@ export default function RecoveryPage({ params }: Props) {
                         className="hidden"
                       />
                     </label>
-                    <p className="mt-1.5 text-[11px] text-slate-600">
+                    <p className="mt-1.5 text-[11px] text-[var(--text-faint)]">
                       CSV — colonnes : date, montant, devise, type, description, categorie{" · "}
                       JSON — format backup app ou tableau simple
                     </p>
@@ -716,7 +734,7 @@ export default function RecoveryPage({ params }: Props) {
                   {/* Queue stats */}
                   {importQueue.length > 0 && (
                     <div className="flex flex-wrap items-center gap-3 text-xs">
-                      <span className="text-slate-500">
+                      <span className="text-[var(--text-label)]">
                         {importQueue.length} ligne{importQueue.length > 1 ? "s" : ""}
                       </span>
                       {pendingCount > 0 && (
@@ -728,7 +746,7 @@ export default function RecoveryPage({ params }: Props) {
                         </span>
                       )}
                       {ignoredCount > 0 && (
-                        <span className="text-slate-600">{ignoredCount} ignorée{ignoredCount > 1 ? "s" : ""}</span>
+                        <span className="text-[var(--text-faint)]">{ignoredCount} ignorée{ignoredCount > 1 ? "s" : ""}</span>
                       )}
                       {pendingCount === 0 && validatedCount > 0 && (
                         <span className="flex items-center gap-1 text-emerald-400">
@@ -750,31 +768,31 @@ export default function RecoveryPage({ params }: Props) {
                               row.status === "validated"
                                 ? "border-emerald-800/30 bg-emerald-950/10"
                                 : row.status === "ignored"
-                                ? "border-slate-800 bg-slate-900/20 opacity-40"
-                                : "border-slate-800 bg-slate-900/40"
+                                ? "border-[var(--border-default)] bg-[var(--surface-card)]/20 opacity-40"
+                                : "border-[var(--border-default)] bg-[var(--surface-glass)]"
                             }`}
                           >
                             {/* Row summary */}
                             <div className="flex items-center gap-2.5 p-3">
                               <span className={`h-2 w-2 shrink-0 rounded-full ${
                                 row.status === "validated" ? "bg-emerald-500"
-                                : row.status === "ignored"  ? "bg-slate-600"
+                                : row.status === "ignored"  ? "bg-[var(--border-strong)]"
                                 : row.type === "income"     ? "bg-emerald-500/60"
                                 : "bg-red-500/60"
                               }`} />
 
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-[11px] text-slate-500">{row.date}</span>
+                                  <span className="text-[11px] text-[var(--text-label)]">{row.date}</span>
                                   <span className={`font-mono text-sm font-semibold tabular-nums ${
                                     row.type === "income" ? "text-emerald-400" : "text-red-400"
                                   }`}>
                                     {row.type === "income" ? "+" : "−"}
-                                    {row.amount.toLocaleString("fr-FR")} {row.currency}
+                                    {formatMoney(row.amount, row.currency)}
                                   </span>
                                 </div>
                                 {row.description && (
-                                  <p className="truncate text-[11px] text-slate-600">{row.description}</p>
+                                  <p className="truncate text-[11px] text-[var(--text-faint)]">{row.description}</p>
                                 )}
                               </div>
 
@@ -798,7 +816,7 @@ export default function RecoveryPage({ params }: Props) {
                                   <button
                                     onClick={() => handleIgnoreRow(row.id)}
                                     aria-label="Ignorer cette ligne"
-                                    className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-400"
+                                    className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-muted)]"
                                   >
                                     <X size={11} />
                                   </button>
@@ -814,15 +832,15 @@ export default function RecoveryPage({ params }: Props) {
 
                             {/* Split UI */}
                             {isSplitting && splitTarget && (
-                              <div className="border-t border-slate-800 p-3.5">
+                              <div className="border-t border-[var(--border-default)] p-3.5">
                                 {/* Split header */}
                                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                  <p className="text-xs font-semibold text-slate-400">
+                                  <p className="text-xs font-semibold text-[var(--text-muted)]">
                                     Division de la transaction
                                   </p>
                                   <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
-                                    <span className="text-slate-500">
-                                      Original : {splitTarget.amount} {splitTarget.currency}
+                                    <span className="text-[var(--text-label)]">
+                                      Original : {formatMoney(splitTarget.amount, splitTarget.currency)}
                                     </span>
                                     <span className={Math.abs(splitRemaining) < 0.001 ? "text-emerald-400" : "text-amber-400"}>
                                       Reste : {splitRemaining.toFixed(2)}
@@ -833,7 +851,7 @@ export default function RecoveryPage({ params }: Props) {
                                 {/* Split rows */}
                                 <div className="space-y-2">
                                   {splitRows.map((sr) => (
-                                    <div key={sr.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-2.5">
+                                    <div key={sr.id} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-2.5">
                                       <div className="flex items-center gap-2">
                                         <select
                                           value={sr.type}
@@ -854,7 +872,7 @@ export default function RecoveryPage({ params }: Props) {
                                         <button
                                           onClick={() => handleRemoveSplitRow(sr.id)}
                                           aria-label="Supprimer cette ligne"
-                                          className="ml-auto shrink-0 rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                                          className="ml-auto shrink-0 rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-red-400"
                                         >
                                           <Trash2 size={11} />
                                         </button>
@@ -880,8 +898,8 @@ export default function RecoveryPage({ params }: Props) {
                                 {/* Split validation message */}
                                 {!splitValid && splitRows.length > 0 && (
                                   <p className="mt-2 text-[11px] text-amber-400">
-                                    Total divisé ({splitTotal.toFixed(2)}) ≠ montant original (
-                                    {splitTarget.amount} {splitTarget.currency}).
+                                    Total divisé ({formatMoney(splitTotal, splitTarget.currency)}) ≠ montant original (
+                                    {formatMoney(splitTarget.amount, splitTarget.currency)}).
                                   </p>
                                 )}
 
@@ -896,7 +914,7 @@ export default function RecoveryPage({ params }: Props) {
                                   <div className="flex-1" />
                                   <button
                                     onClick={() => { setSplitTargetId(null); setSplitRows([]); }}
-                                    className="rounded-xl border border-slate-700 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:bg-slate-800"
+                                    className="rounded-xl border border-[var(--border-strong)] px-3 py-1.5 text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)]"
                                   >
                                     Annuler
                                   </button>
@@ -904,7 +922,7 @@ export default function RecoveryPage({ params }: Props) {
                                     onClick={handleValidateSplit}
                                     disabled={!splitValid || importing === splitTargetId}
                                     aria-label="Valider la division"
-                                    className="rounded-xl bg-violet-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-violet-600 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                                    className="rounded-xl bg-violet-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-violet-600 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                                   >
                                     {importing === splitTargetId ? "…" : "Valider la division"}
                                   </button>
@@ -944,8 +962,8 @@ function OperationCard({
       open
         ? danger
           ? "border-red-800/40 bg-red-950/10"
-          : "border-orange-600/30 bg-slate-900"
-        : "border-slate-800 bg-slate-900/40"
+          : "border-[var(--brand-fill)]/30 bg-[var(--surface-card)]"
+        : "border-[var(--border-default)] bg-[var(--surface-glass)]"
     }`}>
       <button
         onClick={onToggle}
@@ -953,17 +971,17 @@ function OperationCard({
       >
         <span className="shrink-0">{icon}</span>
         <div className="min-w-0 flex-1">
-          <p className={`text-sm font-semibold ${danger ? "text-red-300" : "text-slate-100"}`}>
+          <p className={`text-sm font-semibold ${danger ? "text-red-300" : "text-[var(--text-strong)]"}`}>
             {title}
           </p>
-          <p className="mt-0.5 text-xs text-slate-500">{description}</p>
+          <p className="mt-0.5 text-xs text-[var(--text-label)]">{description}</p>
         </div>
-        <span className="shrink-0 text-slate-600">
+        <span className="shrink-0 text-[var(--text-faint)]">
           {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </span>
       </button>
       {open && (
-        <div className="border-t border-slate-800 p-4">
+        <div className="border-t border-[var(--border-default)] p-4">
           {children}
         </div>
       )}

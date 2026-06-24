@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -18,7 +18,7 @@ import { Plus, ArrowRight, ChevronDown, X } from "lucide-react";
 type Props = { params: Promise<{ locale: string }> };
 
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 export default function TransfersPage({ params }: Props) {
   const { locale } = use(params);
@@ -37,6 +37,9 @@ export default function TransfersPage({ params }: Props) {
   const [note, setNote]                   = useState("");
   const [filterAccount, setFilterAccount] = useState("");
   const [openDropdown, setOpenDropdown]   = useState(false);
+  const [saving, setSaving]               = useState(false);
+  const [formError, setFormError]         = useState<string | null>(null);
+  const savingRef = useRef(false);
 
   // ── Derived ───────────────────────────────────────────────────────────────────
 
@@ -96,18 +99,28 @@ export default function TransfersPage({ params }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSave) return;
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await addTransfer(
-      user.id, fromId, toId,
-      Number(fromAmount), Number(toAmount),
-      fromAcc?.currency ?? "USD", toAcc?.currency ?? "USD",
-      Number(exchangeRate), date, note || null
-    );
-    setShowForm(false);
-    setFromAmount(""); setToAmount(""); setNote(""); setExchangeRate("1");
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    setFormError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setFormError("Session expirée. Reconnecte-toi."); return; }
+      await addTransfer(
+        user.id, fromId, toId,
+        Number(fromAmount), Number(toAmount),
+        fromAcc?.currency ?? "USD", toAcc?.currency ?? "USD",
+        Number(exchangeRate), date, note || null
+      );
+      setShowForm(false);
+      setFromAmount(""); setToAmount(""); setNote(""); setExchangeRate("1");
+    } catch (err: any) {
+      setFormError(err?.message || "Une erreur est survenue. Réessaie.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   // ── Loading ───────────────────────────────────────────────────────────────────
@@ -123,20 +136,20 @@ export default function TransfersPage({ params }: Props) {
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
+            <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
             {transfers.length > 0 && (
               <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                <span className="text-slate-500">
+                <span className="text-[var(--text-label)]">
                   {transfers.length} transfert{transfers.length !== 1 ? "s" : ""}
                 </span>
                 {summary.thisMonthCount > 0 && (
-                  <span className="text-slate-500">
+                  <span className="text-[var(--text-label)]">
                     Ce mois :{" "}
-                    <span className="text-slate-400">{summary.thisMonthCount}</span>
+                    <span className="text-[var(--text-muted)]">{summary.thisMonthCount}</span>
                   </span>
                 )}
                 {summary.last && (
-                  <span className="text-slate-600">
+                  <span className="text-[var(--text-faint)]">
                     Dernier : {formatDate(summary.last.transfer_date)}
                   </span>
                 )}
@@ -146,7 +159,7 @@ export default function TransfersPage({ params }: Props) {
           <button
             onClick={openForm}
             aria-label={t("add")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--brand-fill)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand)]"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">{t("add")}</span>
@@ -165,8 +178,8 @@ export default function TransfersPage({ params }: Props) {
                   onClick={() => setOpenDropdown(!openDropdown)}
                   className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     filterAccount
-                      ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
-                      : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                      ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
+                      : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                   }`}
                 >
                   <span className="max-w-[140px] truncate">{filterLabel}</span>
@@ -176,26 +189,26 @@ export default function TransfersPage({ params }: Props) {
                   />
                 </button>
                 {openDropdown && (
-                  <div className="absolute left-0 top-full z-40 mt-1.5 max-h-[55vh] min-w-[160px] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl">
+                  <div className="absolute left-0 top-full z-40 mt-1.5 max-h-[55vh] min-w-[160px] overflow-y-auto rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-1 shadow-2xl">
                     <button
                       onClick={() => { setFilterAccount(""); setOpenDropdown(false); }}
-                      className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
-                        !filterAccount ? "text-orange-300" : "text-slate-300"
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
+                        !filterAccount ? "text-[var(--brand-text)]" : "text-[var(--text-body)]"
                       }`}
                     >
-                      {!filterAccount && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />}
+                      {!filterAccount && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />}
                       Tous les comptes
                     </button>
                     {accounts.map((a) => (
                       <button
                         key={a.id}
                         onClick={() => { setFilterAccount(a.id); setOpenDropdown(false); }}
-                        className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
-                          filterAccount === a.id ? "text-orange-300" : "text-slate-400"
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
+                          filterAccount === a.id ? "text-[var(--brand-text)]" : "text-[var(--text-muted)]"
                         }`}
                       >
                         {filterAccount === a.id && (
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />
                         )}
                         <span className="truncate">{a.name}</span>
                       </button>
@@ -206,7 +219,7 @@ export default function TransfersPage({ params }: Props) {
               {filterAccount && (
                 <button
                   onClick={() => setFilterAccount("")}
-                  className="flex items-center gap-1 text-xs text-slate-600 transition-colors hover:text-slate-400"
+                  className="flex items-center gap-1 text-xs text-[var(--text-faint)] transition-colors hover:text-[var(--text-muted)]"
                 >
                   <X size={10} />
                   Réinitialiser
@@ -227,7 +240,7 @@ export default function TransfersPage({ params }: Props) {
               label={`${filtered.length} transfert${filtered.length !== 1 ? "s" : ""}`}
             />
             <Card className="overflow-hidden p-0">
-              <ul className="divide-y divide-slate-800/50">
+              <ul className="divide-y divide-[var(--border-subtle)]">
                 {filtered.map((tr) => {
                   const from    = accounts.find((a) => a.id === tr.from_account_id);
                   const to      = accounts.find((a) => a.id === tr.to_account_id);
@@ -236,7 +249,7 @@ export default function TransfersPage({ params }: Props) {
                   return (
                     <li
                       key={tr.id}
-                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-800/20"
+                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]"
                     >
                       {/* Source → Dest flow */}
                       <div className="min-w-0 flex-1">
@@ -244,32 +257,32 @@ export default function TransfersPage({ params }: Props) {
                           {/* From */}
                           <div className="flex min-w-0 items-center gap-1.5">
                             <span className="h-2 w-2 shrink-0 rounded-full bg-slate-500/70" />
-                            <span className="min-w-0 truncate text-sm font-medium text-slate-200">
+                            <span className="min-w-0 truncate text-sm font-medium text-[var(--text-body)]">
                               {from?.name ?? "?"}
                             </span>
                           </div>
                           {/* Arrow */}
                           <ArrowRight
                             size={12}
-                            className="mx-0.5 shrink-0 text-orange-500/60"
+                            className="mx-0.5 shrink-0 text-[var(--brand)]/60"
                           />
                           {/* To */}
                           <div className="flex min-w-0 items-center gap-1.5">
                             <span className="h-2 w-2 shrink-0 rounded-full bg-sky-500/60" />
-                            <span className="min-w-0 truncate text-sm font-medium text-slate-200">
+                            <span className="min-w-0 truncate text-sm font-medium text-[var(--text-body)]">
                               {to?.name ?? "?"}
                             </span>
                           </div>
                         </div>
-                        <p className="mt-0.5 truncate text-[11px] text-slate-600">
+                        <p className="mt-0.5 truncate text-[11px] text-[var(--text-faint)]">
                           {formatDate(tr.transfer_date)}
-                          {tr.note && <span className="ml-2 text-slate-700">· {tr.note}</span>}
+                          {tr.note && <span className="ml-2 text-[var(--text-faint)]">· {tr.note}</span>}
                         </p>
                       </div>
 
                       {/* Amounts */}
                       <div className="shrink-0 text-right">
-                        <p className="font-mono text-sm font-semibold tabular-nums text-slate-200">
+                        <p className="font-mono text-sm font-semibold tabular-nums text-[var(--text-body)]">
                           {formatMoney(tr.from_amount, tr.from_currency)}
                         </p>
                         {isCross && (
@@ -294,21 +307,21 @@ export default function TransfersPage({ params }: Props) {
           onClick={() => setShowForm(false)}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-2.5 md:hidden">
-              <div className="h-1 w-10 rounded-full bg-slate-700" />
+              <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
             </div>
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 pb-3 pt-4">
-              <h2 className="text-base font-bold text-slate-50">{t("add")}</h2>
+              <h2 className="text-base font-bold text-[var(--text-strong)]">{t("add")}</h2>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                className="rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
               >
                 <X size={16} />
               </button>
@@ -320,7 +333,7 @@ export default function TransfersPage({ params }: Props) {
 
                   {/* From account */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("from")}
                     </label>
                     <select
@@ -343,7 +356,7 @@ export default function TransfersPage({ params }: Props) {
 
                   {/* To account */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("to")}
                     </label>
                     <select
@@ -372,17 +385,17 @@ export default function TransfersPage({ params }: Props) {
 
                   {/* Flow preview */}
                   {fromAcc && toAcc && !sameAccount && (
-                    <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-2.5">
+                    <div className="flex items-center gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] px-3.5 py-2.5">
                       <span className="flex items-center gap-1.5 min-w-0">
                         <span className="h-2 w-2 shrink-0 rounded-full bg-slate-500/70" />
-                        <span className="min-w-0 truncate text-xs font-medium text-slate-300">
+                        <span className="min-w-0 truncate text-xs font-medium text-[var(--text-body)]">
                           {fromAcc.name}
                         </span>
                       </span>
-                      <ArrowRight size={12} className="shrink-0 text-orange-500/60" />
+                      <ArrowRight size={12} className="shrink-0 text-[var(--brand)]/60" />
                       <span className="flex items-center gap-1.5 min-w-0">
                         <span className="h-2 w-2 shrink-0 rounded-full bg-sky-500/60" />
-                        <span className="min-w-0 truncate text-xs font-medium text-slate-300">
+                        <span className="min-w-0 truncate text-xs font-medium text-[var(--text-body)]">
                           {toAcc.name}
                         </span>
                       </span>
@@ -396,10 +409,10 @@ export default function TransfersPage({ params }: Props) {
 
                   {/* From amount */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("from_amount")}
                       {fromAcc && (
-                        <span className="ml-1 text-slate-600">({fromAcc.currency})</span>
+                        <span className="ml-1 text-[var(--text-faint)]">({fromAcc.currency})</span>
                       )}
                     </label>
                     <input
@@ -417,9 +430,9 @@ export default function TransfersPage({ params }: Props) {
                   {/* Exchange rate (cross-currency only) */}
                   {!sameCurrency && fromAcc && toAcc && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                         {t("exchange_rate")}
-                        <span className="ml-1 text-slate-600">
+                        <span className="ml-1 text-[var(--text-faint)]">
                           (1 {fromAcc.currency} = ? {toAcc.currency})
                         </span>
                       </label>
@@ -438,13 +451,13 @@ export default function TransfersPage({ params }: Props) {
 
                   {/* To amount */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("to_amount")}
                       {toAcc && (
-                        <span className="ml-1 text-slate-600">({toAcc.currency})</span>
+                        <span className="ml-1 text-[var(--text-faint)]">({toAcc.currency})</span>
                       )}
                       {sameCurrency && (
-                        <span className="ml-1 text-slate-600">(automatique)</span>
+                        <span className="ml-1 text-[var(--text-faint)]">(automatique)</span>
                       )}
                     </label>
                     <input
@@ -461,9 +474,24 @@ export default function TransfersPage({ params }: Props) {
                     />
                   </div>
 
+                  {/* Received amount preview (cross-currency only) */}
+                  {!sameCurrency && fromAcc && toAcc && fromAmount && Number(fromAmount) > 0 && (
+                    <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+                        Montant reçu
+                      </p>
+                      <p className="mt-1 font-mono text-lg font-bold tabular-nums text-sky-400">
+                        {formatMoney(Number(toAmount) || 0, toAcc.currency)}
+                      </p>
+                      <p className="mt-1 text-[10px] text-[var(--text-label)]">
+                        {formatMoney(Number(fromAmount), fromAcc.currency)} × {Number(exchangeRate).toFixed(4)} = {formatMoney(Number(toAmount) || 0, toAcc.currency)}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Date */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("date")}
                     </label>
                     <input
@@ -477,8 +505,8 @@ export default function TransfersPage({ params }: Props) {
 
                   {/* Note */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("note")} <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      {t("note")} <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       value={note}
@@ -492,23 +520,26 @@ export default function TransfersPage({ params }: Props) {
 
               {/* Footer */}
               <div
-                className="shrink-0 border-t border-slate-800 px-5 pt-3"
+                className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3"
                 style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
               >
                 <div className="flex gap-2.5">
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
-                    className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                    className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                   >
                     {tc("cancel")}
                   </button>
+                  {formError && (
+                    <p className="rounded-xl bg-red-900/30 px-4 py-2.5 text-center text-xs text-red-400">{formError}</p>
+                  )}
                   <button
                     type="submit"
-                    disabled={!canSave}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                    disabled={!canSave || saving}
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
-                    {tc("save")}
+                    {saving ? "Sauvegarde en cours…" : tc("save")}
                   </button>
                 </div>
               </div>

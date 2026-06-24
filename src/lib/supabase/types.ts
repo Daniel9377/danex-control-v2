@@ -104,6 +104,8 @@ export type Transaction = {
   migration_status: "pending_review" | "reviewed" | "archived" | "ignored_modern_reports" | null;
   legacy_reviewed_at: string | null;
   legacy_review_note: string | null;
+  // Unexpected expense flag (migration 005)
+  is_unexpected: boolean;
   created_at: string;
 };
 
@@ -205,6 +207,8 @@ export type Order = {
   supplier_price: number | null;
   currency: string;
   advance_received: number;
+  /** Number of units ordered. Defaults to 1 for orders created before migration 003. */
+  quantity: number;
   status: OrderStatus;
   last_update: string | null;
   next_action: string | null;
@@ -215,6 +219,18 @@ export type Order = {
   real_profit_currency: string | null;
   profit_validated_at: string | null;
   completed_at: string | null;
+  created_at: string;
+};
+
+export type OrderItem = {
+  id: string;
+  order_id: string;
+  product_name: string;
+  variant: string | null;
+  supplier: string | null;
+  quantity: number;
+  unit_price: number | null;
+  supplier_unit_cost: number | null;
   created_at: string;
 };
 

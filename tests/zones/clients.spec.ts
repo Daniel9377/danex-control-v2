@@ -72,7 +72,7 @@ test("Clients - Joseph affiche 200 USD immediatement apres argent recu", async (
   // Auto-wait: useAllClientFinancials loads asynchronously after soft nav.
   // toContainText retries until the financial data appears (default 10s).
   await expect(card, "Joseph doit afficher 200 USD (attente chargement async apres soft nav).").toContainText(/200/);
-  await expect(card, "Joseph doit afficher USD ou $US.").toContainText(/USD|\$US|US\$/);
+  await expect(card, "Joseph doit afficher USD, $US ou $.").toContainText(/USD|US\$|\$\d/i);
   const text = normalizeText((await card.textContent()) ?? "");
   console.log(`Clients S3 - affichage Joseph: ${text}`);
 });
@@ -145,7 +145,7 @@ test("Clients - solde client = recu moins couts moins remboursements", async ({ 
   await page.waitForLoadState("networkidle");
   const card = clientCard(page, "Joseph Test");
   await expect(card).toBeVisible();
-  const expand = card.getByRole("button", { name: /financier/i });
+  const expand = card.getByRole("button", { name: /détail/i });
   await expect(expand).toBeVisible();
   await expand.click();
 
@@ -161,6 +161,9 @@ async function createOrder(page: Page, clientName: string, productName: string) 
   await page.goto("/fr/orders");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Nouvelle commande/i }).click();
+  await page.waitForTimeout(400);
+  // Mode choice screen appears first — click "Simple"
+  await page.getByRole("button", { name: /^Simple/ }).click();
   await selectFieldOption(page, /^Client$/, clientName);
   await fillFieldInput(page, /^Produit$/, productName);
   await selectFieldOption(page, /^Devise$/, "USD");
@@ -169,7 +172,8 @@ async function createOrder(page: Page, clientName: string, productName: string) 
 }
 
 function clientCard(page: Page, clientName: string) {
-  return page.locator("article").filter({ hasText: clientName }).first();
+  // Client rows are <li> elements inside a unified Card (not individual <article>s)
+  return page.locator("li").filter({ hasText: clientName }).first();
 }
 
 async function navigateBySidebar(page: Page, name: RegExp) {

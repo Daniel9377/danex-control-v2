@@ -383,8 +383,12 @@ async function processIntakeResponse(
   const msg = userMessage.trim().toLowerCase();
 
   if (/^(annule|cancel|stop|abandonner|quitter)$/i.test(userMessage.trim())) {
-    await closeIntakeSession(sessionId, "cancelled");
-    return "Session annulée.";
+    try {
+      await closeIntakeSession(sessionId, "cancelled");
+      return "Session annulée.";
+    } catch {
+      return "Erreur lors de l'annulation. Réessaie ou contacte le support.";
+    }
   }
 
   const updates: Partial<ClientIntakeData> = {};
@@ -483,8 +487,12 @@ async function processIntakeResponse(
           return `Erreur lors de l'enregistrement : ${errMsg}. Reessaie ou contacte le support.`;
         }
       } else {
-        await closeIntakeSession(sessionId, "cancelled");
-        return `Session annulée.`;
+        try {
+          await closeIntakeSession(sessionId, "cancelled");
+          return `Session annulée.`;
+        } catch {
+          return "Erreur lors de l'annulation. Réessaie ou contacte le support.";
+        }
       }
     }
 
@@ -493,6 +501,10 @@ async function processIntakeResponse(
   }
 
   updates.step = nextStep;
-  await updateIntakeSession(sessionId, updates);
-  return getNextQuestion({ ...data, ...updates });
+  try {
+    await updateIntakeSession(sessionId, updates);
+    return getNextQuestion({ ...data, ...updates });
+  } catch {
+    return "Erreur lors de l'enregistrement de ta réponse. Réessaie.";
+  }
 }

@@ -13,17 +13,14 @@ import { Profile } from "@/lib/supabase/types";
 import {
   Check, Save, ExternalLink, Globe, DollarSign,
   Plug, Lock, User, AlertTriangle,
+  ChevronRight,
 } from "lucide-react";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import Link from "next/link";
 
 type Props = { params: Promise<{ locale: string }> };
 
-const TABS = ["profile", "currencies", "integrations"] as const;
-type Tab = (typeof TABS)[number];
-
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 export default function SettingsPage({ params }: Props) {
   const { locale } = use(params);
@@ -31,12 +28,24 @@ export default function SettingsPage({ params }: Props) {
   const tc = useTranslations("common");
   const { currencies, upsertCurrency, loading: currLoading } = useCurrencies();
 
-  const [tab, setTab]               = useState<Tab>("profile");
   const [profile, setProfile]       = useState<Profile | null>(null);
   const [fullName, setFullName]     = useState("");
   const [language, setLanguage]     = useState(locale);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+
+  // Theme toggle
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  useEffect(() => {
+    setTheme((localStorage.getItem("danex-theme") as "dark" | "light") || "dark");
+  }, []);
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    document.documentElement.classList.remove("dark", "light");
+    document.documentElement.classList.add(next);
+    localStorage.setItem("danex-theme", next);
+    setTheme(next);
+  }
 
   const [rates, setRates]           = useState<Record<string, string>>({});
   const [savedCodes, setSavedCodes] = useState<Set<string>>(new Set());
@@ -104,295 +113,287 @@ export default function SettingsPage({ params }: Props) {
 
   return (
     <PageWrapper locale={locale}>
-      <div className="mx-auto max-w-2xl space-y-5">
+      <div className="mx-auto max-w-2xl space-y-6">
 
         {/* ── Header ── */}
         <div>
-          <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">Gérez votre profil, devises et intégrations.</p>
+          <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--text-label)]">Gérez votre profil, devises et intégrations.</p>
         </div>
 
-        {/* ── Tabs ── */}
-        <SegmentedControl
-          tabs={TABS.map((tb) => ({ value: tb, label: t(tb) }))}
-          value={tab}
-          onChange={setTab}
-        />
-
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* Tab: Profil                                                        */}
+        {/* Section: Profil                                                    */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {tab === "profile" && (
-          <div className="space-y-4">
-            <SectionHeader label="Informations du compte" />
+        <section>
+          <SectionHeader label="Profil" />
 
-            {/* User info card */}
-            {profile?.email && (
-              <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-600/20 text-orange-400">
-                  <User size={16} />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-200">
-                    {profile.full_name || "Nom non défini"}
-                  </p>
-                  <p className="truncate text-xs text-slate-500">{profile.email}</p>
-                </div>
+          {/* User info card */}
+          {profile?.email && (
+            <div className="mb-4 flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] px-4 py-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-fill)]/20 text-[var(--brand-text)]">
+                <User size={16} />
               </div>
-            )}
-
-            <Card>
-              <form onSubmit={saveProfile} className="space-y-4">
-
-                {/* Full name */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                    {t("full_name")}
-                  </label>
-                  <input
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Votre nom complet"
-                    className={fieldCls}
-                  />
-                </div>
-
-                {/* Language */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                    {t("language")}
-                  </label>
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className={fieldCls}
-                  >
-                    <option value="fr">Français</option>
-                    <option value="en">English</option>
-                    <option value="th">ไทย</option>
-                    <option value="pt">Português</option>
-                  </select>
-                  {languageChanged && (
-                    <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-amber-400/80">
-                      <Globe size={10} />
-                      La langue changera après enregistrement.
-                    </p>
-                  )}
-                </div>
-
-                {/* Email (read-only) */}
-                <div>
-                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                    Email
-                    <span className="flex items-center gap-0.5 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
-                      <Lock size={8} /> non modifiable
-                    </span>
-                  </label>
-                  <input
-                    value={profile?.email ?? ""}
-                    readOnly
-                    className="w-full rounded-xl border border-slate-800 bg-slate-900/40 px-3.5 py-2.5 text-sm text-slate-500 opacity-70 cursor-not-allowed"
-                  />
-                </div>
-
-                {/* Success feedback */}
-                {profileSaved && (
-                  <div className="flex items-center gap-2 rounded-xl border border-emerald-800/40 bg-emerald-950/20 px-3.5 py-2.5">
-                    <Check size={13} className="text-emerald-400" />
-                    <p className="text-xs text-emerald-400">{t("saved")}</p>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={profileSaving}
-                  aria-label={profileSaving ? "Enregistrement…" : tc("save")}
-                  className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
-                >
-                  {profileSaved ? <Check size={14} /> : <Save size={14} />}
-                  {profileSaving ? "Enregistrement…" : profileSaved ? t("saved") : tc("save")}
-                </button>
-              </form>
-            </Card>
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* Tab: Devises                                                       */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {tab === "currencies" && (
-          <div className="space-y-4">
-            <SectionHeader label="Taux de change" />
-            <div className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
-              <p className="text-xs text-slate-500">
-                Les taux servent à convertir tous les montants en USD pour les rapports.
-                Mettez à jour régulièrement pour des rapports précis.
-              </p>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-[var(--text-body)]">
+                  {profile.full_name || "Nom non défini"}
+                </p>
+                <p className="truncate text-xs text-[var(--text-label)]">{profile.email}</p>
+              </div>
             </div>
-            <div className="space-y-2">
+          )}
+
+          <Card>
+            <form onSubmit={saveProfile} className="space-y-4">
+              {/* Full name */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                  {t("full_name")}
+                </label>
+                <input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Votre nom complet"
+                  className={fieldCls}
+                />
+              </div>
+
+              {/* Language */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                  {t("language")}
+                </label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className={fieldCls}
+                >
+                  <option value="fr">Français</option>
+                  <option value="en">English</option>
+                  <option value="th">ไทย</option>
+                  <option value="pt">Português</option>
+                </select>
+                {languageChanged && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-amber-400/80">
+                    <Globe size={10} />
+                    La langue changera après enregistrement.
+                  </p>
+                )}
+              </div>
+
+              {/* Email (read-only) */}
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">
+                  Email
+                  <span className="flex items-center gap-0.5 rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-label)]">
+                    <Lock size={8} /> non modifiable
+                  </span>
+                </label>
+                <input
+                  value={profile?.email ?? ""}
+                  readOnly
+                  className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] px-3.5 py-2.5 text-sm text-[var(--text-label)] opacity-70 cursor-not-allowed"
+                />
+              </div>
+
+              {/* Success feedback */}
+              {profileSaved && (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-800/40 bg-emerald-950/20 px-3.5 py-2.5">
+                  <Check size={13} className="text-emerald-400" />
+                  <p className="text-xs text-emerald-400">{t("saved")}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={profileSaving}
+                aria-label={profileSaving ? "Enregistrement…" : tc("save")}
+                className="flex items-center gap-2 rounded-xl bg-[var(--brand-fill)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+              >
+                {profileSaved ? <Check size={14} /> : <Save size={14} />}
+                {profileSaving ? "Enregistrement…" : profileSaved ? t("saved") : tc("save")}
+              </button>
+            </form>
+          </Card>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* Section: Apparence                                                 */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <section>
+          <SectionHeader label="Apparence" />
+          <Card className="overflow-hidden p-0">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="text-sm font-medium text-[var(--text-body)]">Thème</span>
+              <div className="flex rounded-lg bg-[var(--surface-chip)] p-0.5">
+                <button
+                  onClick={() => theme !== "dark" && toggleTheme()}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    theme === "dark"
+                      ? "bg-[var(--border-strong)] text-[var(--text-strong)] shadow-sm"
+                      : "text-[var(--text-label)] hover:text-[var(--text-body)]"
+                  }`}
+                >
+                  Sombre
+                </button>
+                <button
+                  onClick={() => theme !== "light" && toggleTheme()}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    theme === "light"
+                      ? "bg-white text-slate-800 shadow-sm"
+                      : "text-[var(--text-label)] hover:text-[var(--text-body)]"
+                  }`}
+                >
+                  Clair
+                </button>
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* Section: Devises                                                   */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <section>
+          <SectionHeader label="Taux de change" />
+          <div className="mb-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] px-4 py-3">
+            <p className="text-xs text-[var(--text-label)]">
+              Les taux servent à convertir tous les montants en USD pour les rapports.
+              Mettez à jour régulièrement pour des rapports précis.
+            </p>
+          </div>
+          <Card className="overflow-hidden p-0">
+            <ul className="divide-y divide-[var(--border-subtle)]">
               {currencies.map((c) => {
                 const isSaved = savedCodes.has(c.code);
                 return (
-                  <Card key={c.code}>
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm font-bold text-slate-100">
-                            {c.code}
-                          </span>
-                          <span className="text-xs text-slate-500">{c.name}</span>
-                          <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
-                            {c.symbol}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[11px] text-slate-600">
-                          1 {c.code} = ? USD
-                        </p>
+                  <li key={c.code} className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-[var(--text-strong)]">
+                          {c.code}
+                        </span>
+                        <span className="text-xs text-[var(--text-label)]">{c.name}</span>
+                        <span className="rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-label)]">
+                          {c.symbol}
+                        </span>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <input
-                          type="number"
-                          step="0.00001"
-                          value={rates[c.code] ?? ""}
-                          onChange={(e) => setRates((r) => ({ ...r, [c.code]: e.target.value }))}
-                          aria-label={`Taux de change ${c.code} / USD`}
-                          className="w-28 rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2 text-right font-mono text-sm text-slate-100 tabular-nums focus:border-orange-500/70 focus:outline-none"
-                        />
-                        <button
-                          onClick={() => saveCurrencyRate(c.code)}
-                          aria-label={isSaved ? "Taux sauvegardé" : `Sauvegarder le taux ${c.code}`}
-                          className={`rounded-lg p-2 transition-colors ${
-                            isSaved
-                              ? "bg-emerald-950/40 text-emerald-400"
-                              : "text-slate-600 hover:bg-slate-800 hover:text-orange-400"
-                          }`}
-                        >
-                          {isSaved ? <Check size={14} /> : <Save size={14} />}
-                        </button>
-                      </div>
+                      <p className="mt-0.5 text-[11px] text-[var(--text-faint)]">
+                        1 {c.code} = ? USD
+                      </p>
                     </div>
-                  </Card>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <input
+                        type="number"
+                        step="0.00001"
+                        value={rates[c.code] ?? ""}
+                        onChange={(e) => setRates((r) => ({ ...r, [c.code]: e.target.value }))}
+                        aria-label={`Taux de change ${c.code} / USD`}
+                        className="w-28 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-right font-mono text-sm text-[var(--text-strong)] tabular-nums focus:border-[var(--brand)]/70 focus:outline-none"
+                      />
+                      <button
+                        onClick={() => saveCurrencyRate(c.code)}
+                        aria-label={isSaved ? "Taux sauvegardé" : `Sauvegarder le taux ${c.code}`}
+                        className={`rounded-lg p-2 transition-colors ${
+                          isSaved
+                            ? "bg-emerald-950/40 text-emerald-400"
+                            : "text-[var(--text-faint)] hover:bg-[var(--surface-chip)] hover:text-[var(--brand-text)]"
+                        }`}
+                      >
+                        {isSaved ? <Check size={14} /> : <Save size={14} />}
+                      </button>
+                    </div>
+                  </li>
                 );
               })}
-            </div>
-          </div>
-        )}
+            </ul>
+          </Card>
+        </section>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* Tab: Intégrations                                                  */}
+        {/* Section: Intégrations                                             */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {tab === "integrations" && (
-          <div className="space-y-4">
+        <section>
+          <SectionHeader label="Données & outils" />
 
-            {/* Export */}
-            <div>
-              <SectionHeader label="Données" />
-              <Card>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <DollarSign size={14} className="shrink-0 text-orange-400" />
-                      <h3 className="text-sm font-semibold text-slate-100">Export des données</h3>
+          <Card className="overflow-hidden p-0">
+            <ul className="divide-y divide-[var(--border-subtle)]">
+              {/* Export */}
+              <li>
+                <Link
+                  href={`/${locale}/export`}
+                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <DollarSign size={15} className="shrink-0 text-[var(--brand-text)]" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--text-body)]">Export des données</p>
+                      <p className="text-[11px] text-[var(--text-label)]">CSV, JSON, backup complet</p>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      CSV (23 colonnes), JSON backup complet, export par type, client ou commande.
-                    </p>
                   </div>
-                  <Link
-                    href={`/${locale}/export`}
-                    aria-label="Ouvrir la page d'export"
-                    className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-700 px-3 py-1.5 text-sm text-slate-300 transition-colors hover:bg-slate-800 hover:text-slate-100"
-                  >
-                    <ExternalLink size={13} />
-                    Ouvrir
-                  </Link>
-                </div>
-              </Card>
-            </div>
+                  <ChevronRight size={16} className="shrink-0 text-[var(--text-faint)]" />
+                </Link>
+              </li>
 
-            {/* Advanced tools */}
-            <div>
-              <SectionHeader label="Outils avancés" />
-              <Card>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
+              {/* Recovery */}
+              <li>
+                <Link
+                  href={`/${locale}/recovery`}
+                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <AlertTriangle size={15} className="shrink-0 text-red-400" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-[var(--text-body)]">
+                          Réinitialisation &amp; reprise historique
+                        </p>
+                        <span className="rounded-full border border-red-800/50 bg-red-950/30 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
+                          Avancé
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[var(--text-label)]">
+                        Sauvegarder, réinitialiser, reconstruire l'historique
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="shrink-0 text-[var(--text-faint)]" />
+                </Link>
+              </li>
+
+              {/* Google Calendar */}
+              <li className="flex items-center justify-between gap-4 px-4 py-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Plug size={15} className="shrink-0 text-[var(--text-label)]" />
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <AlertTriangle size={14} className="shrink-0 text-red-400" />
-                      <h3 className="text-sm font-semibold text-slate-100">
-                        Réinitialisation &amp; reprise historique
-                      </h3>
-                      <span className="rounded-full border border-red-800/50 bg-red-950/30 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-                        Avancé
+                      <p className="text-sm font-medium text-[var(--text-label)]">{t("google_calendar")}</p>
+                      <span className="rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-label)]">
+                        Bientôt
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Outil avancé pour sauvegarder, réinitialiser les transactions et reconstruire
-                      un historique. À utiliser avec prudence.
-                    </p>
+                    <p className="text-[11px] text-[var(--text-faint)]">{t("calendar_desc")}</p>
                   </div>
-                  <Link
-                    href={`/${locale}/recovery`}
-                    aria-label="Ouvrir l'outil de réinitialisation et reprise historique"
-                    className="flex shrink-0 items-center gap-1.5 rounded-xl border border-red-900/50 px-3 py-1.5 text-sm text-red-400/80 transition-colors hover:border-red-800 hover:bg-red-950/20 hover:text-red-300"
-                  >
-                    <ExternalLink size={13} />
-                    Ouvrir
-                  </Link>
                 </div>
-              </Card>
-            </div>
+              </li>
 
-            {/* Integrations */}
-            <div>
-              <SectionHeader label="Connexions" />
-              <div className="space-y-2">
-                <Card>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Plug size={13} className="shrink-0 text-slate-500" />
-                        <h3 className="text-sm font-semibold text-slate-300">{t("google_calendar")}</h3>
-                        <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
-                          Bientôt
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-slate-600">{t("calendar_desc")}</p>
+              {/* Notion */}
+              <li className="flex items-center justify-between gap-4 px-4 py-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Plug size={15} className="shrink-0 text-[var(--text-label)]" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-[var(--text-label)]">{t("notion")}</p>
+                      <span className="rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-label)]">
+                        Bientôt
+                      </span>
                     </div>
-                    <button
-                      disabled
-                      aria-label="Google Calendar — bientôt disponible"
-                      className="shrink-0 cursor-not-allowed rounded-xl border border-slate-800 px-3 py-1.5 text-sm text-slate-600 opacity-50"
-                    >
-                      {t("connect")}
-                    </button>
+                    <p className="text-[11px] text-[var(--text-faint)]">{t("notion_desc")}</p>
                   </div>
-                </Card>
-
-                <Card>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Plug size={13} className="shrink-0 text-slate-500" />
-                        <h3 className="text-sm font-semibold text-slate-300">{t("notion")}</h3>
-                        <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
-                          Bientôt
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-slate-600">{t("notion_desc")}</p>
-                    </div>
-                    <button
-                      disabled
-                      aria-label="Notion — bientôt disponible"
-                      className="shrink-0 cursor-not-allowed rounded-xl border border-slate-800 px-3 py-1.5 text-sm text-slate-600 opacity-50"
-                    >
-                      {t("connect")}
-                    </button>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          </div>
-        )}
+                </div>
+              </li>
+            </ul>
+          </Card>
+        </section>
       </div>
     </PageWrapper>
   );

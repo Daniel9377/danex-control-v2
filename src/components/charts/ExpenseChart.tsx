@@ -28,15 +28,15 @@ export function ExpenseChart({ data, currency = "USD" }: Props) {
     <div className="[&_svg]:outline-none [&_svg]:focus:outline-none">
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }} style={{ outline: "none" }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" />
         <XAxis
           dataKey="month"
-          tick={{ fill: "#64748b", fontSize: 11 }}
+          tick={{ fill: "var(--text-label)", fontSize: 11 }}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          tick={{ fill: "#64748b", fontSize: 11 }}
+          tick={{ fill: "var(--text-label)", fontSize: 11 }}
           tickLine={false}
           axisLine={false}
           tickFormatter={(v: number) => formatMoney(v, currency)}
@@ -45,19 +45,20 @@ export function ExpenseChart({ data, currency = "USD" }: Props) {
         <Tooltip
           cursor={false}
           contentStyle={{
-            backgroundColor: "#0f172a",
-            border: "1px solid #1e293b",
+            backgroundColor: "var(--surface-card)",
+            border: "1px solid var(--border-default)",
             borderRadius: 8,
             fontSize: 12,
+            color: "var(--text-body)",
           }}
-          labelStyle={{ color: "#94a3b8" }}
+          labelStyle={{ color: "var(--text-muted)" }}
           formatter={(value, name) => [
             formatMoney(Number(value ?? 0), currency),
             name === "income" ? "Revenus" : "Dépenses",
           ]}
         />
         <Legend
-          wrapperStyle={{ fontSize: 12, color: "#94a3b8" }}
+          wrapperStyle={{ fontSize: 12, color: "var(--text-muted)" }}
           formatter={(value) =>
             value === "income" ? "Revenus" : "Dépenses"
           }

@@ -10,7 +10,7 @@ export default function SettingsLoading() {
   return (
     <PageWrapper locale={locale}>
       <div className="space-y-6">
-        <div className="h-7 w-28 animate-pulse rounded-lg bg-slate-800" />
+        <div className="h-7 w-28 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
         <SkeletonCard rows={3} />
         <SkeletonCard rows={4} />
         <SkeletonCard rows={2} />

@@ -34,7 +34,7 @@ const trustVariant: Record<TrustLevel, "default" | "orange" | "danger"> = {
 };
 
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 export default function ClientsPage({ params }: Props) {
   const { locale } = use(params);
@@ -49,6 +49,7 @@ export default function ClientsPage({ params }: Props) {
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState<string | null>(null);
   const [deleteId, setDeleteId]     = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [search, setSearch]         = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -95,10 +96,16 @@ export default function ClientsPage({ params }: Props) {
   }
 
   const filtered = useMemo(
-    () => clients.filter((c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.country ?? "").toLowerCase().includes(search.toLowerCase())
-    ),
+    () => {
+      const q = search.toLowerCase().trim();
+      if (!q) return clients;
+      const digits = q.replace(/\D/g, ""); // for phone search by digits only
+      return clients.filter((c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.country ?? "").toLowerCase().includes(q) ||
+        (digits && (c.phone ?? "").replace(/\D/g, "").includes(digits))
+      );
+    },
     [clients, search]
   );
 
@@ -117,14 +124,14 @@ export default function ClientsPage({ params }: Props) {
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
+            <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
             {clients.length > 0 && (
               <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                <span className="text-slate-500">
+                <span className="text-[var(--text-label)]">
                   {clients.length} client{clients.length > 1 ? "s" : ""}
                 </span>
                 {summary.activeOrdersCount > 0 && (
-                  <span className="text-orange-400/80">
+                  <span className="text-[var(--brand-text)]">
                     {summary.activeOrdersCount} cmd actives
                   </span>
                 )}
@@ -140,7 +147,7 @@ export default function ClientsPage({ params }: Props) {
           <button
             onClick={openAdd}
             aria-label={t("add")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--brand-fill)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand)]"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">{t("add")}</span>
@@ -150,17 +157,17 @@ export default function ClientsPage({ params }: Props) {
         {/* ── Search ── */}
         {clients.length > 0 && (
           <div className="relative">
-            <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+            <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={tc("search")}
-              className="w-full rounded-xl border border-slate-700/80 bg-slate-900 py-2.5 pl-8 pr-9 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none"
+              className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-9 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 transition-colors hover:text-slate-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)] transition-colors hover:text-[var(--text-muted)]"
                 aria-label="Effacer la recherche"
               >
                 <X size={12} />
@@ -180,184 +187,176 @@ export default function ClientsPage({ params }: Props) {
         ) : filtered.length === 0 ? (
           <EmptyState message="Aucun client ne correspond à la recherche." />
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {filtered.map((client) => {
-              const fin          = financials[client.id];
-              const clientOrders = orders.filter((o) => o.client_id === client.id);
-              const activeOrders = clientOrders.filter(
-                (o) => o.status !== "cancelled" && o.status !== "paid"
-              );
-              const isExpanded   = expandedId === client.id;
-              const hasDeficit   = fin && fin.balance < 0;
-              const hasFinancials = fin && (fin.totalReceived > 0 || fin.balance !== 0);
+          <Card className="overflow-hidden p-0">
+            <ul className="divide-y divide-[var(--border-subtle)]">
+              {filtered.map((client) => {
+                const fin          = financials[client.id];
+                const clientOrders = orders.filter((o) => o.client_id === client.id);
+                const activeOrders = clientOrders.filter(
+                  (o) => o.status !== "cancelled" && o.status !== "paid"
+                );
+                const isExpanded   = expandedId === client.id;
+                const hasDeficit   = fin && fin.balance < 0;
+                const hasFinancials = fin && (fin.totalReceived > 0 || fin.balance !== 0);
 
-              return (
-                <Card
-                  key={client.id}
-                  variant="elevated"
-                  className={`transition-colors hover:border-slate-600 ${
-                    hasDeficit ? "border-red-900/30" : ""
-                  }`}
-                >
-                  <article>
-                    {/* ── Top row: name + actions ── */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                          <h3 className="min-w-0 truncate text-sm font-bold text-slate-100">
-                            {client.name}
-                          </h3>
-                          <Badge variant={trustVariant[client.trust_level]}>
-                            {t(`trust_levels.${client.trust_level}`)}
-                          </Badge>
-                          {activeOrders.length > 0 && (
-                            <span className="shrink-0 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-400 ring-1 ring-orange-500/20">
-                              {activeOrders.length} cmd
+                return (
+                  <li key={client.id}>
+                    <div
+                      className={`transition-colors hover:bg-[var(--surface-hover)] ${
+                        isExpanded ? "bg-[var(--surface-chip)]" : ""
+                      } ${hasDeficit ? "border-l-2 border-red-800/50" : ""}`}
+                    >
+                      {/* ── Row: phone (primary), name, amounts, actions ── */}
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        {/* Expand toggle */}
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : client.id)}
+                          aria-label={isExpanded ? "Réduire" : "Voir détail"}
+                          className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)] shrink-0"
+                        >
+                          {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        </button>
+
+                        {/* Identity */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="truncate font-mono text-sm font-semibold tabular-nums text-[var(--text-strong)]">
+                              {client.phone || "—"}
                             </span>
+                            <Badge variant={trustVariant[client.trust_level]}>
+                              {t(`trust_levels.${client.trust_level}`)}
+                            </Badge>
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
+                            <span className="truncate text-xs text-[var(--text-muted)]">
+                              {client.name}
+                            </span>
+                            {client.city && (
+                              <>
+                                <span className="text-[var(--text-faint)]">·</span>
+                                <span className="truncate text-[11px] text-[var(--text-faint)]">
+                                  {client.city}
+                                </span>
+                              </>
+                            )}
+                            {activeOrders.length > 0 && (
+                              <>
+                                <span className="text-[var(--text-faint)]">·</span>
+                                <span className="shrink-0 text-[11px] text-[var(--brand-text)]">
+                                  {activeOrders.length} cmd
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Amounts — always visible */}
+                        <div className="flex shrink-0 items-center gap-4 text-right">
+                          {hasFinancials ? (
+                            <>
+                              <div className="hidden sm:block">
+                                <p className="text-[10px] text-[var(--text-faint)]">Reçu</p>
+                                <p className="font-mono text-xs tabular-nums text-[var(--text-body)]">
+                                  {formatMoney(fin.totalReceived, fin.currency)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-[var(--text-faint)]">Solde</p>
+                                <p className={`font-mono text-sm font-bold tabular-nums ${
+                                  hasDeficit ? "text-red-400" : "text-emerald-400"
+                                }`}>
+                                  {hasDeficit ? "−" : ""}{formatMoney(Math.abs(fin.balance), fin.currency)}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-[11px] text-[var(--text-faint)]">—</span>
                           )}
                         </div>
 
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                          {(client.city || client.country) && (
-                            <span className="flex items-center gap-1 text-[11px] text-slate-600">
-                              <MapPin size={9} />
-                              {[client.city, client.country].filter(Boolean).join(", ")}
-                            </span>
-                          )}
-                          {client.phone && (
-                            <span className="flex items-center gap-1 text-[11px] text-slate-600">
-                              <Phone size={9} />
-                              {client.phone}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        {hasFinancials && (
+                        {/* Actions */}
+                        <div className="flex shrink-0 items-center gap-0.5">
                           <button
-                            onClick={() => setExpandedId(isExpanded ? null : client.id)}
-                            aria-label={isExpanded ? "Réduire" : "Voir détail financier"}
-                            className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                            onClick={() => openEdit(client.id)}
+                            aria-label="Modifier"
+                            className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                           >
-                            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                            <Pencil size={12} />
                           </button>
-                        )}
-                        <button
-                          onClick={() => openEdit(client.id)}
-                          aria-label="Modifier"
-                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
-                        >
-                          <Pencil size={12} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteId(client.id)}
-                          aria-label="Supprimer"
-                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                          <button
+                            onClick={() => setDeleteId(client.id)}
+                            aria-label="Supprimer"
+                            className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-red-400"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* ── Compact financials (collapsed) ── */}
-                    {hasFinancials && !isExpanded && (
-                      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-800/60 pt-2.5">
-                        <div>
-                          <p className="text-[10px] text-slate-600">Reçu</p>
-                          <p className="font-mono text-xs font-semibold tabular-nums text-slate-300">
-                            {formatMoney(fin.totalReceived, fin.currency)}
+                      {/* ── Expanded detail ── */}
+                      {isExpanded && fin && (
+                        <div className="border-t border-[var(--border-subtle)] px-4 pb-4 pt-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+                            Détail financier
                           </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-600">Solde</p>
-                          <p className={`font-mono text-xs font-semibold tabular-nums ${
-                            hasDeficit ? "text-red-400" : "text-orange-300"
-                          }`}>
-                            {hasDeficit ? "−" : ""}{formatMoney(Math.abs(fin.balance), fin.currency)}
-                            {hasDeficit && <span className="ml-0.5 text-[9px]">⚠</span>}
-                          </p>
-                        </div>
-                        {fin.totalProfitValidated > 0 && (
-                          <div>
-                            <p className="text-[10px] text-slate-600">Bénéfice</p>
-                            <p className="font-mono text-xs font-semibold tabular-nums text-emerald-400">
-                              {formatMoney(fin.totalProfitValidated, fin.currency)}
-                            </p>
+                          <div className="space-y-1.5">
+                            <FinRow label="Argent reçu"      value={fin.totalReceived}      currency={fin.currency} color="emerald" />
+                            <FinRow label="Achats produits"  value={-fin.totalProductCost}  currency={fin.currency} color="red" />
+                            <FinRow label="Frais"            value={-fin.totalFees}         currency={fin.currency} color="red" />
+                            {fin.totalRefunded > 0 && (
+                              <FinRow label="Remboursé" value={-fin.totalRefunded} currency={fin.currency} color="red" />
+                            )}
+                            {fin.totalProfitValidated > 0 && (
+                              <FinRow label="Bénéfice validé" value={fin.totalProfitValidated} currency={fin.currency} color="emerald" />
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )}
 
-                    {/* Note (collapsed only) */}
-                    {client.note && !isExpanded && (
-                      <p className="mt-1.5 truncate text-[11px] text-slate-700">{client.note}</p>
-                    )}
+                          <div className="mt-2 flex items-center justify-between border-t border-[var(--border-default)] pt-2">
+                            <span className="text-xs text-[var(--text-muted)]">Solde restant</span>
+                            <span className={`font-mono text-sm font-bold tabular-nums ${
+                              fin.balance >= 0 ? "text-emerald-400" : "text-red-400"
+                            }`}>
+                              {fin.balance >= 0 ? "" : "−"}{formatMoney(Math.abs(fin.balance), fin.currency)}
+                            </span>
+                          </div>
 
-                    {/* ── Expanded detail ── */}
-                    {isExpanded && fin && (
-                      <div className="mt-3 border-t border-slate-800 pt-3">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                          Détail financier
-                        </p>
-                        <div className="space-y-1.5">
-                          <FinRow label="Argent reçu"      value={fin.totalReceived}      currency={fin.currency} color="emerald" />
-                          <FinRow label="Achats produits"  value={-fin.totalProductCost}  currency={fin.currency} color="red" />
-                          <FinRow label="Frais"            value={-fin.totalFees}         currency={fin.currency} color="red" />
-                          {fin.totalRefunded > 0 && (
-                            <FinRow label="Remboursé" value={-fin.totalRefunded} currency={fin.currency} color="red" />
-                          )}
-                          {fin.totalProfitValidated > 0 && (
-                            <FinRow label="Bénéfice validé" value={fin.totalProfitValidated} currency={fin.currency} color="emerald" />
-                          )}
-                        </div>
-
-                        <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2">
-                          <span className="text-xs text-slate-400">Solde restant</span>
-                          <span className={`font-mono text-sm font-bold tabular-nums ${
-                            fin.balance >= 0 ? "text-orange-400" : "text-red-400"
-                          }`}>
-                            {fin.balance >= 0 ? "" : "−"}{formatMoney(Math.abs(fin.balance), fin.currency)}
-                          </span>
-                        </div>
-
-                        {clientOrders.length > 0 && (
-                          <div className="mt-3">
-                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                              Commandes
-                            </p>
-                            <div className="space-y-1">
-                              {clientOrders.map((o) => (
-                                <div key={o.id} className="flex items-center justify-between gap-2">
-                                  <span className="min-w-0 truncate text-xs text-slate-400">
-                                    {o.product_name}
-                                  </span>
-                                  <Badge
-                                    variant={
-                                      o.status === "paid" ? "success"
-                                      : o.status === "cancelled" ? "default"
-                                      : "orange"
-                                    }
-                                  >
-                                    {to(`statuses.${o.status}`)}
-                                  </Badge>
-                                </div>
-                              ))}
+                          {clientOrders.length > 0 && (
+                            <div className="mt-3">
+                              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
+                                Commandes
+                              </p>
+                              <div className="space-y-1">
+                                {clientOrders.map((o) => (
+                                  <div key={o.id} className="flex items-center justify-between gap-2">
+                                    <span className="min-w-0 truncate text-xs text-[var(--text-muted)]">
+                                      {o.product_name}
+                                    </span>
+                                    <Badge
+                                      variant={
+                                        o.status === "paid" ? "success"
+                                        : o.status === "cancelled" ? "default"
+                                        : "orange"
+                                      }
+                                    >
+                                      {to(`statuses.${o.status}`)}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {client.note && (
-                          <p className="mt-2.5 text-[11px] text-slate-600">{client.note}</p>
-                        )}
-                      </div>
-                    )}
-                  </article>
-                </Card>
-              );
-            })}
-          </div>
+                          {client.note && (
+                            <p className="mt-2.5 text-[11px] text-[var(--text-faint)]">{client.note}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
         )}
       </div>
 
@@ -368,23 +367,23 @@ export default function ClientsPage({ params }: Props) {
           onClick={() => setShowForm(false)}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-2.5 md:hidden">
-              <div className="h-1 w-10 rounded-full bg-slate-700" />
+              <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
             </div>
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 pb-3 pt-4">
-              <h2 className="text-base font-bold text-slate-50">
+              <h2 className="text-base font-bold text-[var(--text-strong)]">
                 {editing ? tc("edit") : t("add")}
               </h2>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                className="rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
               >
                 <X size={16} />
               </button>
@@ -396,7 +395,7 @@ export default function ClientsPage({ params }: Props) {
 
                   {/* Name */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("name")}
                     </label>
                     <input
@@ -410,7 +409,7 @@ export default function ClientsPage({ params }: Props) {
 
                   {/* Trust level */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("trust_level")}
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -421,8 +420,8 @@ export default function ClientsPage({ params }: Props) {
                           onClick={() => setTrustLevel(lvl)}
                           className={`rounded-xl py-2.5 text-xs font-medium transition-colors ${
                             trustLevel === lvl
-                              ? "bg-orange-600 text-white"
-                              : "border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                              ? "bg-[var(--brand-fill)] text-white"
+                              : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                           }`}
                         >
                           {t(`trust_levels.${lvl}`)}
@@ -434,7 +433,7 @@ export default function ClientsPage({ params }: Props) {
                   {/* Country + City */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                         {t("country")}
                       </label>
                       <input
@@ -445,7 +444,7 @@ export default function ClientsPage({ params }: Props) {
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                         {t("city")}
                       </label>
                       <input
@@ -459,8 +458,8 @@ export default function ClientsPage({ params }: Props) {
 
                   {/* Phone */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("phone")} <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      {t("phone")} <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       value={phone}
@@ -472,8 +471,8 @@ export default function ClientsPage({ params }: Props) {
 
                   {/* Note */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("note")} <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      {t("note")} <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       value={note}
@@ -487,21 +486,21 @@ export default function ClientsPage({ params }: Props) {
 
               {/* Footer */}
               <div
-                className="shrink-0 border-t border-slate-800 px-5 pt-3"
+                className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3"
                 style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
               >
                 <div className="flex gap-2.5">
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
-                    className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                    className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                   >
                     {tc("cancel")}
                   </button>
                   <button
                     type="submit"
                     disabled={submitting || !name.trim()}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
                     {submitting ? "Enregistrement…" : tc("save")}
                   </button>
@@ -516,11 +515,24 @@ export default function ClientsPage({ params }: Props) {
       <ConfirmDialog
         open={!!deleteId}
         title={tc("confirm_delete")}
-        message="Supprimer ce client ? Ses transactions resteront mais ne seront plus liées."
+        message={
+          deleteError
+            ? `Erreur : ${deleteError}`
+            : "Supprimer ce client ? Ses transactions resteront mais ne seront plus liées."
+        }
         confirmLabel={tc("delete")}
         cancelLabel={tc("cancel")}
         danger
-        onConfirm={async () => { if (deleteId) await deleteClient(deleteId); setDeleteId(null); }}
+        onConfirm={async () => {
+          if (!deleteId) return;
+          try {
+            await deleteClient(deleteId);
+            setDeleteId(null);
+            setDeleteError(null);
+          } catch (err: unknown) {
+            setDeleteError(err instanceof Error ? err.message : "Échec de la suppression.");
+          }
+        }}
         onCancel={() => setDeleteId(null)}
       />
     </PageWrapper>
@@ -544,7 +556,7 @@ function FinRow({
     : "text-amber-400";
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-xs text-slate-500">{label}</span>
+      <span className="text-xs text-[var(--text-label)]">{label}</span>
       <span className={`font-mono text-xs tabular-nums ${colorClass}`}>
         {value > 0 ? "+" : ""}{formatMoney(value, currency)}
       </span>

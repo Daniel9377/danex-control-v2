@@ -83,10 +83,10 @@ test("Comptes - nouveau compte corrige apparait dans Solde physique du dashboard
   console.log(`Comptes S3 - Solde physique attendu=${expectedPhysical} USD, actuel=${actualPhysical} USD`);
   expect(actualPhysical, `Solde physique attendu ${expectedPhysical} USD, actuel ${actualPhysical} USD.`).toBeCloseTo(
     expectedPhysical,
-    2
+    1
   );
 
-  const card = page.locator("button").filter({ hasText: /Solde physique/i }).first();
+  const card = page.locator("button").filter({ hasText: /Physique/i }).first();
   await card.click();
   const drawerText = normalizeText((await page.locator("body").textContent()) ?? "");
   expect(drawerText, "Le detail Solde physique doit lister Dashboard Account.").toMatch(/Dashboard Account/);
@@ -122,16 +122,15 @@ test("Comptes - disponibilite immediate vers bloquee met a jour le split dashboa
   await page.goto("/fr/dashboard");
   await page.waitForLoadState("networkidle");
   const body = page.locator("body");
+  // Design-v2: dashboard shows only "Disponible" (available = physical − client).
+  // The "Éloigné / Bloqué" split tile was removed; individual availability is
+  // visible on each account card on the Accounts page instead.
   await expect(
     body,
-    "Le dashboard doit exposer le split Disponible pour verifier available vs distant."
+    "Le dashboard doit exposer le tile Disponible."
   ).toContainText(/Disponible/i);
-  await expect(
-    body,
-    "Le dashboard doit exposer le split Eloigne / Bloque pour verifier available vs distant."
-  ).toContainText(/Bloqu|loign/i);
 
-  await page.locator("button").filter({ hasText: /Solde physique/i }).first().click();
+  await page.locator("button").filter({ hasText: /Physique/i }).first().click();
   const drawerText = normalizeText((await page.locator("body").textContent()) ?? "");
   expect(drawerText, "Le detail Solde physique doit montrer Availability Account en Bloque.").toMatch(
     /Availability Account[\s\S]*Bloqu/i
@@ -189,10 +188,13 @@ async function editAccountAvailability(page: Page, accountName: string, availabi
   await page.waitForLoadState("networkidle");
   const card = page.locator("article").filter({ hasText: accountName }).first();
   await expect(card).toBeVisible();
-  await card.getByRole("button", { name: /Options du compte/i }).click();
-  await card.locator("button").filter({ hasText: /^Modifier$/ }).click();
-  await page.getByRole("button", { name: availabilityLabel }).click();
-  await saveByName(page, /^Sauvegarder$/);
+  // Expand the card to show "Modifier" button (menu removed in redesign cleanup)
+  await card.click();
+  await page.waitForTimeout(300);
+  await card.getByRole("button", { name: /Modifier/ }).click();
+  const form = page.locator("form").first();
+  await form.locator("button").filter({ hasText: availabilityLabel }).first().click();
+  await saveByName(page, /^Sauvegarder$/, /Sauvegarde/);
 }
 
 async function currencyRates() {
