@@ -43,7 +43,7 @@ const CLIENT_SUBTYPES = new Set([
 ]);
 
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -236,8 +236,8 @@ export default function ExportPage({ params }: Props) {
 
         {/* ── Header ── */}
         <div>
-          <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--text-label)]">
             Exporte tes données en CSV ou sauvegarde complète JSON.
           </p>
         </div>
@@ -259,12 +259,12 @@ export default function ExportPage({ params }: Props) {
                   className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition-all ${
                     active
                       ? "border-orange-600/50 bg-orange-950/30 text-orange-200"
-                      : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                      : "border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                   }`}
                 >
                   <Icon
                     size={14}
-                    className={`mt-0.5 shrink-0 ${active ? "text-orange-400" : "text-slate-600"}`}
+                    className={`mt-0.5 shrink-0 ${active ? "text-orange-400" : "text-[var(--text-faint)]"}`}
                   />
                   <span className="min-w-0 truncate text-xs font-medium leading-tight">
                     {TYPE_LABELS[type]}
@@ -281,21 +281,21 @@ export default function ExportPage({ params }: Props) {
             className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all ${
               exportType === "json_backup"
                 ? "border-emerald-700/50 bg-emerald-950/20"
-                : "border-slate-700/60 bg-slate-800/40 hover:border-slate-600"
+                : "border-[var(--border-strong)] bg-[var(--surface-chip)] hover:border-[var(--border-strong)]"
             }`}
           >
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-              exportType === "json_backup" ? "bg-emerald-900/50" : "bg-slate-800"
+              exportType === "json_backup" ? "bg-emerald-900/50" : "bg-[var(--surface-chip)]"
             }`}>
-              <Shield size={16} className={exportType === "json_backup" ? "text-emerald-400" : "text-slate-500"} />
+              <Shield size={16} className={exportType === "json_backup" ? "text-emerald-400" : "text-[var(--text-label)]"} />
             </div>
             <div className="min-w-0">
               <p className={`text-sm font-semibold ${
-                exportType === "json_backup" ? "text-emerald-300" : "text-slate-300"
+                exportType === "json_backup" ? "text-emerald-300" : "text-[var(--text-body)]"
               }`}>
                 {TYPE_LABELS["json_backup"]}
               </p>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-[var(--text-faint)]">
                 Backup complet · comptes, transactions, clients, commandes, dettes
               </p>
             </div>
@@ -312,7 +312,7 @@ export default function ExportPage({ params }: Props) {
                 {/* Period pills */}
                 {showPeriodFilter && (
                   <div className="space-y-2.5">
-                    <label className="block text-xs font-medium text-slate-500">{t("period_label")}</label>
+                    <label className="block text-xs font-medium text-[var(--text-label)]">{t("period_label")}</label>
                     <div className="flex flex-wrap gap-1.5">
                       {PERIOD_OPTIONS.map((opt) => (
                         <button
@@ -321,7 +321,7 @@ export default function ExportPage({ params }: Props) {
                           className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                             period === opt.value
                               ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
-                              : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                              : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                           }`}
                         >
                           {opt.label}
@@ -331,7 +331,7 @@ export default function ExportPage({ params }: Props) {
                     {period === "custom" && (
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="mb-1.5 block text-xs text-slate-500">{t("from_date")}</label>
+                          <label className="mb-1.5 block text-xs text-[var(--text-label)]">{t("from_date")}</label>
                           <input
                             type="date"
                             value={fromDate}
@@ -340,7 +340,7 @@ export default function ExportPage({ params }: Props) {
                           />
                         </div>
                         <div>
-                          <label className="mb-1.5 block text-xs text-slate-500">{t("to_date")}</label>
+                          <label className="mb-1.5 block text-xs text-[var(--text-label)]">{t("to_date")}</label>
                           <input
                             type="date"
                             value={toDate}
@@ -358,7 +358,7 @@ export default function ExportPage({ params }: Props) {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {showPeriodFilter && (
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                        <label className="mb-1.5 block text-xs font-medium text-[var(--text-label)]">
                           {t("account_label")}
                         </label>
                         <select
@@ -375,7 +375,7 @@ export default function ExportPage({ params }: Props) {
                     )}
                     {showClientFilter && (
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                        <label className="mb-1.5 block text-xs font-medium text-[var(--text-label)]">
                           {t("client_label")}
                         </label>
                         <select
@@ -388,12 +388,12 @@ export default function ExportPage({ params }: Props) {
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
                         </select>
-                        <p className="mt-1 text-[11px] text-slate-600">{t("select_client_hint")}</p>
+                        <p className="mt-1 text-[11px] text-[var(--text-faint)]">{t("select_client_hint")}</p>
                       </div>
                     )}
                     {showOrderFilter && (
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                        <label className="mb-1.5 block text-xs font-medium text-[var(--text-label)]">
                           {t("order_label")}
                         </label>
                         <select
@@ -406,7 +406,7 @@ export default function ExportPage({ params }: Props) {
                             <option key={o.id} value={o.id}>{o.product_name}</option>
                           ))}
                         </select>
-                        <p className="mt-1 text-[11px] text-slate-600">{t("select_order_hint")}</p>
+                        <p className="mt-1 text-[11px] text-[var(--text-faint)]">{t("select_order_hint")}</p>
                       </div>
                     )}
                   </div>
@@ -419,9 +419,9 @@ export default function ExportPage({ params }: Props) {
                       type="checkbox"
                       checked={includeLegacy}
                       onChange={(e) => setIncludeLegacy(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-600 accent-orange-500"
+                      className="h-4 w-4 rounded border-[var(--border-default)] accent-orange-500"
                     />
-                    <span className="text-xs text-slate-400">{t("include_legacy")}</span>
+                    <span className="text-xs text-[var(--text-muted)]">{t("include_legacy")}</span>
                   </label>
                 )}
               </div>
@@ -436,8 +436,8 @@ export default function ExportPage({ params }: Props) {
           </div>
         )}
         {exportType === "json_backup" && (
-          <div className="rounded-xl border border-slate-700/60 bg-slate-800/50 px-4 py-3">
-            <p className="text-xs text-slate-400">{t("json_note")}</p>
+          <div className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-chip)] px-4 py-3">
+            <p className="text-xs text-[var(--text-muted)]">{t("json_note")}</p>
           </div>
         )}
 
@@ -445,17 +445,17 @@ export default function ExportPage({ params }: Props) {
         {previewCount !== null && (
           <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 ${
             previewCount === 0
-              ? "border-slate-800 bg-slate-900/40"
-              : "border-slate-800 bg-slate-900/60"
+              ? "border-[var(--border-default)] bg-[var(--surface-glass)]"
+              : "border-[var(--border-default)] bg-[var(--surface-glass)]"
           }`}>
-            <Filter size={13} className={previewCount === 0 ? "text-slate-600" : "text-orange-400/80"} />
-            <p className="text-sm text-slate-400">
-              <span className={`font-semibold ${previewCount === 0 ? "text-slate-500" : "text-slate-200"}`}>
+            <Filter size={13} className={previewCount === 0 ? "text-[var(--text-faint)]" : "text-orange-400/80"} />
+            <p className="text-sm text-[var(--text-muted)]">
+              <span className={`font-semibold ${previewCount === 0 ? "text-[var(--text-label)]" : "text-[var(--text-body)]"}`}>
                 {previewCount}
               </span>{" "}
               {countSuffix}
               {previewCount === 0 && (
-                <span className="ml-2 text-slate-600">— {t("no_data")}</span>
+                <span className="ml-2 text-[var(--text-faint)]">— {t("no_data")}</span>
               )}
             </p>
           </div>
@@ -479,7 +479,7 @@ export default function ExportPage({ params }: Props) {
                 onClick={handleCSV}
                 disabled={busy || previewCount === 0}
                 aria-label={busy ? t("generating") : t("btn_csv")}
-                className="flex items-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                className="flex items-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
               >
                 <FileDown size={15} />
                 {busy ? t("generating") : t("btn_csv")}
@@ -489,7 +489,7 @@ export default function ExportPage({ params }: Props) {
               onClick={handleJSONBackup}
               disabled={busy}
               aria-label={busy ? t("generating") : t("btn_json")}
-              className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-800 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-4 py-2.5 text-sm font-medium text-[var(--text-body)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-strong)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Database size={15} />
               {busy ? t("generating") : t("btn_json")}

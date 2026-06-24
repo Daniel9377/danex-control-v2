@@ -52,10 +52,10 @@ interface RowState {
 // ── Field styles ──────────────────────────────────────────────────────────────
 
 const inlineFieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-2.5 py-2 text-xs text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none";
 
 const filterSelectCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-2.5 py-2 text-xs text-slate-200 focus:border-orange-500/70 focus:outline-none";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-body)] focus:border-orange-500/70 focus:outline-none";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -83,9 +83,9 @@ function getMigrationStatusLabel(status: string | null): string {
 function getMigrationStatusColor(status: string | null): string {
   switch (status) {
     case "reviewed": return "bg-emerald-900/40 text-emerald-400";
-    case "archived": return "bg-slate-700/60 text-slate-400";
+    case "archived": return "bg-[var(--border-strong)]/60 text-[var(--text-muted)]";
     case "ignored_modern_reports": return "bg-amber-900/40 text-amber-400";
-    default: return "bg-slate-800 text-slate-500";
+    default: return "bg-[var(--surface-chip)] text-[var(--text-label)]";
   }
 }
 
@@ -95,8 +95,8 @@ function getAccountingTypeBadge(at: AccountingType | null) {
     case "non_income_inflow":    return { label: "Entrée non-revenu",  color: "text-sky-400" };
     case "real_expense":         return { label: "Vraie dépense",      color: "text-red-400" };
     case "non_expense_outflow":  return { label: "Sortie non-dépense", color: "text-orange-400" };
-    case "adjustment":           return { label: "Ajustement",         color: "text-slate-400" };
-    default:                     return { label: "Non classifié",      color: "text-slate-500" };
+    case "adjustment":           return { label: "Ajustement",         color: "text-[var(--text-muted)]" };
+    default:                     return { label: "Non classifié",      color: "text-[var(--text-label)]" };
   }
 }
 
@@ -127,21 +127,21 @@ function inPeriodFilter(dateStr: string, period: string, fromDate: string, toDat
 function ImpactPreview({ subType }: { subType: TransactionSubType }) {
   const impact = computeImpact(subType);
   return (
-    <div className="mt-3 rounded-xl border border-slate-700/60 bg-slate-900/60 p-3.5 text-xs">
-      <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+    <div className="mt-3 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-glass)] p-3.5 text-xs">
+      <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-label)]">
         Impact sur les rapports
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <span className={cn("flex items-center gap-1.5", impact.becomesRealIncome ? "text-emerald-400" : "text-slate-600")}>
+        <span className={cn("flex items-center gap-1.5", impact.becomesRealIncome ? "text-emerald-400" : "text-[var(--text-faint)]")}>
           <TrendingUp size={11} /> Vrai revenu : {impact.becomesRealIncome ? "Oui" : "Non"}
         </span>
-        <span className={cn("flex items-center gap-1.5", impact.becomesRealExpense ? "text-red-400" : "text-slate-600")}>
+        <span className={cn("flex items-center gap-1.5", impact.becomesRealExpense ? "text-red-400" : "text-[var(--text-faint)]")}>
           <TrendingDown size={11} /> Vraie dépense : {impact.becomesRealExpense ? "Oui" : "Non"}
         </span>
-        <span className={cn("flex items-center gap-1.5", impact.touchesClientMoney ? "text-sky-400" : "text-slate-600")}>
+        <span className={cn("flex items-center gap-1.5", impact.touchesClientMoney ? "text-sky-400" : "text-[var(--text-faint)]")}>
           <Users size={11} /> Argent client : {impact.touchesClientMoney ? "Oui" : "Non"}
         </span>
-        <span className="flex items-center gap-1.5 text-slate-600">
+        <span className="flex items-center gap-1.5 text-[var(--text-faint)]">
           <Minus size={11} /> Solde physique : inchangé
         </span>
       </div>
@@ -162,7 +162,7 @@ function SubTypePicker({
     <div className="space-y-2.5">
       {SUB_TYPE_GROUPS.map((group) => (
         <div key={group.label}>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-label)]">
             {group.label}
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -178,7 +178,7 @@ function SubTypePicker({
                     "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
                     value === st
                       ? "bg-orange-600 text-white"
-                      : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+                      : "bg-[var(--surface-chip)] text-[var(--text-muted)] hover:bg-[var(--border-strong)] hover:text-[var(--text-body)]"
                   )}
                 >
                   {meta.label}
@@ -371,7 +371,7 @@ export default function LegacyPage({ params }: Props) {
         key={tx.id}
         className={cn(
           "rounded-xl border transition-colors",
-          isSelected ? "border-orange-600/50 bg-orange-950/20" : "border-slate-800 bg-slate-900"
+          isSelected ? "border-orange-600/50 bg-orange-950/20" : "border-[var(--border-default)] bg-[var(--surface-card)]"
         )}
       >
         {/* Row summary */}
@@ -385,12 +385,12 @@ export default function LegacyPage({ params }: Props) {
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] text-slate-500">{formatDate(tx.transaction_date)}</span>
+              <span className="text-[11px] text-[var(--text-label)]">{formatDate(tx.transaction_date)}</span>
               <span className={cn("text-sm font-semibold tabular-nums", tx.type === "income" ? "text-emerald-400" : "text-red-400")}>
                 {tx.type === "income" ? "+" : "−"}{formatAmount(tx.amount, tx.currency)}
               </span>
               {account && (
-                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">
+                <span className="rounded-full bg-[var(--surface-chip)] px-2 py-0.5 text-[10px] text-[var(--text-muted)]">
                   {account.name}
                 </span>
               )}
@@ -400,7 +400,7 @@ export default function LegacyPage({ params }: Props) {
                 </span>
               ) : (
                 <>
-                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-500">
+                  <span className="rounded-full bg-[var(--surface-chip)] px-2 py-0.5 text-[10px] text-[var(--text-label)]">
                     {tx.type === "income" ? "Entrée" : "Sortie"}
                     {tx.category ? ` · ${tx.category}` : ""}
                   </span>
@@ -412,15 +412,15 @@ export default function LegacyPage({ params }: Props) {
               </span>
             </div>
             {tx.note && (
-              <p className="mt-0.5 truncate text-[11px] text-slate-600">{tx.note}</p>
+              <p className="mt-0.5 truncate text-[11px] text-[var(--text-faint)]">{tx.note}</p>
             )}
             {client && (
-              <p className="mt-0.5 text-[11px] text-slate-600">
+              <p className="mt-0.5 text-[11px] text-[var(--text-faint)]">
                 {client.name}{order ? ` · ${order.product_name}` : ""}
               </p>
             )}
             {tx.legacy_review_note && (
-              <p className="mt-0.5 text-[10px] italic text-slate-700">
+              <p className="mt-0.5 text-[10px] italic text-[var(--text-faint)]">
                 Note : {tx.legacy_review_note}
               </p>
             )}
@@ -433,7 +433,7 @@ export default function LegacyPage({ params }: Props) {
                 onClick={() => handleRevert(tx.id)}
                 aria-label="Annuler la reclassification"
                 title="Annuler la reclassification"
-                className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
               >
                 <RotateCcw size={13} />
               </button>
@@ -443,7 +443,7 @@ export default function LegacyPage({ params }: Props) {
                 onClick={() => handleIgnore(tx.id)}
                 aria-label="Ignorer cette transaction"
                 title="Ignorer cette transaction"
-                className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-amber-400"
+                className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-amber-400"
               >
                 <Archive size={13} />
               </button>
@@ -456,7 +456,7 @@ export default function LegacyPage({ params }: Props) {
                   "flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
                   row.open
                     ? "bg-orange-600/20 text-orange-400"
-                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                    : "bg-[var(--surface-chip)] text-[var(--text-body)] hover:bg-[var(--border-strong)]"
                 )}
               >
                 <Tag size={11} />
@@ -469,14 +469,14 @@ export default function LegacyPage({ params }: Props) {
 
         {/* Inline reclassification form */}
         {row.open && (
-          <div className="border-t border-slate-800 px-4 pb-4 pt-3.5">
+          <div className="border-t border-[var(--border-default)] px-4 pb-4 pt-3.5">
             {rError && (
               <div className="mb-3 rounded-xl border border-red-800/50 bg-red-950/30 px-3.5 py-2.5">
                 <p className="text-xs text-red-400">{rError}</p>
               </div>
             )}
 
-            <p className="mb-2.5 text-xs font-semibold text-slate-400">Choisir le nouveau type :</p>
+            <p className="mb-2.5 text-xs font-semibold text-[var(--text-muted)]">Choisir le nouveau type :</p>
             <SubTypePicker
               value={row.selectedSubType}
               onChange={(v) => patchRow(tx.id, { selectedSubType: v, confirming: false })}
@@ -486,7 +486,7 @@ export default function LegacyPage({ params }: Props) {
             {row.selectedSubType && meta?.needsClient && (
               <div className="mt-3 grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="mb-1.5 block text-[11px] text-slate-500">Client</label>
+                  <label className="mb-1.5 block text-[11px] text-[var(--text-label)]">Client</label>
                   <select
                     value={row.selectedClientId}
                     onChange={(e) => patchRow(tx.id, { selectedClientId: e.target.value, selectedOrderId: "" })}
@@ -498,7 +498,7 @@ export default function LegacyPage({ params }: Props) {
                 </div>
                 {meta.needsOrder && row.selectedClientId && (
                   <div>
-                    <label className="mb-1.5 block text-[11px] text-slate-500">Commande</label>
+                    <label className="mb-1.5 block text-[11px] text-[var(--text-label)]">Commande</label>
                     <select
                       value={row.selectedOrderId}
                       onChange={(e) => patchRow(tx.id, { selectedOrderId: e.target.value })}
@@ -517,8 +517,8 @@ export default function LegacyPage({ params }: Props) {
             {/* Note */}
             {row.selectedSubType && (
               <div className="mt-3">
-                <label className="mb-1.5 block text-[11px] text-slate-500">
-                  Note de reclassification <span className="text-slate-600">(optionnel)</span>
+                <label className="mb-1.5 block text-[11px] text-[var(--text-label)]">
+                  Note de reclassification <span className="text-[var(--text-faint)]">(optionnel)</span>
                 </label>
                 <input
                   type="text"
@@ -556,13 +556,13 @@ export default function LegacyPage({ params }: Props) {
                       <button
                         onClick={() => handleReclassify(tx)}
                         disabled={rLoading}
-                        className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                        className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                       >
                         {rLoading ? "…" : "Confirmer"}
                       </button>
                       <button
                         onClick={() => patchRow(tx.id, { confirming: false })}
-                        className="rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                        className="rounded-xl border border-[var(--border-strong)] px-3 py-2 text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                       >
                         Annuler
                       </button>
@@ -595,33 +595,33 @@ export default function LegacyPage({ params }: Props) {
 
         {/* ── Header ── */}
         <div>
-          <h1 className="text-xl font-bold text-slate-100">{t("title")}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--text-label)]">
             {t("subtitle")}{" "}
             <span className="text-orange-400/80">{t("balance_unchanged_notice")}</span>
           </p>
         </div>
 
         {/* ── Tool notice ── */}
-        <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 px-4 py-3">
-          <p className="text-xs text-slate-400">
-            <span className="font-semibold text-slate-300">Outil temporaire de migration.</span>{" "}
+        <div className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-chip)] px-4 py-3">
+          <p className="text-xs text-[var(--text-muted)]">
+            <span className="font-semibold text-[var(--text-body)]">Outil temporaire de migration.</span>{" "}
             Reclasse les anciennes transactions créées avant la nouvelle architecture.
             Une fois toutes traitées, cette page ne sert plus.
           </p>
         </div>
 
         {/* ── Progress ── */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-[var(--text-label)]">
               {isDone ? "Migration terminée" : `${stats.reviewed + stats.ignored} / ${stats.total} traitées`}
             </span>
             <span className={`font-mono text-xs font-semibold ${isDone ? "text-emerald-400" : "text-orange-400"}`}>
               {progressPct}%
             </span>
           </div>
-          <div className="h-1.5 w-full rounded-full bg-slate-800">
+          <div className="h-1.5 w-full rounded-full bg-[var(--surface-chip)]">
             <div
               className={`h-1.5 rounded-full transition-all ${isDone ? "bg-emerald-500" : "bg-orange-500"}`}
               style={{ width: `${progressPct}%` }}
@@ -640,15 +640,15 @@ export default function LegacyPage({ params }: Props) {
         {/* ── Stats ── */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Total legacy",  value: stats.total,    color: "text-slate-300",  icon: Clock },
+            { label: "Total legacy",  value: stats.total,    color: "text-[var(--text-body)]",  icon: Clock },
             { label: "À traiter",     value: stats.pending,  color: "text-amber-400",  icon: AlertTriangle },
             { label: "Reclassifiés",  value: stats.reviewed, color: "text-emerald-400", icon: CheckCircle2 },
-            { label: "Ignorés",       value: stats.ignored,  color: "text-slate-500",  icon: Archive },
+            { label: "Ignorés",       value: stats.ignored,  color: "text-[var(--text-label)]",  icon: Archive },
           ].map(({ label, value, color, icon: Icon }) => (
-            <div key={label} className="rounded-xl border border-slate-800 bg-slate-900 p-3.5">
+            <div key={label} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-3.5">
               <div className="flex items-center gap-2">
                 <Icon size={13} className={color} />
-                <span className="text-[11px] text-slate-500">{label}</span>
+                <span className="text-[11px] text-[var(--text-label)]">{label}</span>
               </div>
               <p className={cn("mt-1.5 font-mono text-2xl font-bold", color)}>{value}</p>
             </div>
@@ -666,19 +666,19 @@ export default function LegacyPage({ params }: Props) {
         <div className="space-y-2">
           <div className="flex gap-2">
             <div className="relative min-w-0 flex-1">
-              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
               <input
                 type="text"
                 placeholder="Rechercher (note, catégorie, montant)…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-700/80 bg-slate-900 py-2.5 pl-8 pr-8 text-sm text-slate-200 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none"
+                className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-8 text-sm text-[var(--text-body)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none"
               />
               {search && (
                 <button
                   onClick={() => setSearch("")}
                   aria-label="Effacer la recherche"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 transition-colors hover:text-slate-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)] transition-colors hover:text-[var(--text-muted)]"
                 >
                   <X size={12} />
                 </button>
@@ -691,7 +691,7 @@ export default function LegacyPage({ params }: Props) {
                 "flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm transition-colors",
                 showFilters || hasActiveFilter
                   ? "border-orange-600/50 bg-orange-950/30 text-orange-400"
-                  : "border-slate-700/80 bg-slate-900 text-slate-400 hover:border-slate-600 hover:text-slate-300"
+                  : "border-[var(--border-strong)] bg-[var(--surface-card)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
               )}
             >
               <Filter size={13} />
@@ -703,17 +703,17 @@ export default function LegacyPage({ params }: Props) {
           </div>
 
           {showFilters && (
-            <div className="rounded-xl border border-slate-700/60 bg-slate-900 p-4">
+            <div className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] p-4">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-medium text-slate-500">Compte</label>
+                  <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-label)]">Compte</label>
                   <select value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)} className={filterSelectCls}>
                     <option value="all">Tous les comptes</option>
                     {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-medium text-slate-500">Période</label>
+                  <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-label)]">Période</label>
                   <select value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value)} className={filterSelectCls}>
                     <option value="all">Toute la période</option>
                     <option value="month">Ce mois</option>
@@ -723,7 +723,7 @@ export default function LegacyPage({ params }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-medium text-slate-500">Type</label>
+                  <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-label)]">Type</label>
                   <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={filterSelectCls}>
                     <option value="all">Entrée + Sortie</option>
                     <option value="income">Entrée seulement</option>
@@ -731,7 +731,7 @@ export default function LegacyPage({ params }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-medium text-slate-500">Type comptable</label>
+                  <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-label)]">Type comptable</label>
                   <select value={accountingFilter} onChange={(e) => setAccountingFilter(e.target.value)} className={filterSelectCls}>
                     <option value="all">Tous</option>
                     <option value="real_income">Vrai revenu</option>
@@ -744,11 +744,11 @@ export default function LegacyPage({ params }: Props) {
                 {periodFilter === "custom" && (
                   <>
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-medium text-slate-500">Du</label>
+                      <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-label)]">Du</label>
                       <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className={filterSelectCls} />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-[11px] font-medium text-slate-500">Au</label>
+                      <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-label)]">Au</label>
                       <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className={filterSelectCls} />
                     </div>
                   </>
@@ -757,7 +757,7 @@ export default function LegacyPage({ params }: Props) {
               {hasActiveFilter && (
                 <button
                   onClick={() => { setAccountFilter("all"); setPeriodFilter("all"); setTypeFilter("all"); setAccountingFilter("all"); setFromDate(""); setToDate(""); }}
-                  className="mt-3 flex items-center gap-1 text-[11px] text-slate-600 transition-colors hover:text-slate-400"
+                  className="mt-3 flex items-center gap-1 text-[11px] text-[var(--text-faint)] transition-colors hover:text-[var(--text-muted)]"
                 >
                   <X size={10} /> Réinitialiser les filtres
                 </button>
@@ -781,13 +781,13 @@ export default function LegacyPage({ params }: Props) {
               </button>
               <button
                 onClick={selectAll}
-                className="text-xs text-slate-400 transition-colors hover:text-slate-200"
+                className="text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--text-body)]"
               >
                 Tout sélectionner ({filtered.length})
               </button>
               <button
                 onClick={clearSelection}
-                className="flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-300"
+                className="flex items-center gap-1 text-xs text-[var(--text-label)] transition-colors hover:text-[var(--text-body)]"
               >
                 <X size={11} /> Désélectionner
               </button>
@@ -801,8 +801,8 @@ export default function LegacyPage({ params }: Props) {
                 />
                 {bulkSubType && <ImpactPreview subType={bulkSubType} />}
                 <div className="mt-3">
-                  <label className="mb-1.5 block text-[11px] text-slate-500">
-                    Note commune <span className="text-slate-600">(optionnel)</span>
+                  <label className="mb-1.5 block text-[11px] text-[var(--text-label)]">
+                    Note commune <span className="text-[var(--text-faint)]">(optionnel)</span>
                   </label>
                   <input
                     type="text"
@@ -834,13 +834,13 @@ export default function LegacyPage({ params }: Props) {
                           <button
                             onClick={handleBulkReclassify}
                             disabled={rLoading}
-                            className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                            className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                           >
                             {rLoading ? "…" : "Confirmer"}
                           </button>
                           <button
                             onClick={() => setBulkConfirming(false)}
-                            className="rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                            className="rounded-xl border border-[var(--border-strong)] px-3 py-2 text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                           >
                             Annuler
                           </button>
@@ -858,13 +858,13 @@ export default function LegacyPage({ params }: Props) {
         {loadingTx ? (
           <div className="space-y-2">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-[60px] animate-pulse rounded-xl bg-slate-900" />
+              <div key={i} className="h-[60px] animate-pulse rounded-xl bg-[var(--surface-card)]" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-12 text-center">
+          <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] py-12 text-center">
             <CheckCircle2 size={28} className="mx-auto mb-3 text-emerald-500/60" />
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-[var(--text-label)]">
               {viewFilter === "pending"
                 ? "Toutes les transactions legacy ont été traitées."
                 : "Aucune transaction correspondant aux filtres."}
