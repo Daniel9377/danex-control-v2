@@ -515,7 +515,11 @@ export default function ClientsPage({ params }: Props) {
       <ConfirmDialog
         open={!!deleteId}
         title={tc("confirm_delete")}
-        message="Supprimer ce client ? Ses transactions resteront mais ne seront plus liées."
+        message={
+          deleteError
+            ? `Erreur : ${deleteError}`
+            : "Supprimer ce client ? Ses transactions resteront mais ne seront plus liées."
+        }
         confirmLabel={tc("delete")}
         cancelLabel={tc("cancel")}
         danger
@@ -529,11 +533,6 @@ export default function ClientsPage({ params }: Props) {
             setDeleteError(err instanceof Error ? err.message : "Échec de la suppression.");
           }
         }}
-        message={
-          deleteError
-            ? `Erreur : ${deleteError}`
-            : "Supprimer ce client ? Ses transactions resteront mais ne seront plus liées."
-        }
         onCancel={() => setDeleteId(null)}
       />
     </PageWrapper>

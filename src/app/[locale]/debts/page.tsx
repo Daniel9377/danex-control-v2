@@ -970,7 +970,9 @@ export default function DebtsPage({ params }: Props) {
         open={!!deleteId}
         title={tc("confirm_delete")}
         message={
-          debtToDelete && Number(debtToDelete.paid_amount) > 0
+          deleteError
+            ? `Erreur : ${deleteError}`
+            : debtToDelete && Number(debtToDelete.paid_amount) > 0
             ? `Cette dette a ${formatMoney(debtToDelete.paid_amount, debtToDelete.currency)} de paiements enregistrés. Les effets sur les comptes seront annulés. Continuer ?`
             : "Supprimer cette dette ?"
         }
@@ -988,13 +990,6 @@ export default function DebtsPage({ params }: Props) {
             // Keep dialog open so the user sees the error; they can retry or cancel
           }
         }}
-        message={
-          deleteError
-            ? `Erreur : ${deleteError}`
-            : debtToDelete && Number(debtToDelete.paid_amount) > 0
-            ? `Cette dette a ${formatMoney(debtToDelete.paid_amount, debtToDelete.currency)} de paiements enregistrés. Les effets sur les comptes seront annulés. Continuer ?`
-            : "Supprimer cette dette ?"
-        }
         onCancel={() => setDeleteId(null)}
       />
     </PageWrapper>
