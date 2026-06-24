@@ -222,19 +222,19 @@
   /* ── Money / status ──────────────────────────────────────────────────── */
   --money-neutral:    #0f172a;       /* slate-900 */
 
-  /* ── Status tints (lighter backgrounds for light theme) ──────────────── */
-  --tint-success-bg:  rgba(16, 185, 129, 0.1);
-  --tint-success-fg:  #059669;
-  --tint-danger-bg:   rgba(239, 68, 68, 0.1);
-  --tint-danger-fg:   #dc2626;
-  --tint-warning-bg:  rgba(249, 115, 22, 0.1);
-  --tint-warning-fg:  #ea580c;
-  --tint-info-bg:     rgba(96, 165, 250, 0.1);
-  --tint-info-fg:     #2563eb;
-  --tint-orange-bg:   rgba(249, 115, 22, 0.1);
-  --tint-orange-fg:   #ea580c;
-  --tint-default-bg:  rgba(203, 213, 225, 0.4);
-  --tint-default-fg:  #334155;
+  /* ── Status tints (opaque enough for white backgrounds) ──────────────── */
+  --tint-success-bg:  rgba(16, 185, 129, 0.2);
+  --tint-success-fg:  #047857;       /* emerald-700 */
+  --tint-danger-bg:   rgba(239, 68, 68, 0.2);
+  --tint-danger-fg:   #b91c1c;       /* red-700 */
+  --tint-warning-bg:  rgba(249, 115, 22, 0.2);
+  --tint-warning-fg:  #c2410c;       /* orange-700 — was amber-400, too pale on white */
+  --tint-info-bg:     rgba(96, 165, 250, 0.2);
+  --tint-info-fg:     #1d4ed8;       /* blue-700 */
+  --tint-orange-bg:   rgba(249, 115, 22, 0.2);
+  --tint-orange-fg:   #c2410c;       /* orange-700 */
+  --tint-default-bg:  rgba(203, 213, 225, 0.5);
+  --tint-default-fg:  #1e293b;       /* slate-800 */
 
   /* ── Shadows ─────────────────────────────────────────────────────────── */
   --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.06);

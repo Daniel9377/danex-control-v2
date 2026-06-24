@@ -89,7 +89,7 @@ const GROUP_COLORS: Record<string, string> = {
   personnel: "text-blue-400",
   business:  "text-violet-400",
   client:    "text-orange-400",
-  dette:     "text-amber-400",
+  dette:     "text-[var(--tint-warning-fg)]",
   autre:     "text-[var(--text-muted)]",
 };
 
@@ -97,7 +97,7 @@ const ITEM_COLORS: Record<string, string> = {
   personnel: "border-blue-800/40 bg-blue-950/20 hover:border-blue-600/60 hover:bg-blue-950/40 text-blue-300",
   business:  "border-violet-800/40 bg-violet-950/20 hover:border-violet-600/60 hover:bg-violet-950/40 text-violet-300",
   client:    "border-orange-800/40 bg-orange-950/20 hover:border-orange-600/60 hover:bg-orange-950/40 text-orange-300",
-  dette:     "border-amber-800/40 bg-amber-950/20 hover:border-amber-600/60 hover:bg-amber-950/40 text-amber-300",
+  dette:     "border-amber-800/40 bg-amber-950/20 hover:border-amber-600/60 hover:bg-amber-950/40 text-[var(--tint-warning-fg)]",
   autre:     "border-[var(--border-strong)] bg-[var(--surface-glass)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-chip)] text-[var(--text-body)]",
 };
 
@@ -642,7 +642,7 @@ export function TransactionFormModal({
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Dette à rembourser</label>
                   {openDebts.length === 0 ? (
-                    <p className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-3.5 py-2.5 text-xs text-amber-400">
+                    <p className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-3.5 py-2.5 text-xs text-[var(--tint-warning-fg)]">
                       Aucune dette active. Crée d'abord une «&nbsp;Dette prise&nbsp;».
                     </p>
                   ) : (
@@ -668,7 +668,7 @@ export function TransactionFormModal({
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Créance à récupérer</label>
                   {openReceivables.length === 0 ? (
-                    <p className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-3.5 py-2.5 text-xs text-amber-400">
+                    <p className="rounded-xl border border-amber-900/40 bg-amber-950/20 px-3.5 py-2.5 text-xs text-[var(--tint-warning-fg)]">
                       Aucune créance active. Crée d'abord une «&nbsp;Créance créée&nbsp;».
                     </p>
                   ) : (
@@ -832,7 +832,7 @@ export function TransactionFormModal({
                     onChange={(e) => setIsUnexpected(e.target.checked)}
                     className="h-4 w-4 rounded border-[var(--border-strong)] bg-[var(--surface-card)] accent-amber-500"
                   />
-                  <span className="text-xs text-amber-300">Dépense imprévue</span>
+                  <span className="text-xs text-[var(--tint-warning-fg)]">Dépense imprévue</span>
                   <span className="text-[10px] text-[var(--text-label)]">(surcoût, frais non anticipé)</span>
                 </label>
               )}

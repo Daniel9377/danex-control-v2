@@ -35,8 +35,8 @@ const ACCOUNTING_IMPACT: Record<AccountingType, { label: string; color: string }
   real_income:           { label: "Compté comme revenu réel",            color: "text-emerald-400" },
   non_income_inflow:     { label: "Entrée non comptée comme revenu",     color: "text-sky-400" },
   real_expense:          { label: "Comptée comme dépense réelle",        color: "text-red-400" },
-  non_expense_outflow:   { label: "Sortie non comptée comme dépense",    color: "text-amber-400" },
-  adjustment:            { label: "Correction de solde uniquement",      color: "text-amber-400" },
+  non_expense_outflow:   { label: "Sortie non comptée comme dépense",    color: "text-[var(--tint-warning-fg)]" },
+  adjustment:            { label: "Correction de solde uniquement",      color: "text-[var(--tint-warning-fg)]" },
 };
 
 const SUBTYPE_FILTER_GROUPS = [
@@ -426,7 +426,7 @@ export default function TransactionsPage({ params }: Props) {
                     {totals.adjustments !== 0 && (
                       <div>
                         <p className="text-[10px] text-[var(--text-faint)]">Corrections</p>
-                        <p className="font-mono text-xs tabular-nums text-amber-500">
+                        <p className="font-mono text-xs tabular-nums text-[var(--tint-warning-fg)]">
                           {totals.adjustments >= 0 ? "+" : ""}{formatMoney(Math.abs(totals.adjustments), "USD")}
                         </p>
                       </div>
@@ -454,8 +454,8 @@ export default function TransactionsPage({ params }: Props) {
                 const client    = tx.client_id ? clients.find((c) => c.id === tx.client_id) : null;
                 const isAdj     = tx.accounting_type === "adjustment";
                 const subLabel  = tx.sub_type ? SUB_TYPE_META[tx.sub_type]?.label : null;
-                const dotColor  = isAdj ? "bg-amber-500" : tx.type === "expense" ? "bg-red-500/70" : "bg-emerald-500/70";
-                const amtColor  = isAdj ? "text-amber-400" : tx.type === "expense" ? "text-red-400" : "text-emerald-400";
+                const dotColor  = isAdj ? "bg-orange-600" : tx.type === "expense" ? "bg-red-500/70" : "bg-emerald-500/70";
+                const amtColor  = isAdj ? "text-[var(--tint-warning-fg)]" : tx.type === "expense" ? "text-red-400" : "text-emerald-400";
                 const amtPrefix = isAdj ? "" : tx.type === "expense" ? "−" : "+";
 
                 const isExpanded = expandedId === tx.id;
@@ -713,7 +713,7 @@ export default function TransactionsPage({ params }: Props) {
                           )}
                         </div>
                         {adjDifference !== null && Math.abs(adjDifference) < 0.001 && adjTargetBalance !== "" && (
-                          <p className="text-[11px] text-amber-400/80">
+                          <p className="text-[11px] text-[var(--tint-warning-fg)]/80">
                             Aucune correction nécessaire — le solde est déjà correct.
                           </p>
                         )}

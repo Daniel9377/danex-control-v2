@@ -48,7 +48,7 @@ const SEVERITY_CONFIG: Record<
   },
   medium: {
     label: "Moyenne",
-    color: "text-yellow-400",
+    color: "text-[var(--tint-warning-fg)]",
     bg: "bg-yellow-950/20",
     border: "border-yellow-800/30",
     Icon: AlertTriangle,
@@ -150,7 +150,7 @@ function getAlertMessages(alert: SmartAlert): AlertMessages {
 function CategoryIcon({ category }: { category: AlertCategory }) {
   switch (category) {
     case "client": return <Users  size={12} className="shrink-0 text-blue-400/80" />;
-    case "debt":   return <HandCoins size={12} className="shrink-0 text-amber-400/80" />;
+    case "debt":   return <HandCoins size={12} className="shrink-0 text-[var(--tint-warning-fg)]/80" />;
     case "legacy": return <Tag    size={12} className="shrink-0 text-[var(--text-label)]" />;
     case "system": return <Settings2 size={12} className="shrink-0 text-purple-400/80" />;
   }

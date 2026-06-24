@@ -269,7 +269,7 @@ export default function DebtsPage({ params }: Props) {
                 {tabSummary.overdueCount}
               </p>
               {tabSummary.soonCount > 0 && (
-                <p className="mt-1 flex items-center gap-1 text-[10px] text-amber-400">
+                <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--tint-warning-fg)]">
                   <Clock size={9} />
                   {tabSummary.soonCount} bientôt échu
                 </p>
@@ -343,7 +343,7 @@ export default function DebtsPage({ params }: Props) {
                                   </span>
                                 )}
                                 {soon && (
-                                  <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-amber-950/40 px-2 py-0.5 text-[10px] font-medium text-amber-400">
+                                  <span className="shrink-0 flex items-center gap-0.5 rounded-full bg-amber-950/40 px-2 py-0.5 text-[10px] font-medium text-[var(--tint-warning-fg)]">
                                     <Clock size={8} />
                                     Bientôt
                                   </span>
@@ -715,7 +715,7 @@ export default function DebtsPage({ params }: Props) {
                           L'argent a réellement quitté ce compte
                         </span>
                       </label>
-                      <p className={`mt-1.5 text-[11px] ${affectsBalance ? "text-amber-400" : "text-[var(--text-faint)]"}`}>
+                      <p className={`mt-1.5 text-[11px] ${affectsBalance ? "text-[var(--tint-warning-fg)]" : "text-[var(--text-faint)]"}`}>
                         {affectsBalance
                           ? `Le solde sera réduit de ${amount || "…"} ${currency}.`
                           : "Déclaration seulement — aucun compte ne sera modifié."}
@@ -894,7 +894,7 @@ export default function DebtsPage({ params }: Props) {
                       ))}
                     </select>
                     {settlementMethod !== "real_payment" && (
-                      <p className="mt-1.5 text-[11px] text-amber-400/80">
+                      <p className="mt-1.5 text-[11px] text-[var(--tint-warning-fg)]/80">
                         Aucun mouvement de solde — règlement par compensation.
                       </p>
                     )}
