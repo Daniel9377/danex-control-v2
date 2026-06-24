@@ -233,49 +233,40 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
     });
   }
 
-  // Ajouter le message actuel
-  // Detecter mention client — demander a DeepSeek de CLASSER l intention
-  const mentionedClient = detectClientMention(userMessage);
-  let enrichedMessage = userMessage;
-  if (mentionedClient) {
-    enrichedMessage = `${userMessage}
+  // Étape 1 — Classification d'intention (appel DeepSeek léger, sans contexte lourd)
+  const classificationResult = await callDeepSeek([
+    {
+      role: "system",
+      content: `Tu es un classifieur. Analyse le message de Daniel et reponds avec UN SEUL mot parmi: INFO, CREATION, MENTION, ou AUCUN.
+INFO = Daniel demande des infos sur un client (comment va X, ou en est X). Inclus le nom du client apres deux-points. Ex: "INFO:Divine Test"
+CREATION = Daniel veut ajouter un nouveau client (nouveau client X, X veut une commande). Inclus le nom. Ex: "CREATION:Marc"
+MENTION = Daniel mentionne un nom sans intention precise (je vais voir X, le truc de la cliente). Inclus le nom si possible. Ex: "MENTION" ou "MENTION:Serge"
+AUCUN = aucun client mentionne. Ex: "AUCUN"
+Reponds UNIQUEMENT avec le mot et le nom. Pas de phrase. Pas d'explication.`,
+    },
+    { role: "user", content: userMessage },
+  ], 30);
 
-[SYSTEME: Un client potentiel a ete mentionne: "${mentionedClient}".
-CLASSE l intention de Daniel en UN seul mot-code sur la PREMIERE ligne de ta reponse:
-- INTENTION:INFO → Daniel demande des infos sur ce client (ex: "comment va X", "ou en est X")
-- INTENTION:CREATION → Daniel veut ajouter ce client ou une commande pour lui (ex: "nouveau client X", "X vient de me contacter pour une commande")
-- INTENTION:MENTION → Daniel mentionne ce nom sans intention precise (ex: "je vais voir X demain", "le truc de la cliente")
+  const classif = classificationResult.trim();
+  const classParts = classif.match(/^(INFO|CREATION|MENTION|AUCUN)(?::(.+))?$/i);
+  const intent = classParts?.[1]?.toUpperCase() ?? null;
+  const detectedName = classParts?.[2]?.trim() || null;
+  console.log("[classifier]", classif, "→ intent:", intent, "name:", detectedName);
 
-Ensuite, sur les lignes suivantes, reponds normalement a Daniel.
-N'utilise PAS NOUVEAU_CLIENT dans ta reponse — le code gerera la creation.]`;
-  }
-
-  messages.push({ role: "user" as const, content: enrichedMessage });
+  // Étape 2 — Réponse normale avec contexte Supabase
+  messages.push({ role: "user" as const, content: userMessage });
 
   const response = await callDeepSeek(messages);
-
-  // Traiter la reponse — extraire la classification d intention
   let finalResponse = deanonymize(map, response);
-  const intentMatch = finalResponse.match(/INTENTION:(INFO|CREATION|MENTION)/i);
-  const intent = intentMatch?.[1]?.toUpperCase() ?? null;
-
-  // Retirer la ligne d intention de la reponse visible
-  if (intentMatch) {
-    finalResponse = finalResponse.replace(/INTENTION:(INFO|CREATION|MENTION)\s*/i, "").trim();
-  }
 
   // Si intention = CREATION, demander confirmation avant de creer
-  if (intent === "CREATION" && mentionedClient) {
-    const clientName = mentionedClient;
-    // Search if client already exists
-    const existing = await searchExistingClient(userId, clientName);
+  if (intent === "CREATION" && detectedName) {
+    const existing = await searchExistingClient(userId, detectedName);
     if (existing) {
-      // Client already exists — switch to INFO
-      finalResponse = `${clientName} est deja dans tes clients. ${finalResponse || "Tu veux les details ?"}`;
+      finalResponse = `${detectedName} est deja dans tes clients. ${finalResponse || "Tu veux les details ?"}`;
     } else {
-      // Create intake session but in confirmation-pending mode
-      await createIntakeSession(userId, clientName);
-      finalResponse = finalResponse || `Je ne trouve pas ${clientName} dans tes clients. Tu veux creer un nouveau client ${clientName} ? (oui / non)`;
+      await createIntakeSession(userId, detectedName);
+      finalResponse = finalResponse || `Je ne trouve pas ${detectedName} dans tes clients. Tu veux creer un nouveau client ${detectedName} ? (oui / non)`;
     }
   }
 
