@@ -20,7 +20,7 @@ import Link from "next/link";
 type Props = { params: Promise<{ locale: string }> };
 
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
 
 export default function SettingsPage({ params }: Props) {
   const { locale } = use(params);
@@ -117,8 +117,8 @@ export default function SettingsPage({ params }: Props) {
 
         {/* ── Header ── */}
         <div>
-          <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">Gérez votre profil, devises et intégrations.</p>
+          <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--text-label)]">Gérez votre profil, devises et intégrations.</p>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
@@ -129,15 +129,15 @@ export default function SettingsPage({ params }: Props) {
 
           {/* User info card */}
           {profile?.email && (
-            <div className="mb-4 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3">
+            <div className="mb-4 flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] px-4 py-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-600/20 text-orange-400">
                 <User size={16} />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-slate-200">
+                <p className="truncate text-sm font-medium text-[var(--text-body)]">
                   {profile.full_name || "Nom non défini"}
                 </p>
-                <p className="truncate text-xs text-slate-500">{profile.email}</p>
+                <p className="truncate text-xs text-[var(--text-label)]">{profile.email}</p>
               </div>
             </div>
           )}
@@ -146,7 +146,7 @@ export default function SettingsPage({ params }: Props) {
             <form onSubmit={saveProfile} className="space-y-4">
               {/* Full name */}
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                   {t("full_name")}
                 </label>
                 <input
@@ -159,7 +159,7 @@ export default function SettingsPage({ params }: Props) {
 
               {/* Language */}
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                   {t("language")}
                 </label>
                 <select
@@ -182,16 +182,16 @@ export default function SettingsPage({ params }: Props) {
 
               {/* Email (read-only) */}
               <div>
-                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]">
                   Email
-                  <span className="flex items-center gap-0.5 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
+                  <span className="flex items-center gap-0.5 rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-label)]">
                     <Lock size={8} /> non modifiable
                   </span>
                 </label>
                 <input
                   value={profile?.email ?? ""}
                   readOnly
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900/40 px-3.5 py-2.5 text-sm text-slate-500 opacity-70 cursor-not-allowed"
+                  className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] px-3.5 py-2.5 text-sm text-[var(--text-label)] opacity-70 cursor-not-allowed"
                 />
               </div>
 
@@ -207,7 +207,7 @@ export default function SettingsPage({ params }: Props) {
                 type="submit"
                 disabled={profileSaving}
                 aria-label={profileSaving ? "Enregistrement…" : tc("save")}
-                className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
               >
                 {profileSaved ? <Check size={14} /> : <Save size={14} />}
                 {profileSaving ? "Enregistrement…" : profileSaved ? t("saved") : tc("save")}
@@ -223,14 +223,14 @@ export default function SettingsPage({ params }: Props) {
           <SectionHeader label="Apparence" />
           <Card className="overflow-hidden p-0">
             <div className="flex items-center justify-between gap-3 px-4 py-3">
-              <span className="text-sm font-medium text-slate-200">Thème</span>
-              <div className="flex rounded-lg bg-slate-800 p-0.5">
+              <span className="text-sm font-medium text-[var(--text-body)]">Thème</span>
+              <div className="flex rounded-lg bg-[var(--surface-chip)] p-0.5">
                 <button
                   onClick={() => theme !== "dark" && toggleTheme()}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                     theme === "dark"
-                      ? "bg-slate-700 text-slate-100 shadow-sm"
-                      : "text-slate-500 hover:text-slate-300"
+                      ? "bg-[var(--border-strong)] text-[var(--text-strong)] shadow-sm"
+                      : "text-[var(--text-label)] hover:text-[var(--text-body)]"
                   }`}
                 >
                   Sombre
@@ -240,7 +240,7 @@ export default function SettingsPage({ params }: Props) {
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                     theme === "light"
                       ? "bg-white text-slate-800 shadow-sm"
-                      : "text-slate-500 hover:text-slate-300"
+                      : "text-[var(--text-label)] hover:text-[var(--text-body)]"
                   }`}
                 >
                   Clair
@@ -255,29 +255,29 @@ export default function SettingsPage({ params }: Props) {
         {/* ══════════════════════════════════════════════════════════════════ */}
         <section>
           <SectionHeader label="Taux de change" />
-          <div className="mb-4 rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
-            <p className="text-xs text-slate-500">
+          <div className="mb-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] px-4 py-3">
+            <p className="text-xs text-[var(--text-label)]">
               Les taux servent à convertir tous les montants en USD pour les rapports.
               Mettez à jour régulièrement pour des rapports précis.
             </p>
           </div>
           <Card className="overflow-hidden p-0">
-            <ul className="divide-y divide-slate-800/50">
+            <ul className="divide-y divide-[var(--border-subtle)]">
               {currencies.map((c) => {
                 const isSaved = savedCodes.has(c.code);
                 return (
-                  <li key={c.code} className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-slate-800/20">
+                  <li key={c.code} className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-slate-100">
+                        <span className="font-mono text-sm font-bold text-[var(--text-strong)]">
                           {c.code}
                         </span>
-                        <span className="text-xs text-slate-500">{c.name}</span>
-                        <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
+                        <span className="text-xs text-[var(--text-label)]">{c.name}</span>
+                        <span className="rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-label)]">
                           {c.symbol}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-[11px] text-slate-600">
+                      <p className="mt-0.5 text-[11px] text-[var(--text-faint)]">
                         1 {c.code} = ? USD
                       </p>
                     </div>
@@ -288,7 +288,7 @@ export default function SettingsPage({ params }: Props) {
                         value={rates[c.code] ?? ""}
                         onChange={(e) => setRates((r) => ({ ...r, [c.code]: e.target.value }))}
                         aria-label={`Taux de change ${c.code} / USD`}
-                        className="w-28 rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2 text-right font-mono text-sm text-slate-100 tabular-nums focus:border-orange-500/70 focus:outline-none"
+                        className="w-28 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-right font-mono text-sm text-[var(--text-strong)] tabular-nums focus:border-orange-500/70 focus:outline-none"
                       />
                       <button
                         onClick={() => saveCurrencyRate(c.code)}
@@ -296,7 +296,7 @@ export default function SettingsPage({ params }: Props) {
                         className={`rounded-lg p-2 transition-colors ${
                           isSaved
                             ? "bg-emerald-950/40 text-emerald-400"
-                            : "text-slate-600 hover:bg-slate-800 hover:text-orange-400"
+                            : "text-[var(--text-faint)] hover:bg-[var(--surface-chip)] hover:text-orange-400"
                         }`}
                       >
                         {isSaved ? <Check size={14} /> : <Save size={14} />}
@@ -316,21 +316,21 @@ export default function SettingsPage({ params }: Props) {
           <SectionHeader label="Données & outils" />
 
           <Card className="overflow-hidden p-0">
-            <ul className="divide-y divide-slate-800/50">
+            <ul className="divide-y divide-[var(--border-subtle)]">
               {/* Export */}
               <li>
                 <Link
                   href={`/${locale}/export`}
-                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-slate-800/20"
+                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <DollarSign size={15} className="shrink-0 text-orange-400" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-200">Export des données</p>
-                      <p className="text-[11px] text-slate-500">CSV, JSON, backup complet</p>
+                      <p className="text-sm font-medium text-[var(--text-body)]">Export des données</p>
+                      <p className="text-[11px] text-[var(--text-label)]">CSV, JSON, backup complet</p>
                     </div>
                   </div>
-                  <ChevronRight size={16} className="shrink-0 text-slate-600" />
+                  <ChevronRight size={16} className="shrink-0 text-[var(--text-faint)]" />
                 </Link>
               </li>
 
@@ -338,40 +338,40 @@ export default function SettingsPage({ params }: Props) {
               <li>
                 <Link
                   href={`/${locale}/recovery`}
-                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-slate-800/20"
+                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <AlertTriangle size={15} className="shrink-0 text-red-400" />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-slate-200">
+                        <p className="text-sm font-medium text-[var(--text-body)]">
                           Réinitialisation &amp; reprise historique
                         </p>
                         <span className="rounded-full border border-red-800/50 bg-red-950/30 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
                           Avancé
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-[var(--text-label)]">
                         Sauvegarder, réinitialiser, reconstruire l'historique
                       </p>
                     </div>
                   </div>
-                  <ChevronRight size={16} className="shrink-0 text-slate-600" />
+                  <ChevronRight size={16} className="shrink-0 text-[var(--text-faint)]" />
                 </Link>
               </li>
 
               {/* Google Calendar */}
               <li className="flex items-center justify-between gap-4 px-4 py-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <Plug size={15} className="shrink-0 text-slate-500" />
+                  <Plug size={15} className="shrink-0 text-[var(--text-label)]" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-slate-500">{t("google_calendar")}</p>
-                      <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
+                      <p className="text-sm font-medium text-[var(--text-label)]">{t("google_calendar")}</p>
+                      <span className="rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-label)]">
                         Bientôt
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-600">{t("calendar_desc")}</p>
+                    <p className="text-[11px] text-[var(--text-faint)]">{t("calendar_desc")}</p>
                   </div>
                 </div>
               </li>
@@ -379,15 +379,15 @@ export default function SettingsPage({ params }: Props) {
               {/* Notion */}
               <li className="flex items-center justify-between gap-4 px-4 py-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <Plug size={15} className="shrink-0 text-slate-500" />
+                  <Plug size={15} className="shrink-0 text-[var(--text-label)]" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-slate-500">{t("notion")}</p>
-                      <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">
+                      <p className="text-sm font-medium text-[var(--text-label)]">{t("notion")}</p>
+                      <span className="rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-label)]">
                         Bientôt
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-600">{t("notion_desc")}</p>
+                    <p className="text-[11px] text-[var(--text-faint)]">{t("notion_desc")}</p>
                   </div>
                 </div>
               </li>

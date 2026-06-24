@@ -59,7 +59,7 @@ function computeOrderCosts(txs: Transaction[], orderId: string) {
 }
 
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
 
 export default function OrdersPage({ params }: Props) {
   const { locale } = use(params);
@@ -423,7 +423,7 @@ export default function OrdersPage({ params }: Props) {
   function ClientQuickCreate() {
     if (showQuickClient) {
       return (
-        <div className="mt-2 rounded-xl border border-slate-700 bg-slate-900/60 p-3 space-y-2">
+        <div className="mt-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-glass)] p-3 space-y-2">
           <div className="flex items-center gap-2">
             <input
               value={quickClientName}
@@ -452,7 +452,7 @@ export default function OrdersPage({ params }: Props) {
             <button
               type="button"
               onClick={() => { setShowQuickClient(false); setQuickClientName(""); setQuickClientPhone(""); }}
-              className="rounded-lg px-3 py-1.5 text-xs text-slate-500 transition-colors hover:text-slate-300"
+              className="rounded-lg px-3 py-1.5 text-xs text-[var(--text-label)] transition-colors hover:text-[var(--text-body)]"
             >
               Annuler
             </button>
@@ -478,10 +478,10 @@ export default function OrdersPage({ params }: Props) {
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
+            <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
             {orders.length > 0 && (
               <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                <span className="text-slate-500">
+                <span className="text-[var(--text-label)]">
                   {filtered.length} commande{filtered.length !== 1 ? "s" : ""}
                 </span>
                 {orderSummary.activeCount > 0 && (
@@ -533,7 +533,7 @@ export default function OrdersPage({ params }: Props) {
                 className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   filterStatus
                     ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
-                    : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                    : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                 }`}
               >
                 <span className="max-w-[120px] truncate">{activeStatusLabel}</span>
@@ -543,11 +543,11 @@ export default function OrdersPage({ params }: Props) {
                 />
               </button>
               {openDropdown === "status" && (
-                <div className="absolute left-0 top-full z-40 mt-1.5 max-h-[55vh] min-w-[160px] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl">
+                <div className="absolute left-0 top-full z-40 mt-1.5 max-h-[55vh] min-w-[160px] overflow-y-auto rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-1 shadow-2xl">
                   <button
                     onClick={() => { setFilterStatus(""); setOpenDropdown(null); }}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
-                      !filterStatus ? "text-orange-300" : "text-slate-300"
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
+                      !filterStatus ? "text-orange-300" : "text-[var(--text-body)]"
                     }`}
                   >
                     {!filterStatus && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />}
@@ -557,8 +557,8 @@ export default function OrdersPage({ params }: Props) {
                     <button
                       key={s}
                       onClick={() => { setFilterStatus(s); setOpenDropdown(null); }}
-                      className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
-                        filterStatus === s ? "text-orange-300" : "text-slate-400"
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
+                        filterStatus === s ? "text-orange-300" : "text-[var(--text-muted)]"
                       }`}
                     >
                       {filterStatus === s && (
@@ -579,7 +579,7 @@ export default function OrdersPage({ params }: Props) {
                   className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     filterClient
                       ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
-                      : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                      : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                   }`}
                 >
                   <span className="max-w-[120px] truncate">{activeClientLabel}</span>
@@ -589,11 +589,11 @@ export default function OrdersPage({ params }: Props) {
                   />
                 </button>
                 {openDropdown === "client" && (
-                  <div className="absolute right-0 top-full z-40 mt-1.5 max-h-[55vh] min-w-[160px] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl">
+                  <div className="absolute right-0 top-full z-40 mt-1.5 max-h-[55vh] min-w-[160px] overflow-y-auto rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-1 shadow-2xl">
                     <button
                       onClick={() => { setFilterClient(""); setOpenDropdown(null); }}
-                      className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
-                        !filterClient ? "text-orange-300" : "text-slate-300"
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
+                        !filterClient ? "text-orange-300" : "text-[var(--text-body)]"
                       }`}
                     >
                       {!filterClient && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />}
@@ -603,8 +603,8 @@ export default function OrdersPage({ params }: Props) {
                       <button
                         key={c.id}
                         onClick={() => { setFilterClient(c.id); setOpenDropdown(null); }}
-                        className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
-                          filterClient === c.id ? "text-orange-300" : "text-slate-400"
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
+                          filterClient === c.id ? "text-orange-300" : "text-[var(--text-muted)]"
                         }`}
                       >
                         {filterClient === c.id && (
@@ -622,7 +622,7 @@ export default function OrdersPage({ params }: Props) {
             {(filterStatus || filterClient) && (
               <button
                 onClick={() => { setFilterStatus(""); setFilterClient(""); }}
-                className="flex items-center gap-1 text-xs text-slate-600 transition-colors hover:text-slate-400"
+                className="flex items-center gap-1 text-xs text-[var(--text-faint)] transition-colors hover:text-[var(--text-muted)]"
               >
                 <X size={10} />
                 Réinitialiser
@@ -663,7 +663,7 @@ export default function OrdersPage({ params }: Props) {
               return (
                 <Card
                   key={order.id}
-                  className={`transition-colors hover:border-slate-600 ${
+                  className={`transition-colors hover:border-[var(--border-strong)] ${
                     isDeficit ? "border-red-900/30" : ""
                   }`}
                 >
@@ -674,18 +674,18 @@ export default function OrdersPage({ params }: Props) {
                         {/* Product name + status badge */}
                         <div className="flex min-w-0 items-start gap-2">
                           <div className="min-w-0 flex-1">
-                            <h3 className="truncate text-sm font-bold text-slate-100">
+                            <h3 className="truncate text-sm font-bold text-[var(--text-strong)]">
                               {order.product_name}
                             </h3>
-                            <p className="truncate text-[11px] text-slate-500">
+                            <p className="truncate text-[11px] text-[var(--text-label)]">
                               {client?.name ?? "—"}
                               {client?.phone && (
-                                <span className="ml-1.5 font-mono text-slate-600">
+                                <span className="ml-1.5 font-mono text-[var(--text-faint)]">
                                   · {client.phone}
                                 </span>
                               )}
                               {order.tracking_code && (
-                                <span className="ml-2 font-mono text-slate-700">
+                                <span className="ml-2 font-mono text-[var(--text-faint)]">
                                   {order.tracking_code}
                                 </span>
                               )}
@@ -712,18 +712,18 @@ export default function OrdersPage({ params }: Props) {
                                   <div className={`h-1.5 w-1.5 rounded-full transition-colors ${
                                     active ? "bg-orange-500 ring-2 ring-orange-500/30"
                                     : done  ? "bg-slate-500"
-                                    : "bg-slate-700"
+                                    : "bg-[var(--border-strong)]"
                                   }`} />
                                   {i < TIMELINE_STEPS.length - 1 && (
                                     <div className={`h-px w-5 ${
-                                      done && stepIdx > i ? "bg-slate-600" : "bg-slate-800"
+                                      done && stepIdx > i ? "bg-slate-600" : "bg-[var(--surface-chip)]"
                                     }`} />
                                   )}
                                 </div>
                               );
                             })}
                             {order.client_price && (
-                              <span className="ml-2 font-mono text-[10px] text-slate-500">
+                              <span className="ml-2 font-mono text-[10px] text-[var(--text-label)]">
                                 {formatMoney(order.client_price, order.currency)}
                               </span>
                             )}
@@ -734,8 +734,8 @@ export default function OrdersPage({ params }: Props) {
                         {(margin !== null || hasCosts) && (
                           <div className="mt-2 flex flex-wrap items-center gap-1.5">
                             {margin !== null && (
-                              <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px]">
-                                <span className="text-slate-600">{t("expected_margin")}</span>{" "}
+                              <span className="rounded-full bg-[var(--surface-chip)] px-2 py-0.5 text-[10px]">
+                                <span className="text-[var(--text-faint)]">{t("expected_margin")}</span>{" "}
                                 <span className={`font-mono font-semibold ${
                                   margin >= 0 ? "text-emerald-400" : "text-red-400"
                                 }`}>
@@ -764,7 +764,7 @@ export default function OrdersPage({ params }: Props) {
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                                 isDeficit
                                   ? "bg-red-950/40 text-red-300"
-                                  : "bg-slate-800/80 text-slate-400"
+                                  : "bg-[var(--surface-chip)] text-[var(--text-muted)]"
                               }`}>
                                 {isDeficit ? "−" : "="}{formatMoney(Math.abs(costs.balance), order.currency)}
                                 {isDeficit && " ⚠"}
@@ -777,7 +777,7 @@ export default function OrdersPage({ params }: Props) {
                         {order.status === "shipped" && costs.balance > 0 && (
                           <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-emerald-800/40 bg-emerald-950/20 px-2.5 py-1.5">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            <span className="text-[10px] text-slate-400">{t("realized_profit")} disponible</span>
+                            <span className="text-[10px] text-[var(--text-muted)]">{t("realized_profit")} disponible</span>
                             <span className="font-mono text-xs font-bold text-emerald-400 tabular-nums">
                               +{formatMoney(costs.balance, order.currency)}
                             </span>
@@ -793,7 +793,7 @@ export default function OrdersPage({ params }: Props) {
 
                         {/* Last update */}
                         {order.last_update && (
-                          <p className="mt-1 text-[10px] text-slate-700">
+                          <p className="mt-1 text-[10px] text-[var(--text-faint)]">
                             MAJ {formatDate(order.last_update)}
                           </p>
                         )}
@@ -804,21 +804,21 @@ export default function OrdersPage({ params }: Props) {
                         <button
                           onClick={() => setExpandedId(isExpanded ? null : order.id)}
                           aria-label={isExpanded ? "Réduire" : "Voir détail"}
-                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                          className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                         >
                           {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                         </button>
                         <button
                           onClick={() => openEdit(order.id)}
                           aria-label="Modifier"
-                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                          className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                         >
                           <Pencil size={12} />
                         </button>
                         <button
                           onClick={() => setDeleteId(order.id)}
                           aria-label="Supprimer"
-                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                          className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-red-400"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -827,12 +827,12 @@ export default function OrdersPage({ params }: Props) {
 
                     {/* ── Expanded detail ── */}
                     {isExpanded && (
-                      <div className="mt-3 space-y-4 border-t border-slate-800 pt-3">
+                      <div className="mt-3 space-y-4 border-t border-[var(--border-default)] pt-3">
 
                         {/* Financial detail */}
                         {hasCosts && (
                           <div>
-                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                               Suivi financier
                             </p>
                             <div className="space-y-1.5">
@@ -846,7 +846,7 @@ export default function OrdersPage({ params }: Props) {
                                 .filter((r) => Math.abs(r.val) > 0.01)
                                 .map((r) => (
                                   <div key={r.label} className="flex items-center justify-between gap-2">
-                                    <span className="text-xs text-slate-500">{r.label}</span>
+                                    <span className="text-xs text-[var(--text-label)]">{r.label}</span>
                                     <span className={`font-mono text-xs tabular-nums ${
                                       r.color === "emerald" ? "text-emerald-400" : "text-red-400"
                                     }`}>
@@ -863,8 +863,8 @@ export default function OrdersPage({ params }: Props) {
                                 </span>
                               </div>
                             )}
-                            <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-2">
-                              <span className="text-xs text-slate-400">Solde client restant</span>
+                            <div className="mt-2 flex items-center justify-between border-t border-[var(--border-default)] pt-2">
+                              <span className="text-xs text-[var(--text-muted)]">Solde client restant</span>
                               <span className={`font-mono text-sm font-bold tabular-nums ${
                                 costs.balance >= 0 ? "text-orange-400" : "text-red-400"
                               }`}>
@@ -877,26 +877,26 @@ export default function OrdersPage({ params }: Props) {
                         {/* Order info */}
                         {(order.note || order.tracking_code || order.next_action) && (
                           <div>
-                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                               Informations
                             </p>
                             <div className="space-y-1.5">
                               {order.tracking_code && (
                                 <div className="flex items-center justify-between gap-2">
-                                  <span className="text-xs text-slate-500">Tracking</span>
-                                  <span className="font-mono text-xs text-slate-300">{order.tracking_code}</span>
+                                  <span className="text-xs text-[var(--text-label)]">Tracking</span>
+                                  <span className="font-mono text-xs text-[var(--text-body)]">{order.tracking_code}</span>
                                 </div>
                               )}
                               {order.next_action && (
                                 <div className="flex items-start justify-between gap-2">
-                                  <span className="shrink-0 text-xs text-slate-500">Prochaine action</span>
+                                  <span className="shrink-0 text-xs text-[var(--text-label)]">Prochaine action</span>
                                   <span className="text-right text-xs text-orange-400/80">{order.next_action}</span>
                                 </div>
                               )}
                               {order.note && (
                                 <div className="flex items-start justify-between gap-2">
-                                  <span className="shrink-0 text-xs text-slate-500">Note</span>
-                                  <span className="text-right text-xs text-slate-400">{order.note}</span>
+                                  <span className="shrink-0 text-xs text-[var(--text-label)]">Note</span>
+                                  <span className="text-right text-xs text-[var(--text-muted)]">{order.note}</span>
                                 </div>
                               )}
                             </div>
@@ -909,13 +909,13 @@ export default function OrdersPage({ params }: Props) {
                             {/* Profit call-to-action for shipped orders */}
                             {order.status === "shipped" && costs.balance > 0 && (
                               <div className="mb-3 rounded-xl border border-emerald-800/40 bg-emerald-950/20 p-3">
-                                <p className="text-[11px] font-semibold text-slate-300">
+                                <p className="text-[11px] font-semibold text-[var(--text-body)]">
                                   {t("realized_profit")} disponible
                                 </p>
                                 <p className="mt-0.5 font-mono text-lg font-bold text-emerald-400 tabular-nums">
                                   +{formatMoney(costs.balance, order.currency)}
                                 </p>
-                                <p className="mt-1 text-[10px] text-slate-500">
+                                <p className="mt-1 text-[10px] text-[var(--text-label)]">
                                   La commande est expédiée. Valide ce bénéfice pour le comptabiliser.
                                 </p>
                                 <button
@@ -927,7 +927,7 @@ export default function OrdersPage({ params }: Props) {
                                 </button>
                               </div>
                             )}
-                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                               Enregistrer une opération
                             </p>
                             <div className="flex flex-wrap gap-2">
@@ -973,12 +973,12 @@ export default function OrdersPage({ params }: Props) {
           onClick={() => setShowForm(false)}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-2.5 md:hidden">
-              <div className="h-1 w-10 rounded-full bg-slate-700" />
+              <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
             </div>
 
             {/* Header */}
@@ -988,12 +988,12 @@ export default function OrdersPage({ params }: Props) {
                   <button
                     type="button"
                     onClick={backToChoose}
-                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300 shrink-0"
+                    className="rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)] shrink-0"
                   >
                     <ChevronDown size={16} className="rotate-90" />
                   </button>
                 )}
-                <h2 className="text-base font-bold text-slate-50 truncate">
+                <h2 className="text-base font-bold text-[var(--text-strong)] truncate">
                   {formStep === "choose"
                     ? (editing ? tc("edit") : t("add"))
                     : formStep === "simple"
@@ -1004,7 +1004,7 @@ export default function OrdersPage({ params }: Props) {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300 shrink-0"
+                className="rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)] shrink-0"
               >
                 <X size={16} />
               </button>
@@ -1017,24 +1017,24 @@ export default function OrdersPage({ params }: Props) {
                   <button
                     type="button"
                     onClick={openSimple}
-                    className="flex flex-col items-start gap-2 rounded-xl border border-slate-700 bg-slate-900 p-5 text-left transition-colors hover:border-orange-700/50 hover:bg-slate-800/50"
+                    className="flex flex-col items-start gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] p-5 text-left transition-colors hover:border-orange-700/50 hover:bg-[var(--surface-chip)]"
                   >
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-slate-400">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--surface-chip)] text-[var(--text-muted)]">
                       <Plus size={18} />
                     </span>
-                    <span className="text-sm font-bold text-slate-100">Simple</span>
-                    <span className="text-[11px] text-slate-500">Un seul produit, totaux uniquement</span>
+                    <span className="text-sm font-bold text-[var(--text-strong)]">Simple</span>
+                    <span className="text-[11px] text-[var(--text-label)]">Un seul produit, totaux uniquement</span>
                   </button>
                   <button
                     type="button"
                     onClick={openDetailed}
-                    className="flex flex-col items-start gap-2 rounded-xl border border-slate-700 bg-slate-900 p-5 text-left transition-colors hover:border-orange-700/50 hover:bg-slate-800/50"
+                    className="flex flex-col items-start gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] p-5 text-left transition-colors hover:border-orange-700/50 hover:bg-[var(--surface-chip)]"
                   >
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-slate-400">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--surface-chip)] text-[var(--text-muted)]">
                       <Pencil size={18} />
                     </span>
-                    <span className="text-sm font-bold text-slate-100">Détaillé</span>
-                    <span className="text-[11px] text-slate-500">Plusieurs produits, variantes, fournisseurs</span>
+                    <span className="text-sm font-bold text-[var(--text-strong)]">Détaillé</span>
+                    <span className="text-[11px] text-[var(--text-label)]">Plusieurs produits, variantes, fournisseurs</span>
                   </button>
                 </div>
               </div>
@@ -1047,7 +1047,7 @@ export default function OrdersPage({ params }: Props) {
                   <div className="space-y-4 py-1">
                     {/* Client */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("client")}</label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("client")}</label>
                       <select value={clientId} onChange={(e) => setClientId(e.target.value)} required className={fieldCls}>
                         <option value="">— Sélectionner —</option>
                         {clients.map((c) => (
@@ -1060,19 +1060,19 @@ export default function OrdersPage({ params }: Props) {
                     </div>
                     {/* Product */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("product")}</label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("product")}</label>
                       <input value={productName} onChange={(e) => setProductName(e.target.value)} required placeholder="Nom du produit ou commande" className={fieldCls} />
                     </div>
                     {/* Status */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("status")}</label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("status")}</label>
                       <select value={status} onChange={(e) => setStatus(e.target.value as OrderStatus)} className={fieldCls}>
                         {ORDER_STATUSES.map((s) => (<option key={s} value={s}>{t(`statuses.${s}`)}</option>))}
                       </select>
                     </div>
                     {/* Currency */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">Devise</label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Devise</label>
                       <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={fieldCls}>
                         {currencies.map((c) => (<option key={c.code} value={c.code}>{c.code}</option>))}
                       </select>
@@ -1080,16 +1080,16 @@ export default function OrdersPage({ params }: Props) {
                     {/* Prices + Quantity */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("client_price")}</label>
+                        <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("client_price")}</label>
                         <input type="number" step="0.01" value={clientPrice} onChange={(e) => setClientPrice(e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono tabular-nums`} />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("supplier_price")}</label>
+                        <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("supplier_price")}</label>
                         <input type="number" step="0.01" value={supplierPrice} onChange={(e) => setSupplierPrice(e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono tabular-nums`} />
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("quantity")}</label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("quantity")}</label>
                       <input type="number" step="1" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="1" className={`${fieldCls} font-mono tabular-nums w-24`} />
                     </div>
 
@@ -1100,16 +1100,16 @@ export default function OrdersPage({ params }: Props) {
                       const qty = parseInt(quantity, 10) || 1;
                       const margin = (cp > 0 || sp > 0) ? denormMargin(cp || null, sp || null, qty) : null;
                       return (
-                        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 space-y-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">{t("expected_margin")}</p>
+                        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-3 space-y-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">{t("expected_margin")}</p>
                           {cp > 0 && (
                             <div className="flex items-center justify-between gap-3">
-                              <span className="text-xs text-slate-500">Total client</span>
-                              <span className="font-mono text-xs text-slate-300">{formatMoney(cp, currency)} × {qty} = {formatMoney(cp * qty, currency)}</span>
+                              <span className="text-xs text-[var(--text-label)]">Total client</span>
+                              <span className="font-mono text-xs text-[var(--text-body)]">{formatMoney(cp, currency)} × {qty} = {formatMoney(cp * qty, currency)}</span>
                             </div>
                           )}
-                          <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-2">
-                            <span className="text-xs text-slate-500">Marge</span>
+                          <div className="flex items-center justify-between gap-3 border-t border-[var(--border-default)] pt-2">
+                            <span className="text-xs text-[var(--text-label)]">Marge</span>
                             <span className={`font-mono text-sm font-bold tabular-nums ${margin !== null && margin >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                               {margin !== null ? `${margin >= 0 ? "+" : "−"}${formatMoney(Math.abs(margin), currency)}` : "—"}
                             </span>
@@ -1120,31 +1120,31 @@ export default function OrdersPage({ params }: Props) {
 
                     {/* Advance */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("advance")} <span className="text-slate-600">(acompte reçu)</span></label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("advance")} <span className="text-[var(--text-faint)]">(acompte reçu)</span></label>
                       <input type="number" step="0.01" value={advance} onChange={(e) => setAdvance(e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono tabular-nums`} />
                     </div>
                     {/* Tracking */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("tracking")} <span className="text-slate-600">(optionnel)</span></label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("tracking")} <span className="text-[var(--text-faint)]">(optionnel)</span></label>
                       <input value={trackingCode} onChange={(e) => setTrackingCode(e.target.value)} placeholder="Ex : CN123456789" className={fieldCls} />
                     </div>
                     {/* Next action */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("next_action")} <span className="text-slate-600">(optionnel)</span></label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("next_action")} <span className="text-[var(--text-faint)]">(optionnel)</span></label>
                       <input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="Ex : Contacter le fournisseur" className={fieldCls} />
                     </div>
                     {/* Note */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("note")} <span className="text-slate-600">(optionnel)</span></label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("note")} <span className="text-[var(--text-faint)]">(optionnel)</span></label>
                       <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Remarque interne…" className={fieldCls} />
                     </div>
                   </div>
                 </div>
                 {/* Footer */}
-                <div className="shrink-0 border-t border-slate-800 px-5 pt-3" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
+                <div className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
                   <div className="flex gap-2.5">
-                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200">{tc("cancel")}</button>
-                    <button type="submit" disabled={submitting || !(!!clientId && !!productName.trim())} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">{submitting ? "Enregistrement…" : tc("save")}</button>
+                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]">{tc("cancel")}</button>
+                    <button type="submit" disabled={submitting || !(!!clientId && !!productName.trim())} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]">{submitting ? "Enregistrement…" : tc("save")}</button>
                   </div>
                 </div>
               </form>
@@ -1157,7 +1157,7 @@ export default function OrdersPage({ params }: Props) {
                   <div className="space-y-4 py-1">
                     {/* Client */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("client")}</label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("client")}</label>
                       <select value={detailClientId} onChange={(e) => setDetailClientId(e.target.value)} required className={fieldCls}>
                         <option value="">— Sélectionner —</option>
                         {clients.map((c) => (
@@ -1170,14 +1170,14 @@ export default function OrdersPage({ params }: Props) {
                     </div>
                     {/* Status */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("status")}</label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("status")}</label>
                       <select value={detailStatus} onChange={(e) => setDetailStatus(e.target.value as OrderStatus)} className={fieldCls}>
                         {ORDER_STATUSES.map((s) => (<option key={s} value={s}>{t(`statuses.${s}`)}</option>))}
                       </select>
                     </div>
                     {/* Currency */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">Devise</label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Devise</label>
                       <select value={detailCurrency} onChange={(e) => setDetailCurrency(e.target.value)} className={fieldCls}>
                         {currencies.map((c) => (<option key={c.code} value={c.code}>{c.code}</option>))}
                       </select>
@@ -1185,10 +1185,10 @@ export default function OrdersPage({ params }: Props) {
 
                     {/* ── Products ── */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">Produits</label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Produits</label>
                       <div className="space-y-3">
                         {detailItems.map((it, idx) => (
-                          <div key={idx} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 space-y-2">
+                          <div key={idx} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-3 space-y-2">
                             <div className="flex items-center gap-2">
                               <input
                                 value={it.product_name}
@@ -1198,38 +1198,38 @@ export default function OrdersPage({ params }: Props) {
                                 className={`${fieldCls} flex-1`}
                               />
                               {detailItems.length > 1 && (
-                                <button type="button" onClick={() => removeDetailItem(idx)} className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-800 hover:text-red-400 shrink-0">
+                                <button type="button" onClick={() => removeDetailItem(idx)} className="rounded-lg p-1.5 text-[var(--text-faint)] hover:bg-[var(--surface-chip)] hover:text-red-400 shrink-0">
                                   <X size={14} />
                                 </button>
                               )}
                             </div>
                             <div className="grid grid-cols-4 gap-2">
                               <div>
-                                <label className="mb-0.5 block text-[10px] text-slate-600">Qté</label>
+                                <label className="mb-0.5 block text-[10px] text-[var(--text-faint)]">Qté</label>
                                 <input type="number" step="1" min="1" value={it.quantity} onChange={(e) => updateDetailItem(idx, "quantity", e.target.value)} placeholder="1" className={`${fieldCls} font-mono text-xs`} />
                               </div>
                               <div>
-                                <label className="mb-0.5 block text-[10px] text-slate-600">Variante</label>
+                                <label className="mb-0.5 block text-[10px] text-[var(--text-faint)]">Variante</label>
                                 <input value={it.variant} onChange={(e) => updateDetailItem(idx, "variant", e.target.value)} placeholder="—" className={`${fieldCls} text-xs`} />
                               </div>
                               <div>
-                                <label className="mb-0.5 block text-[10px] text-slate-600">Fournisseur</label>
+                                <label className="mb-0.5 block text-[10px] text-[var(--text-faint)]">Fournisseur</label>
                                 <input value={it.supplier} onChange={(e) => updateDetailItem(idx, "supplier", e.target.value)} placeholder="—" className={`${fieldCls} text-xs`} />
                               </div>
                               <div>
-                                <label className="mb-0.5 block text-[10px] text-slate-600">Prix unit.</label>
+                                <label className="mb-0.5 block text-[10px] text-[var(--text-faint)]">Prix unit.</label>
                                 <input type="number" step="0.01" value={it.unit_price} onChange={(e) => updateDetailItem(idx, "unit_price", e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono text-xs`} />
                               </div>
                             </div>
                             {/* Coût fournisseur for this item */}
                             <div>
-                              <label className="mb-0.5 block text-[10px] text-slate-600">Coût fournisseur</label>
+                              <label className="mb-0.5 block text-[10px] text-[var(--text-faint)]">Coût fournisseur</label>
                               <input type="number" step="0.01" value={it.supplier_unit_cost} onChange={(e) => updateDetailItem(idx, "supplier_unit_cost", e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono text-xs w-36`} />
                             </div>
                           </div>
                         ))}
                       </div>
-                      <button type="button" onClick={addDetailItem} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-700 py-2 text-xs text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-400">
+                      <button type="button" onClick={addDetailItem} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border-strong)] py-2 text-xs text-[var(--text-label)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-muted)]">
                         <Plus size={13} /> Ajouter un produit
                       </button>
                     </div>
@@ -1240,14 +1240,14 @@ export default function OrdersPage({ params }: Props) {
                       const totalQty = detailItems.reduce((s, it) => s + (parseInt(it.quantity, 10) || 1), 0);
                       const totalClient = detailItems.reduce((s, it) => s + (Number(it.unit_price || 0) * (parseInt(it.quantity, 10) || 1)), 0);
                       return (
-                        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 space-y-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">{t("expected_margin")}</p>
+                        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] p-3 space-y-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">{t("expected_margin")}</p>
                           <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs text-slate-500">{detailItems.filter((it) => it.product_name.trim()).length} produit{detailItems.filter((it) => it.product_name.trim()).length !== 1 ? "s" : ""} · {totalQty} unités</span>
-                            <span className="font-mono text-xs text-slate-300">{formatMoney(totalClient, detailCurrency)}</span>
+                            <span className="text-xs text-[var(--text-label)]">{detailItems.filter((it) => it.product_name.trim()).length} produit{detailItems.filter((it) => it.product_name.trim()).length !== 1 ? "s" : ""} · {totalQty} unités</span>
+                            <span className="font-mono text-xs text-[var(--text-body)]">{formatMoney(totalClient, detailCurrency)}</span>
                           </div>
-                          <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-2">
-                            <span className="text-xs text-slate-500">Marge totale</span>
+                          <div className="flex items-center justify-between gap-3 border-t border-[var(--border-default)] pt-2">
+                            <span className="text-xs text-[var(--text-label)]">Marge totale</span>
                             <span className={`font-mono text-sm font-bold tabular-nums ${margin !== null && margin >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                               {margin !== null ? `${margin >= 0 ? "+" : "−"}${formatMoney(Math.abs(margin), detailCurrency)}` : "—"}
                             </span>
@@ -1258,31 +1258,31 @@ export default function OrdersPage({ params }: Props) {
 
                     {/* Advance */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("advance")} <span className="text-slate-600">(acompte reçu)</span></label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("advance")} <span className="text-[var(--text-faint)]">(acompte reçu)</span></label>
                       <input type="number" step="0.01" value={detailAdvance} onChange={(e) => setDetailAdvance(e.target.value)} placeholder="0.00" className={`${fieldCls} font-mono tabular-nums`} />
                     </div>
                     {/* Tracking */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("tracking")} <span className="text-slate-600">(optionnel)</span></label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("tracking")} <span className="text-[var(--text-faint)]">(optionnel)</span></label>
                       <input value={detailTracking} onChange={(e) => setDetailTracking(e.target.value)} placeholder="Ex : CN123456789" className={fieldCls} />
                     </div>
                     {/* Next action */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("next_action")} <span className="text-slate-600">(optionnel)</span></label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("next_action")} <span className="text-[var(--text-faint)]">(optionnel)</span></label>
                       <input value={detailNextAction} onChange={(e) => setDetailNextAction(e.target.value)} placeholder="Ex : Contacter le fournisseur" className={fieldCls} />
                     </div>
                     {/* Note */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">{t("note")} <span className="text-slate-600">(optionnel)</span></label>
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">{t("note")} <span className="text-[var(--text-faint)]">(optionnel)</span></label>
                       <input value={detailNote} onChange={(e) => setDetailNote(e.target.value)} placeholder="Remarque interne…" className={fieldCls} />
                     </div>
                   </div>
                 </div>
                 {/* Footer */}
-                <div className="shrink-0 border-t border-slate-800 px-5 pt-3" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
+                <div className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
                   <div className="flex gap-2.5">
-                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200">{tc("cancel")}</button>
-                    <button type="submit" disabled={submitting || !(!!detailClientId && detailItems.some((it) => it.product_name.trim()))} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500">{submitting ? "Enregistrement…" : tc("save")}</button>
+                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]">{tc("cancel")}</button>
+                    <button type="submit" disabled={submitting || !(!!detailClientId && detailItems.some((it) => it.product_name.trim()))} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]">{submitting ? "Enregistrement…" : tc("save")}</button>
                   </div>
                 </div>
               </form>

@@ -83,25 +83,25 @@ function FormulaSheet({ open, onClose, physicalBalance, clientMoney, debtOwed, p
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-slate-800 bg-slate-900 md:rounded-xl">
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-          <h3 className="text-sm font-semibold text-slate-100">Calcul du solde personnel</h3>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800"><X size={16} /></button>
+      <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-card)] md:rounded-xl">
+        <div className="flex items-center justify-between border-b border-[var(--border-default)] px-5 py-4">
+          <h3 className="text-sm font-semibold text-[var(--text-strong)]">Calcul du solde personnel</h3>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-[var(--text-label)] hover:bg-[var(--surface-chip)]"><X size={16} /></button>
         </div>
         <div className="space-y-3 px-5 py-4">
-          <p className="text-xs text-slate-500">Les créances à recevoir ne sont pas incluses — cet argent n'est pas encore dans tes comptes.</p>
+          <p className="text-xs text-[var(--text-label)]">Les créances à recevoir ne sont pas incluses — cet argent n'est pas encore dans tes comptes.</p>
           <div className="space-y-2">
             {rows.map((r) => (
               <div key={r.label} className="flex items-start justify-between gap-3">
-                <div><p className="text-sm text-slate-300">{r.label}</p><p className="text-xs text-slate-600">{r.hint}</p></div>
-                <span className={`shrink-0 font-mono text-sm font-semibold tabular-nums ${r.value < 0 ? "text-red-400" : "text-slate-100"}`}>
+                <div><p className="text-sm text-[var(--text-body)]">{r.label}</p><p className="text-xs text-[var(--text-faint)]">{r.hint}</p></div>
+                <span className={`shrink-0 font-mono text-sm font-semibold tabular-nums ${r.value < 0 ? "text-red-400" : "text-[var(--text-strong)]"}`}>
                   {formatMoney(Math.abs(r.value), "USD")}
                 </span>
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between border-t border-slate-700 pt-3">
-            <span className="text-sm font-semibold text-slate-200">= Solde personnel estimé</span>
+          <div className="flex items-center justify-between border-t border-[var(--border-strong)] pt-3">
+            <span className="text-sm font-semibold text-[var(--text-body)]">= Solde personnel estimé</span>
             <span className={`font-mono text-base font-bold tabular-nums ${personalEst < 0 ? "text-red-400" : "text-emerald-400"}`}>
               {formatMoney(personalEst, "USD")}
             </span>
@@ -122,16 +122,16 @@ function DebtListSheet({ open, onClose, title, debts: items, totalUSD, color, ra
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-slate-800 bg-slate-900 md:rounded-xl">
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-          <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800"><X size={16} /></button>
+      <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-card)] md:rounded-xl">
+        <div className="flex items-center justify-between border-b border-[var(--border-default)] px-5 py-4">
+          <h3 className="text-sm font-semibold text-[var(--text-strong)]">{title}</h3>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-[var(--text-label)] hover:bg-[var(--surface-chip)]"><X size={16} /></button>
         </div>
         <div className="max-h-[50vh] overflow-y-auto px-5 py-3">
           {items.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">Aucun élément.</p>
+            <p className="py-6 text-center text-sm text-[var(--text-label)]">Aucun élément.</p>
           ) : (
-            <ul className="divide-y divide-slate-800">
+            <ul className="divide-y divide-[var(--border-default)]">
               {items.map((d) => {
                 const remaining = Number(d.amount) - Number(d.paid_amount);
                 const isOverdue = d.due_date ? new Date(d.due_date) < now : false;
@@ -140,10 +140,10 @@ function DebtListSheet({ open, onClose, title, debts: items, totalUSD, color, ra
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-slate-200">{d.person_name}</span>
+                          <span className="text-sm font-medium text-[var(--text-body)]">{d.person_name}</span>
                           {isOverdue && <Badge variant="danger">En retard</Badge>}
                         </div>
-                        <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-slate-500">
+                        <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-[var(--text-label)]">
                           <span>Total : {formatMoney(Number(d.amount), d.currency)}</span>
                           {Number(d.paid_amount) > 0 && <span>Payé : {formatMoney(Number(d.paid_amount), d.currency)}</span>}
                           {d.due_date && <span>Échéance : {formatDate(d.due_date)}</span>}
@@ -159,15 +159,15 @@ function DebtListSheet({ open, onClose, title, debts: items, totalUSD, color, ra
             </ul>
           )}
         </div>
-        <div className="border-t border-slate-800 px-5 py-4">
+        <div className="border-t border-[var(--border-default)] px-5 py-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-400">Total restant</span>
+            <span className="text-sm font-medium text-[var(--text-muted)]">Total restant</span>
             <span className={`font-mono text-base font-bold tabular-nums ${color === "red" ? "text-red-400" : "text-emerald-400"}`}>
               {formatMoney(totalUSD, "USD")}
             </span>
           </div>
           <Link href={`/${locale}/debts`} onClick={onClose}
-            className="mt-3 flex w-full items-center justify-center rounded-lg border border-slate-700 py-2 text-xs text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+            className="mt-3 flex w-full items-center justify-center rounded-lg border border-[var(--border-strong)] py-2 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]">
             Gérer dans Dettes & Créances →
           </Link>
         </div>
@@ -185,29 +185,29 @@ function MonthlyDetailSheet({ open, onClose, title, items, total, note }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-slate-800 bg-slate-900 md:rounded-xl">
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-          <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800"><X size={16} /></button>
+      <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-card)] md:rounded-xl">
+        <div className="flex items-center justify-between border-b border-[var(--border-default)] px-5 py-4">
+          <h3 className="text-sm font-semibold text-[var(--text-strong)]">{title}</h3>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-[var(--text-label)] hover:bg-[var(--surface-chip)]"><X size={16} /></button>
         </div>
-        {note && <p className="border-b border-slate-800/50 px-5 py-2 text-xs text-slate-500">{note}</p>}
+        {note && <p className="border-b border-[var(--border-subtle)] px-5 py-2 text-xs text-[var(--text-label)]">{note}</p>}
         <div className="max-h-[55vh] overflow-y-auto px-5 py-3">
           {items.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">Aucune transaction ce mois-ci.</p>
+            <p className="py-6 text-center text-sm text-[var(--text-label)]">Aucune transaction ce mois-ci.</p>
           ) : (
-            <ul className="divide-y divide-slate-800">
+            <ul className="divide-y divide-[var(--border-default)]">
               {items.map((item, i) => (
                 <li key={i} className="flex items-center justify-between gap-4 py-3">
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm text-slate-200">{item.label}</p><p className="text-xs text-slate-500">{item.date}</p></div>
-                  <p className="shrink-0 font-mono text-sm font-semibold tabular-nums text-slate-100">{formatMoney(item.amount, item.currency)}</p>
+                  <div className="min-w-0 flex-1"><p className="truncate text-sm text-[var(--text-body)]">{item.label}</p><p className="text-xs text-[var(--text-label)]">{item.date}</p></div>
+                  <p className="shrink-0 font-mono text-sm font-semibold tabular-nums text-[var(--text-strong)]">{formatMoney(item.amount, item.currency)}</p>
                 </li>
               ))}
             </ul>
           )}
         </div>
-        <div className="flex items-center justify-between border-t border-slate-800 px-5 py-4">
-          <span className="text-sm font-medium text-slate-400">Total</span>
-          <span className="font-mono text-base font-bold tabular-nums text-slate-50">{formatMoney(total, "USD")}</span>
+        <div className="flex items-center justify-between border-t border-[var(--border-default)] px-5 py-4">
+          <span className="text-sm font-medium text-[var(--text-muted)]">Total</span>
+          <span className="font-mono text-base font-bold tabular-nums text-[var(--text-strong)]">{formatMoney(total, "USD")}</span>
         </div>
       </div>
     </div>
@@ -221,29 +221,29 @@ function ClientBreakdownSheet({ open, onClose, rows, totalHeld, locale }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-slate-800 bg-slate-900 md:rounded-xl">
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-          <h3 className="text-sm font-semibold text-slate-100">Argent client détenu</h3>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800"><X size={16} /></button>
+      <div className="relative z-10 w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-card)] md:rounded-xl">
+        <div className="flex items-center justify-between border-b border-[var(--border-default)] px-5 py-4">
+          <h3 className="text-sm font-semibold text-[var(--text-strong)]">Argent client détenu</h3>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-[var(--text-label)] hover:bg-[var(--surface-chip)]"><X size={16} /></button>
         </div>
-        <p className="border-b border-slate-800/50 px-5 py-2 text-xs text-slate-500">
+        <p className="border-b border-[var(--border-subtle)] px-5 py-2 text-xs text-[var(--text-label)]">
           Argent reçu des clients, après coûts et bénéfice validé. Ne t'appartient pas encore.
         </p>
         <div className="max-h-[50vh] overflow-y-auto px-5 py-3">
           {rows.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">Aucun client avec de l'argent en attente.</p>
+            <p className="py-6 text-center text-sm text-[var(--text-label)]">Aucun client avec de l'argent en attente.</p>
           ) : (
-            <ul className="divide-y divide-slate-800">
+            <ul className="divide-y divide-[var(--border-default)]">
               {rows.map((r) => (
                 <li key={r.name} className="py-3">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-slate-200">{r.name}</span>
+                    <span className="text-sm font-medium text-[var(--text-body)]">{r.name}</span>
                     <span className={`shrink-0 font-mono text-sm font-bold tabular-nums ${r.balance < 0 ? "text-red-400" : "text-sky-300"}`}>
                       {formatMoney(r.balance, "USD")}
                     </span>
                   </div>
-                  <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-slate-500">
-                    <span>Reçu : <span className="text-slate-400">{formatMoney(r.received, "USD")}</span></span>
+                  <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-[var(--text-label)]">
+                    <span>Reçu : <span className="text-[var(--text-muted)]">{formatMoney(r.received, "USD")}</span></span>
                     <span>Coûts : <span className="text-red-400">−{formatMoney(r.costs, "USD")}</span></span>
                   </div>
                 </li>
@@ -251,9 +251,9 @@ function ClientBreakdownSheet({ open, onClose, rows, totalHeld, locale }: {
             </ul>
           )}
         </div>
-        <div className="border-t border-slate-800 px-5 py-3">
+        <div className="border-t border-[var(--border-default)] px-5 py-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-400">Total détenu</span>
+            <span className="text-sm font-medium text-[var(--text-muted)]">Total détenu</span>
             <span className="font-mono text-base font-bold tabular-nums text-sky-300">{formatMoney(totalHeld, "USD")}</span>
           </div>
         </div>
@@ -289,7 +289,7 @@ function availLabel(av: string | null | undefined): string {
 }
 
 function tileCls(extra = "") {
-  return `rounded-xl border border-slate-800 bg-slate-900 p-4 ${extra}`;
+  return `rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4 ${extra}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -417,12 +417,12 @@ export default function DashboardPage({ params }: Props) {
     return (
       <PageWrapper locale={locale}>
         <div className="space-y-4">
-          <div className="h-9 w-48 animate-pulse rounded-lg bg-slate-800" />
+          <div className="h-9 w-48 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
           <div className="grid grid-cols-3 gap-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-                <div className="mb-2 h-3 w-16 animate-pulse rounded bg-slate-800" />
-                <div className="h-6 w-24 animate-pulse rounded bg-slate-800" />
+              <div key={i} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
+                <div className="mb-2 h-3 w-16 animate-pulse rounded bg-[var(--surface-chip)]" />
+                <div className="h-6 w-24 animate-pulse rounded bg-[var(--surface-chip)]" />
               </div>
             ))}
           </div>
@@ -454,17 +454,17 @@ export default function DashboardPage({ params }: Props) {
               const title = titleName ? `${baseLabel} : ${titleName}` : baseLabel;
               return (
                 <Link key={alert.id} href={`/${locale}${alert.actionHref}`}
-                  className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:border-slate-600 ${bg}`}>
+                  className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:border-[var(--border-strong)] ${bg}`}>
                   <Icon size={14} className={`shrink-0 ${color}`} />
-                  <span className="flex-1 truncate text-xs text-slate-300">{title}</span>
+                  <span className="flex-1 truncate text-xs text-[var(--text-body)]">{title}</span>
                   {isCritical && <Badge variant="danger" className="text-[10px]">Critique</Badge>}
-                  <span className="shrink-0 text-xs text-slate-600">→</span>
+                  <span className="shrink-0 text-xs text-[var(--text-faint)]">→</span>
                 </Link>
               );
             })}
             {smartAlerts.length > actionableAlerts.length && (
               <Link href={`/${locale}/alerts`}
-                className="flex items-center justify-center rounded-lg border border-slate-800 py-1.5 text-[11px] text-slate-500 transition-colors hover:bg-slate-900 hover:text-slate-300">
+                className="flex items-center justify-center rounded-lg border border-[var(--border-default)] py-1.5 text-[11px] text-[var(--text-label)] transition-colors hover:bg-[var(--surface-card)] hover:text-[var(--text-body)]">
                 Voir les {smartAlerts.length} alertes →
               </Link>
             )}
@@ -476,33 +476,33 @@ export default function DashboardPage({ params }: Props) {
             ══════════════════════════════════════════════════════════════════ */}
         <button
           onClick={() => setOpenSheet("formula")}
-          className="card-interactive relative w-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-5 text-left"
+          className="card-interactive relative w-full overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 text-left"
         >
           <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-orange-500/5 blur-2xl" />
           <div className="relative flex items-end justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-600">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-faint)]">
                 Solde personnel estimé
               </p>
-              <p className="mt-1 font-mono text-3xl font-bold tabular-nums text-slate-50">
+              <p className="mt-1 font-mono text-3xl font-bold tabular-nums text-[var(--text-strong)]">
                 {personalBalanceEstimate < 0 && "−"}
                 {formatMoney(Math.abs(personalBalanceEstimate), "USD")}
               </p>
             </div>
             <div className="flex items-center gap-2">
               {clientMoney.netHeldUSD > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/70 px-2.5 py-1 text-[11px]">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-chip)] px-2.5 py-1 text-[11px]">
                   <span className="font-mono text-sky-400">{formatMoney(clientMoney.netHeldUSD, "USD")}</span>
-                  <span className="text-slate-500">client</span>
+                  <span className="text-[var(--text-label)]">client</span>
                 </span>
               )}
               {debtOverview.totalOwedUSD > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-800/70 px-2.5 py-1 text-[11px]">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-chip)] px-2.5 py-1 text-[11px]">
                   <span className="font-mono text-red-400">{formatMoney(debtOverview.totalOwedUSD, "USD")}</span>
-                  <span className="text-slate-500">dettes</span>
+                  <span className="text-[var(--text-label)]">dettes</span>
                 </span>
               )}
-              <span className="text-[10px] text-slate-600">Détails →</span>
+              <span className="text-[10px] text-[var(--text-faint)]">Détails →</span>
             </div>
           </div>
         </button>
@@ -513,55 +513,55 @@ export default function DashboardPage({ params }: Props) {
         <section>
           <SectionHeader label="Vue réelle" />
           <Card className="overflow-hidden p-0">
-            <ul className="divide-y divide-slate-800/50">
+            <ul className="divide-y divide-[var(--border-subtle)]">
               <li>
-                <button onClick={() => setOpenSheet("physical")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
-                  <span className="text-sm text-slate-300">Solde physique</span>
+                <button onClick={() => setOpenSheet("physical")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]">
+                  <span className="text-sm text-[var(--text-body)]">Solde physique</span>
                   <span className="flex items-center gap-2">
-                    <span className="text-xs text-slate-600">{accounts.length} comptes</span>
-                    <span className="font-mono text-sm font-bold tabular-nums text-slate-100">{formatMoney(physicalBalance.total, "USD")}</span>
-                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                    <span className="text-xs text-[var(--text-faint)]">{accounts.length} comptes</span>
+                    <span className="font-mono text-sm font-bold tabular-nums text-[var(--text-strong)]">{formatMoney(physicalBalance.total, "USD")}</span>
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-[var(--text-faint)]" />
                   </span>
                 </button>
               </li>
               <li>
-                <button onClick={() => setOpenSheet("client")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
-                  <span className="text-sm text-slate-300">Argent client détenu</span>
+                <button onClick={() => setOpenSheet("client")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]">
+                  <span className="text-sm text-[var(--text-body)]">Argent client détenu</span>
                   <span className="flex items-center gap-2">
-                    <span className="text-xs text-slate-600">Non validé</span>
+                    <span className="text-xs text-[var(--text-faint)]">Non validé</span>
                     <span className={`font-mono text-sm font-bold tabular-nums ${clientMoney.netHeldUSD < 0 ? "text-red-400" : "text-sky-300"}`}>{formatMoney(clientMoney.netHeldUSD, "USD")}</span>
-                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-[var(--text-faint)]" />
                   </span>
                 </button>
               </li>
               <li className="flex items-center justify-between gap-3 px-4 py-3">
-                <span className="text-sm text-slate-300">Disponible</span>
+                <span className="text-sm text-[var(--text-body)]">Disponible</span>
                 <span className="flex items-center gap-2">
-                  <span className="text-xs text-slate-600">Physique − client</span>
+                  <span className="text-xs text-[var(--text-faint)]">Physique − client</span>
                   <span className={`font-mono text-sm font-bold tabular-nums ${availableBalance < 0 ? "text-red-400" : "text-emerald-400"}`}>{formatMoney(availableBalance, "USD")}</span>
                 </span>
               </li>
               <li>
-                <button onClick={() => setOpenSheet("debts")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                <button onClick={() => setOpenSheet("debts")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]">
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500/70" />
-                    <span className="text-sm text-slate-300">Dettes à payer</span>
+                    <span className="text-sm text-[var(--text-body)]">Dettes à payer</span>
                   </div>
                   <span className="flex items-center gap-2">
                     <MoneyAmount amount={debtOverview.totalOwedUSD} currency="USD" tone="negative" size="sm" />
-                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-[var(--text-faint)]" />
                   </span>
                 </button>
               </li>
               <li>
-                <button onClick={() => setOpenSheet("receivables")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                <button onClick={() => setOpenSheet("receivables")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]">
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/70" />
-                    <span className="text-sm text-slate-300">Créances à recevoir</span>
+                    <span className="text-sm text-[var(--text-body)]">Créances à recevoir</span>
                   </div>
                   <span className="flex items-center gap-2">
                     <MoneyAmount amount={debtOverview.totalReceivableUSD} currency="USD" tone="positive" size="sm" />
-                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-[var(--text-faint)]" />
                   </span>
                 </button>
               </li>
@@ -575,12 +575,12 @@ export default function DashboardPage({ params }: Props) {
         <section>
           <div className="flex gap-2">
             <Link href={`/${locale}/transactions`}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900 py-3 text-sm font-medium text-slate-300 transition-colors hover:border-orange-500/30 hover:bg-slate-800 hover:text-slate-100">
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-orange-500/30 hover:bg-[var(--surface-chip)] hover:text-[var(--text-strong)]">
               <Plus size={15} className="text-orange-500" />
               Transaction
             </Link>
             <Link href={`/${locale}/clients`}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-900 py-3 text-sm font-medium text-slate-300 transition-colors hover:border-orange-500/30 hover:bg-slate-800 hover:text-slate-100">
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-orange-500/30 hover:bg-[var(--surface-chip)] hover:text-[var(--text-strong)]">
               <Plus size={15} className="text-orange-500" />
               Client
             </Link>
@@ -593,40 +593,40 @@ export default function DashboardPage({ params }: Props) {
         <section>
           <SectionHeader label="Ce mois" />
           <Card className="overflow-hidden p-0">
-            <ul className="divide-y divide-slate-800/50">
+            <ul className="divide-y divide-[var(--border-subtle)]">
               <li>
-                <button onClick={() => setOpenSheet("income")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                <button onClick={() => setOpenSheet("income")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]">
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/70" />
-                    <span className="text-sm text-slate-300">Revenus</span>
+                    <span className="text-sm text-[var(--text-body)]">Revenus</span>
                   </div>
                   <span className="flex items-center gap-2">
                     <MoneyAmount amount={monthlyMetrics.realIncomeUSD} currency="USD" tone="positive" size="sm" />
-                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-[var(--text-faint)]" />
                   </span>
                 </button>
               </li>
               <li>
-                <button onClick={() => setOpenSheet("expense")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                <button onClick={() => setOpenSheet("expense")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]">
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500/70" />
-                    <span className="text-sm text-slate-300">Dépenses</span>
+                    <span className="text-sm text-[var(--text-body)]">Dépenses</span>
                   </div>
                   <span className="flex items-center gap-2">
                     <MoneyAmount amount={monthlyMetrics.realExpenseUSD} currency="USD" tone={monthlyMetrics.realExpenseUSD > 0 ? "negative" : "muted"} size="sm" />
-                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-[var(--text-faint)]" />
                   </span>
                 </button>
               </li>
               <li>
-                <button onClick={() => setOpenSheet("profit")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-800/20">
+                <button onClick={() => setOpenSheet("profit")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]">
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500/70" />
-                    <span className="text-sm text-slate-300">Bénéfice</span>
+                    <span className="text-sm text-[var(--text-body)]">Bénéfice</span>
                   </div>
                   <span className="flex items-center gap-2">
                     <MoneyAmount amount={monthlyMetrics.profitValidatedUSD} currency="USD" tone="warning" size="sm" />
-                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-slate-600" />
+                    <ChevronDown size={14} className="shrink-0 -rotate-90 text-[var(--text-faint)]" />
                   </span>
                 </button>
               </li>
@@ -640,15 +640,15 @@ export default function DashboardPage({ params }: Props) {
         <section>
           <button
             onClick={() => setChartsOpen(!chartsOpen)}
-            className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-left transition-colors hover:border-slate-700"
+            className="flex w-full items-center justify-between rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] px-4 py-3 text-left transition-colors hover:border-[var(--border-strong)]"
           >
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Graphiques</span>
-            <span className="flex items-center gap-2 text-xs text-slate-600">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-label)]">Graphiques</span>
+            <span className="flex items-center gap-2 text-xs text-[var(--text-faint)]">
               <select
                 value={chartAccountId ?? ""}
                 onChange={(e) => { e.stopPropagation(); setChartAccountId(e.target.value || null); }}
                 onClick={(e) => e.stopPropagation()}
-                className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-chip)] px-2 py-1 text-xs text-[var(--text-body)] focus:border-orange-500 focus:outline-none"
               >
                 <option value="">Tous</option>
                 {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -657,7 +657,7 @@ export default function DashboardPage({ params }: Props) {
                 value={chartPeriod}
                 onChange={(e) => { e.stopPropagation(); setChartPeriod(e.target.value as DashPeriod); }}
                 onClick={(e) => e.stopPropagation()}
-                className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-300 focus:border-orange-500 focus:outline-none"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-chip)] px-2 py-1 text-xs text-[var(--text-body)] focus:border-orange-500 focus:outline-none"
               >
                 <option value="week">Semaine</option>
                 <option value="month">Mois</option>
@@ -679,7 +679,7 @@ export default function DashboardPage({ params }: Props) {
                 )}
               </Card>
               <Card>
-                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-[var(--text-label)]">
                   {t("real_expenses_by_category")}
                 </p>
                 {categoryData.length > 0 ? (
@@ -697,16 +697,16 @@ export default function DashboardPage({ params }: Props) {
             ══════════════════════════════════════════════════════════════════ */}
         <section>
           <Card className="overflow-hidden p-0">
-            <div className="flex items-center border-b border-slate-800 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <div className="flex items-center border-b border-[var(--border-default)] px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-label)]">
                 {t("recent_transactions")}
               </p>
             </div>
             {recentTx.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-500">{tc("empty")}</p>
+              <p className="py-8 text-center text-sm text-[var(--text-label)]">{tc("empty")}</p>
             ) : (
               <>
-                <ul className="divide-y divide-slate-800/60">
+                <ul className="divide-y divide-[var(--border-subtle)]">
                   {recentTx.map((tx, i) => {
                     const acc = accounts.find((a) => a.id === tx.account_id);
                     const isInc = isRealIncome(tx);
@@ -720,8 +720,8 @@ export default function DashboardPage({ params }: Props) {
                         <div className="flex min-w-0 flex-1 items-center gap-2.5">
                           <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${tx.type === "expense" ? "bg-red-950/60 text-red-400" : "bg-emerald-950/60 text-emerald-400"}`}>{sign}</span>
                           <div className="min-w-0">
-                            <p className="truncate text-sm text-slate-200">{tx.category ?? tx.note ?? "—"}</p>
-                            <p className="text-[11px] text-slate-600">
+                            <p className="truncate text-sm text-[var(--text-body)]">{tx.category ?? tx.note ?? "—"}</p>
+                            <p className="text-[11px] text-[var(--text-faint)]">
                               {acc?.name ?? (tx.account_id === null ? "Comptabilité" : "—")} · {formatDate(tx.transaction_date)}
                             </p>
                           </div>
@@ -732,8 +732,8 @@ export default function DashboardPage({ params }: Props) {
                   })}
                 </ul>
                 {transactions.length > 3 && (
-                  <div className="border-t border-slate-800/60 px-4 py-2.5">
-                    <Link href={`/${locale}/transactions`} className="flex items-center justify-center text-xs text-slate-500 transition-colors hover:text-orange-400">
+                  <div className="border-t border-[var(--border-subtle)] px-4 py-2.5">
+                    <Link href={`/${locale}/transactions`} className="flex items-center justify-center text-xs text-[var(--text-label)] transition-colors hover:text-orange-400">
                       {tc("see_all")} ({transactions.length}) →
                     </Link>
                   </div>

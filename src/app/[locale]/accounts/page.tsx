@@ -241,9 +241,9 @@ export default function AccountsPage({ params }: Props) {
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
+            <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
             {accounts.length > 0 && (
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-[var(--text-label)]">
                 {accounts.length} compte{accounts.length !== 1 ? "s" : ""}
               </p>
             )}
@@ -275,7 +275,7 @@ export default function AccountsPage({ params }: Props) {
                 const hasBlocked = blocked > 0.001;
                 return (
                   <article key={acc.id} className={`rounded-xl border transition-colors ${
-                    isOpen ? "border-slate-600 bg-slate-900/80" : "border-slate-800 bg-slate-900 hover:border-slate-700"
+                    isOpen ? "border-[var(--border-strong)] bg-[var(--surface-card)]/80" : "border-[var(--border-default)] bg-[var(--surface-card)] hover:border-[var(--border-strong)]"
                   } overflow-hidden`}>
                     {/* Collapsed card — click to expand */}
                     <button
@@ -283,13 +283,13 @@ export default function AccountsPage({ params }: Props) {
                       className="flex w-full items-center gap-3 p-4 text-left"
                       aria-label={acc.name}
                     >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-700/60 bg-slate-800 text-slate-400">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border-strong)] bg-[var(--surface-chip)] text-[var(--text-muted)]">
                         {(() => { const Icon = accountIcon(acc); return <Icon size={18} />; })()}
                       </span>
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-200">{acc.name}</p>
-                        <p className="mt-0.5 text-[11px] text-slate-500">
+                        <p className="truncate text-sm font-semibold text-[var(--text-body)]">{acc.name}</p>
+                        <p className="mt-0.5 text-[11px] text-[var(--text-label)]">
                           {typeLabels[acc.type] ?? acc.type} · {acc.currency}
                         </p>
                       </div>
@@ -302,39 +302,39 @@ export default function AccountsPage({ params }: Props) {
                           )}
                         </span>
                         <div className="w-[100px] shrink-0 text-right">
-                          <p className={`truncate font-mono text-lg font-bold tabular-nums ${isNeg ? "text-red-400" : "text-slate-50"}`}>
+                          <p className={`truncate font-mono text-lg font-bold tabular-nums ${isNeg ? "text-red-400" : "text-[var(--text-strong)]"}`}>
                             {formatMoney(acc.balance, acc.currency)}
                           </p>
                         </div>
                       </div>
 
-                      <ChevronDown size={18} className={`shrink-0 text-slate-600 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown size={18} className={`shrink-0 text-[var(--text-faint)] transition-transform ${isOpen ? "rotate-180" : ""}`} />
                     </button>
 
                     {/* Expanded detail: Liquidité + Disponible/Bloqué */}
                     {isOpen && (
-                      <div className="border-t border-slate-800 bg-slate-900/50 px-4 pb-4 pt-3">
+                      <div className="border-t border-[var(--border-default)] bg-[var(--surface-card)]/50 px-4 pb-4 pt-3">
                         {hasBlocked ? (
                           <>
-                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">Liquidité</p>
-                            <div className="flex items-stretch gap-4 rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">Liquidité</p>
+                            <div className="flex items-stretch gap-4 rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)]/80 p-3">
                               <div className="flex flex-1 flex-col gap-1">
-                                <p className="text-[10px] text-slate-500">Disponible</p>
+                                <p className="text-[10px] text-[var(--text-label)]">Disponible</p>
                                 <p className="font-mono text-base font-bold tabular-nums text-emerald-400">
                                   {formatMoney(available, acc.currency)}
                                 </p>
                               </div>
-                              <span className="w-px self-stretch bg-slate-700/60" />
+                              <span className="w-px self-stretch bg-[var(--border-strong)]/60" />
                               <div className="flex flex-1 flex-col gap-1">
-                                <p className="text-[10px] text-slate-500">Bloqué</p>
-                                <p className="font-mono text-base font-bold tabular-nums text-slate-300">
+                                <p className="text-[10px] text-[var(--text-label)]">Bloqué</p>
+                                <p className="font-mono text-base font-bold tabular-nums text-[var(--text-body)]">
                                   {formatMoney(blocked, acc.currency)}
                                 </p>
                               </div>
                             </div>
                           </>
                         ) : (
-                          <p className="text-[11px] text-slate-600">Aucun argent client détenu sur ce compte.</p>
+                          <p className="text-[11px] text-[var(--text-faint)]">Aucun argent client détenu sur ce compte.</p>
                         )}
 
                         {/* Meta: availability + note + negative warning */}
@@ -343,7 +343,7 @@ export default function AccountsPage({ params }: Props) {
                             acc.availability === "immediate" ? "bg-emerald-950/60 text-emerald-400"
                             : acc.availability === "close" ? "bg-amber-950/60 text-amber-400"
                             : acc.availability === "distant" ? "bg-amber-950/40 text-amber-500"
-                            : "bg-slate-800 text-slate-500"
+                            : "bg-[var(--surface-chip)] text-[var(--text-label)]"
                           }`}>
                             <span className={`h-1.5 w-1.5 rounded-full ${
                               acc.availability === "immediate" ? "bg-emerald-500"
@@ -353,7 +353,7 @@ export default function AccountsPage({ params }: Props) {
                             }`} />
                             {availLabels[acc.availability ?? "immediate"]}
                           </span>
-                          {acc.note && <span className="truncate text-[10px] text-slate-600">— {acc.note}</span>}
+                          {acc.note && <span className="truncate text-[10px] text-[var(--text-faint)]">— {acc.note}</span>}
                           {isNeg && <span className="flex items-center gap-1 text-[10px] text-red-400"><AlertTriangle size={10} />{t("negative_warning")}</span>}
                         </div>
 
@@ -361,13 +361,13 @@ export default function AccountsPage({ params }: Props) {
                         <div className="mt-3 flex gap-2">
                           <button
                             onClick={() => { setExpandedId(null); openEdit(acc.id); }}
-                            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                            className="flex items-center gap-1.5 rounded-lg border border-[var(--border-strong)] px-3 py-1.5 text-[11px] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                           >
                             <Pencil size={11} /> Modifier
                           </button>
                           <Link
                             href={`/${locale}/transactions?account=${acc.id}`}
-                            className="flex items-center gap-1.5 rounded-lg border border-slate-800 px-3 py-1.5 text-[11px] text-slate-500 transition-colors hover:border-slate-700 hover:text-slate-300"
+                            className="flex items-center gap-1.5 rounded-lg border border-[var(--border-default)] px-3 py-1.5 text-[11px] text-[var(--text-label)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                           >
                             Voir les transactions →
                           </Link>
@@ -413,19 +413,19 @@ export default function AccountsPage({ params }: Props) {
             onClick={() => setShowForm(false)}
           >
             <div
-              className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+              className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-center pt-2.5 md:hidden">
-                <div className="h-1 w-10 rounded-full bg-slate-700" />
+                <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
               </div>
 
               <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
                 <div>
-                  <h2 className="text-base font-bold text-slate-50">
+                  <h2 className="text-base font-bold text-[var(--text-strong)]">
                     {editing ? "Modifier le compte" : "Nouveau compte"}
                   </h2>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs text-[var(--text-label)]">
                     {editing
                       ? "Modifie les informations de ce compte."
                       : "Ajoute un endroit où ton argent est stocké."}
@@ -433,7 +433,7 @@ export default function AccountsPage({ params }: Props) {
                 </div>
                 <button
                   onClick={() => setShowForm(false)}
-                  className="shrink-0 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                  className="shrink-0 rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                 >
                   <X size={16} />
                 </button>
@@ -445,12 +445,12 @@ export default function AccountsPage({ params }: Props) {
 
                     {/* Section 1 : Identité */}
                     <div>
-                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                         Identité
                       </p>
                       <div className="space-y-3">
                         <div>
-                          <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                          <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                             Nom du compte
                           </label>
                           <input
@@ -462,7 +462,7 @@ export default function AccountsPage({ params }: Props) {
                           />
                         </div>
                         <div>
-                          <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                          <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                             Type
                           </label>
                           <div className="grid grid-cols-2 gap-2">
@@ -474,7 +474,7 @@ export default function AccountsPage({ params }: Props) {
                                 className={`rounded-xl border p-2.5 text-xs font-medium transition-colors ${
                                   type === key
                                     ? "border-orange-600/50 bg-orange-950/25 text-orange-300"
-                                    : "border-slate-700/60 bg-slate-900/60 text-slate-400 hover:border-slate-600"
+                                    : "border-[var(--border-strong)] bg-[var(--surface-glass)] text-[var(--text-muted)] hover:border-[var(--border-strong)]"
                                 }`}
                               >
                                 {typeLabels[key] ?? key}
@@ -487,7 +487,7 @@ export default function AccountsPage({ params }: Props) {
 
                     {/* Section 2 : Disponibilité */}
                     <div>
-                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                         Disponibilité
                       </p>
                       <div className="grid grid-cols-2 gap-2">
@@ -501,7 +501,7 @@ export default function AccountsPage({ params }: Props) {
                               className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
                                 isSel
                                   ? "border-orange-600/50 bg-orange-950/25"
-                                  : "border-slate-700/50 bg-slate-900/60 hover:border-slate-600"
+                                  : "border-[var(--border-strong)] bg-[var(--surface-glass)] hover:border-[var(--border-strong)]"
                               }`}
                             >
                               <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
@@ -511,10 +511,10 @@ export default function AccountsPage({ params }: Props) {
                                 : "bg-slate-600"
                               }`} />
                               <div>
-                                <p className={`text-xs font-medium ${isSel ? "text-orange-300" : "text-slate-300"}`}>
+                                <p className={`text-xs font-medium ${isSel ? "text-orange-300" : "text-[var(--text-body)]"}`}>
                                   {availLabels[key]}
                                 </p>
-                                <p className="mt-0.5 text-[10px] leading-tight text-slate-600">
+                                <p className="mt-0.5 text-[10px] leading-tight text-[var(--text-faint)]">
                                   {key === "immediate" ? "Utilisable maintenant"
                                   : key === "close" ? "Facile à récupérer"
                                   : key === "distant" ? "Agent / autre pays"
@@ -529,12 +529,12 @@ export default function AccountsPage({ params }: Props) {
 
                     {/* Section 3 : Solde */}
                     <div>
-                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                         Solde
                       </p>
                       <div className={!editing ? "grid grid-cols-2 gap-2" : undefined}>
                         <div>
-                          <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                          <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                             Devise
                           </label>
                           <select
@@ -552,7 +552,7 @@ export default function AccountsPage({ params }: Props) {
                         </div>
                         {!editing && (
                           <div>
-                            <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                            <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                               Solde initial
                             </label>
                             <input
@@ -571,7 +571,7 @@ export default function AccountsPage({ params }: Props) {
 
                     {/* Section 4 : Note */}
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                         Note
                       </label>
                       <input
@@ -586,7 +586,7 @@ export default function AccountsPage({ params }: Props) {
 
                 {/* Footer */}
                 <div
-                  className="shrink-0 border-t border-slate-800 px-5 pt-3"
+                  className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3"
                   style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
                 >
                   {formError && (
@@ -596,14 +596,14 @@ export default function AccountsPage({ params }: Props) {
                     <button
                       type="button"
                       onClick={() => setShowForm(false)}
-                      className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                      className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                     >
                       {tc("cancel")}
                     </button>
                     <button
                       type="submit"
                       disabled={saving}
-                      className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                      className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                     >
                       {saving ? "Sauvegarde en cours…" : tc("save")}
                     </button>
@@ -619,4 +619,4 @@ export default function AccountsPage({ params }: Props) {
 }
 
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 transition-colors focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] transition-colors focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";

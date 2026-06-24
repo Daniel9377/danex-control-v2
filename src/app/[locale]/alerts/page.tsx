@@ -55,9 +55,9 @@ const SEVERITY_CONFIG: Record<
   },
   low: {
     label: "Faible",
-    color: "text-slate-400",
-    bg: "bg-slate-800/30",
-    border: "border-slate-700",
+    color: "text-[var(--text-muted)]",
+    bg: "bg-[var(--surface-chip)]",
+    border: "border-[var(--border-strong)]",
     Icon: Info,
   },
 };
@@ -151,7 +151,7 @@ function CategoryIcon({ category }: { category: AlertCategory }) {
   switch (category) {
     case "client": return <Users  size={12} className="shrink-0 text-blue-400/80" />;
     case "debt":   return <HandCoins size={12} className="shrink-0 text-amber-400/80" />;
-    case "legacy": return <Tag    size={12} className="shrink-0 text-slate-500" />;
+    case "legacy": return <Tag    size={12} className="shrink-0 text-[var(--text-label)]" />;
     case "system": return <Settings2 size={12} className="shrink-0 text-purple-400/80" />;
   }
 }
@@ -172,14 +172,14 @@ function AlertRow({ alert, locale }: { alert: SmartAlert; locale: string }) {
   }[alert.severity];
 
   return (
-    <li className={cn("transition-colors hover:bg-slate-800/20", severityBorder)}>
+    <li className={cn("transition-colors hover:bg-[var(--surface-hover)]", severityBorder)}>
       <div className="flex items-start gap-3 px-4 py-3">
         <Icon size={15} className={cn("mt-0.5 shrink-0", cfg.color)} />
 
         <div className="min-w-0 flex-1">
           {/* Title row */}
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="min-w-0 truncate text-sm font-semibold text-slate-100">
+            <span className="min-w-0 truncate text-sm font-semibold text-[var(--text-strong)]">
               {title}
             </span>
             <span className={cn(
@@ -191,14 +191,14 @@ function AlertRow({ alert, locale }: { alert: SmartAlert; locale: string }) {
             <CategoryIcon category={alert.category} />
           </div>
           {/* Message */}
-          <p className="mt-1 text-xs text-slate-400 leading-relaxed">{message}</p>
+          <p className="mt-1 text-xs text-[var(--text-muted)] leading-relaxed">{message}</p>
         </div>
 
         {/* Action link */}
         <Link
           href={`/${locale}${alert.actionHref}`}
           aria-label={`Voir les détails : ${title}`}
-          className="ml-1 flex shrink-0 items-center gap-1 rounded-lg bg-slate-800/80 px-2.5 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-700 hover:text-slate-100"
+          className="ml-1 flex shrink-0 items-center gap-1 rounded-lg bg-[var(--surface-chip)] px-2.5 py-1.5 text-xs text-[var(--text-body)] transition-colors hover:bg-[var(--border-strong)] hover:text-[var(--text-strong)]"
         >
           Voir <ArrowRight size={11} />
         </Link>
@@ -271,14 +271,14 @@ export default function AlertsPage({ params }: Props) {
     return (
       <PageWrapper locale={locale}>
         <div className="mx-auto max-w-3xl space-y-4">
-          <div className="h-7 w-40 animate-pulse rounded-lg bg-slate-800" />
+          <div className="h-7 w-40 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
           <div className="flex gap-2">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-7 w-20 animate-pulse rounded-full bg-slate-800" />
+              <div key={i} className="h-7 w-20 animate-pulse rounded-full bg-[var(--surface-chip)]" />
             ))}
           </div>
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-[72px] animate-pulse rounded-xl bg-slate-900" />
+            <div key={i} className="h-[72px] animate-pulse rounded-xl bg-[var(--surface-card)]" />
           ))}
         </div>
       </PageWrapper>
@@ -293,8 +293,8 @@ export default function AlertsPage({ params }: Props) {
 
         {/* ── Header ── */}
         <div>
-          <h1 className="text-xl font-bold text-slate-100">{t("title")}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">{t("subtitle")}</p>
+          <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--text-label)]">{t("subtitle")}</p>
         </div>
 
         {/* ── Summary pills ── */}
@@ -327,13 +327,13 @@ export default function AlertsPage({ params }: Props) {
               <span className="text-xs font-semibold text-emerald-300">{t("all_clear")}</span>
             </div>
           )}
-          <span className="ml-auto text-xs text-slate-600">
+          <span className="ml-auto text-xs text-[var(--text-faint)]">
             {alerts.length} alerte{alerts.length !== 1 ? "s" : ""}
           </span>
         </div>
 
         {/* ── Tab bar — wraps on narrow viewports instead of overflowing ── */}
-        <div className="flex flex-wrap gap-0.5 rounded-xl border border-slate-800 bg-slate-950 p-1">
+        <div className="flex flex-wrap gap-0.5 rounded-xl border border-[var(--border-default)] bg-[var(--bg-app)] p-1">
           {TAB_CONFIG.map(({ key, labelKey }) => {
             const count = key !== "all" ? tabCount(key) : undefined;
             const active = activeTab === key;
@@ -343,14 +343,14 @@ export default function AlertsPage({ params }: Props) {
                 onClick={() => setActiveTab(key)}
                 className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   active
-                    ? "bg-slate-800 text-slate-100 shadow-sm"
-                    : "text-slate-500 hover:text-slate-300"
+                    ? "bg-[var(--surface-chip)] text-[var(--text-strong)] shadow-sm"
+                    : "text-[var(--text-label)] hover:text-[var(--text-body)]"
                 }`}
               >
                 {t(labelKey as Parameters<typeof t>[0])}
                 {count !== undefined && count > 0 && (
                   <span className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
-                    active ? "bg-slate-700 text-slate-300" : "bg-slate-800/80 text-slate-500"
+                    active ? "bg-[var(--border-strong)] text-[var(--text-body)]" : "bg-[var(--surface-chip)] text-[var(--text-label)]"
                   }`}>
                     {count}
                   </span>
@@ -367,18 +367,18 @@ export default function AlertsPage({ params }: Props) {
         <div className="flex gap-2">
           {/* Search */}
           <div className="relative min-w-0 flex-1">
-            <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+            <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
             <input
               type="text"
               placeholder={t("search_placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-700/80 bg-slate-900 py-2.5 pl-8 pr-3 text-sm text-slate-200 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none"
+              className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-3 text-sm text-[var(--text-body)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 transition-colors hover:text-slate-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)] transition-colors hover:text-[var(--text-muted)]"
                 aria-label="Effacer la recherche"
               >
                 <X size={12} />
@@ -393,7 +393,7 @@ export default function AlertsPage({ params }: Props) {
               className={`flex items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
                 severityFilter !== "all"
                   ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
-                  : "border-slate-700/80 bg-slate-900 text-slate-400 hover:border-slate-600 hover:text-slate-300"
+                  : "border-[var(--border-strong)] bg-[var(--surface-card)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
               }`}
             >
               <span className="max-w-[80px] truncate">
@@ -407,13 +407,13 @@ export default function AlertsPage({ params }: Props) {
               />
             </button>
             {openSeverity && (
-              <div className="absolute right-0 top-full z-40 mt-1.5 min-w-[160px] overflow-hidden rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl">
+              <div className="absolute right-0 top-full z-40 mt-1.5 min-w-[160px] overflow-hidden rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-1 shadow-2xl">
                 {SEVERITY_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => { setSeverityFilter(opt.value); setOpenSeverity(false); }}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-slate-800 ${
-                      severityFilter === opt.value ? "text-orange-300" : "text-slate-300"
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
+                      severityFilter === opt.value ? "text-orange-300" : "text-[var(--text-body)]"
                     }`}
                   >
                     {severityFilter === opt.value && (
@@ -430,13 +430,13 @@ export default function AlertsPage({ params }: Props) {
         {/* Active filters strip */}
         {(search || severityFilter !== "all") && (
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-600">
+            <span className="text-[11px] text-[var(--text-faint)]">
               {displayedAlerts.length} résultat{displayedAlerts.length !== 1 ? "s" : ""}
             </span>
             {(search || severityFilter !== "all") && (
               <button
                 onClick={() => { setSearch(""); setSeverityFilter("all"); }}
-                className="flex items-center gap-1 text-[11px] text-slate-600 transition-colors hover:text-slate-400"
+                className="flex items-center gap-1 text-[11px] text-[var(--text-faint)] transition-colors hover:text-[var(--text-muted)]"
               >
                 <X size={9} />
                 Réinitialiser
@@ -447,13 +447,13 @@ export default function AlertsPage({ params }: Props) {
 
         {/* ── Alert list ── */}
         {displayedAlerts.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 py-14 text-center">
+          <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] py-14 text-center">
             <CheckCircle2 size={28} className="mx-auto mb-3 text-emerald-500/60" />
-            <p className="text-sm text-slate-500">{t("empty")}</p>
+            <p className="text-sm text-[var(--text-label)]">{t("empty")}</p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
-            <ul className="divide-y divide-slate-800/50">
+          <div className="overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)]">
+            <ul className="divide-y divide-[var(--border-subtle)]">
               {displayedAlerts.map((alert) => (
                 <AlertRow key={alert.id} alert={alert} locale={locale} />
               ))}

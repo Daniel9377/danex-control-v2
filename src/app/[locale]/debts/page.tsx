@@ -44,7 +44,7 @@ const SETTLEMENT_BADGE: Record<SettlementMethod, string> = {
 };
 
 const fieldCls =
-  "w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -209,10 +209,10 @@ export default function DebtsPage({ params }: Props) {
       <PageWrapper locale={locale}>
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <div className="h-7 w-40 animate-pulse rounded-lg bg-slate-800" />
-            <div className="h-9 w-36 animate-pulse rounded-lg bg-slate-800" />
+            <div className="h-7 w-40 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
+            <div className="h-9 w-36 animate-pulse rounded-lg bg-[var(--surface-chip)]" />
           </div>
-          <div className="h-10 animate-pulse rounded-xl bg-slate-800" />
+          <div className="h-10 animate-pulse rounded-xl bg-[var(--surface-chip)]" />
           <SkeletonList count={4} />
         </div>
       </PageWrapper>
@@ -230,7 +230,7 @@ export default function DebtsPage({ params }: Props) {
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-bold text-slate-50">{t("title")}</h1>
+          <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
           <button
             onClick={() => { setDirection(tab); setAffectsBalance(false); setShowForm(true); }}
             aria-label={t("add")}
@@ -261,10 +261,10 @@ export default function DebtsPage({ params }: Props) {
               color={tab === "i_owe" ? "red" : "green"}
               note={`${tabSummary.activeCount} en cours`}
             />
-            <div className="flex flex-col rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="text-xs font-medium text-slate-400">En retard</p>
+            <div className="flex flex-col rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-4">
+              <p className="text-xs font-medium text-[var(--text-muted)]">En retard</p>
               <p className={`mt-1 font-mono text-xl font-bold tabular-nums ${
-                tabSummary.overdueCount > 0 ? "text-red-400" : "text-slate-600"
+                tabSummary.overdueCount > 0 ? "text-red-400" : "text-[var(--text-faint)]"
               }`}>
                 {tabSummary.overdueCount}
               </p>
@@ -275,7 +275,7 @@ export default function DebtsPage({ params }: Props) {
                 </p>
               )}
               {tabSummary.overdueCount === 0 && tabSummary.soonCount === 0 && (
-                <p className="mt-1 text-[10px] text-slate-600">Tout à jour</p>
+                <p className="mt-1 text-[10px] text-[var(--text-faint)]">Tout à jour</p>
               )}
             </div>
           </div>
@@ -289,7 +289,7 @@ export default function DebtsPage({ params }: Props) {
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 filterOverdue
                   ? "border-red-600/60 bg-red-950/40 text-red-300"
-                  : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                  : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
               }`}
             >
               <AlertTriangle size={9} />
@@ -309,7 +309,7 @@ export default function DebtsPage({ params }: Props) {
 
             {filteredActive.length > 0 && (
               <Card className="overflow-hidden p-0">
-                <ul className="divide-y divide-slate-800/50">
+                <ul className="divide-y divide-[var(--border-subtle)]">
                   {filteredActive.map((debt) => {
                     const remaining  = Number(debt.amount) - Number(debt.paid_amount);
                     const progress   = Math.min((Number(debt.paid_amount) / Number(debt.amount)) * 100, 100);
@@ -322,15 +322,15 @@ export default function DebtsPage({ params }: Props) {
 
                     return (
                       <li key={debt.id} className={overdue ? "border-l-2 border-red-800/50" : ""}>
-                        <div className={`transition-colors hover:bg-slate-800/20 px-4 py-3 ${
-                          isExpanded ? "bg-slate-800/30" : ""
+                        <div className={`transition-colors hover:bg-[var(--surface-hover)] px-4 py-3 ${
+                          isExpanded ? "bg-[var(--surface-chip)]" : ""
                         }`}>
                           {/* ── Row ── */}
                           <div className="flex items-center gap-3">
                             {/* Identity */}
                             <div className="min-w-0 flex-1">
                               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                <span className="min-w-0 truncate text-sm font-semibold text-slate-100">
+                                <span className="min-w-0 truncate text-sm font-semibold text-[var(--text-strong)]">
                                   {debt.person_name}
                                 </span>
                                 <Badge variant={statusVariant[debt.status]}>
@@ -351,7 +351,7 @@ export default function DebtsPage({ params }: Props) {
                               </div>
                               {debt.due_date && (
                                 <p className={`mt-0.5 text-[11px] ${
-                                  overdue ? "text-red-400/70" : "text-slate-600"
+                                  overdue ? "text-red-400/70" : "text-[var(--text-faint)]"
                                 }`}>
                                   {t("due_date")}: {formatDate(debt.due_date)}
                                 </p>
@@ -359,7 +359,7 @@ export default function DebtsPage({ params }: Props) {
                               {/* Progress bar on collapsed row */}
                               {Number(debt.paid_amount) > 0 && (
                                 <div className="mt-2">
-                                  <div className="h-1 w-full rounded-full bg-slate-800">
+                                  <div className="h-1 w-full rounded-full bg-[var(--surface-chip)]">
                                     <div
                                       className={`h-1 rounded-full transition-all ${
                                         debt.status === "paid" ? "bg-emerald-500" : "bg-orange-500"
@@ -376,13 +376,13 @@ export default function DebtsPage({ params }: Props) {
                               <div>
                                 <p className={`font-mono text-sm font-bold tabular-nums ${
                                   debt.status === "paid"
-                                    ? "text-slate-500"
+                                    ? "text-[var(--text-label)]"
                                     : tab === "i_owe" ? "text-red-400" : "text-emerald-400"
                                 }`}>
                                   {formatMoney(remaining, debt.currency)}
                                 </p>
                                 {Number(debt.paid_amount) > 0 && (
-                                  <p className="text-[10px] text-slate-700">
+                                  <p className="text-[10px] text-[var(--text-faint)]">
                                     / {formatMoney(Number(debt.amount), debt.currency)}
                                   </p>
                                 )}
@@ -396,7 +396,7 @@ export default function DebtsPage({ params }: Props) {
                                   onClick={() => openPaymentForm(debt.id)}
                                   aria-label={t("add_payment")}
                                   title={t("add_payment")}
-                                  className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-orange-400"
+                                  className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-orange-400"
                                 >
                                   <CreditCard size={13} />
                                 </button>
@@ -404,14 +404,14 @@ export default function DebtsPage({ params }: Props) {
                               <button
                                 onClick={() => loadPayments(debt.id)}
                                 aria-label={isExpanded ? "Réduire" : "Voir historique"}
-                                className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                                className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                               >
                                 {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                               </button>
                               <button
                                 onClick={() => setDeleteId(debt.id)}
                                 aria-label="Supprimer"
-                                className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                                className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-red-400"
                               >
                                 <Trash2 size={12} />
                               </button>
@@ -420,17 +420,17 @@ export default function DebtsPage({ params }: Props) {
 
                           {/* Note */}
                           {debt.note && !isExpanded && (
-                            <p className="mt-1.5 truncate text-[11px] text-slate-700">{debt.note}</p>
+                            <p className="mt-1.5 truncate text-[11px] text-[var(--text-faint)]">{debt.note}</p>
                           )}
 
                           {/* ── Payment history (expanded) ── */}
                           {isExpanded && (
-                            <div className="mt-3 border-t border-slate-800 pt-3">
-                              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                            <div className="mt-3 border-t border-[var(--border-default)] pt-3">
+                              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                                 {t("payment_history")}
                               </p>
                               {payments.length === 0 ? (
-                                <p className="text-xs text-slate-600">Aucun paiement enregistré.</p>
+                                <p className="text-xs text-[var(--text-faint)]">Aucun paiement enregistré.</p>
                               ) : (
                                 <ul className="space-y-1.5">
                                   {payments.map((p) => {
@@ -439,21 +439,21 @@ export default function DebtsPage({ params }: Props) {
                                     return (
                                       <li key={p.id} className="flex items-center justify-between gap-3">
                                         <div className="min-w-0 flex-1">
-                                          <span className="text-xs text-slate-400">
+                                          <span className="text-xs text-[var(--text-muted)]">
                                             {formatDate(p.payment_date)}
                                           </span>
                                           {payAcc && (
-                                            <span className="ml-2 text-[11px] text-slate-500">
+                                            <span className="ml-2 text-[11px] text-[var(--text-label)]">
                                               · {payAcc.name}
                                             </span>
                                           )}
                                           {method !== "real_payment" && (
-                                            <span className="ml-2 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+                                            <span className="ml-2 rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]">
                                               {SETTLEMENT_BADGE[method]}
                                             </span>
                                           )}
                                           {p.note && (
-                                            <span className="ml-2 text-[11px] text-slate-600">{p.note}</span>
+                                            <span className="ml-2 text-[11px] text-[var(--text-faint)]">{p.note}</span>
                                           )}
                                         </div>
                                         <MoneyAmount
@@ -481,20 +481,20 @@ export default function DebtsPage({ params }: Props) {
               <>
                 <SectionHeader label="Réglées" />
                 <Card className="overflow-hidden p-0">
-                  <ul className="divide-y divide-slate-800/50">
+                  <ul className="divide-y divide-[var(--border-subtle)]">
                     {paid.map((debt) => {
                       const remaining  = Number(debt.amount) - Number(debt.paid_amount);
                       const isExpanded = expandedId === debt.id;
 
                       return (
                         <li key={debt.id}>
-                          <div className={`transition-colors hover:bg-slate-800/20 px-4 py-3 ${
-                            isExpanded ? "bg-slate-800/30" : ""
+                          <div className={`transition-colors hover:bg-[var(--surface-hover)] px-4 py-3 ${
+                            isExpanded ? "bg-[var(--surface-chip)]" : ""
                           }`}>
                             <div className="flex items-center gap-3">
                               <div className="min-w-0 flex-1">
                                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                  <span className="min-w-0 truncate text-sm font-semibold text-slate-500">
+                                  <span className="min-w-0 truncate text-sm font-semibold text-[var(--text-label)]">
                                     {debt.person_name}
                                   </span>
                                   <Badge variant="success">
@@ -503,7 +503,7 @@ export default function DebtsPage({ params }: Props) {
                                 </div>
                               </div>
                               <div className="shrink-0 text-right">
-                                <p className="font-mono text-sm font-bold tabular-nums text-slate-500">
+                                <p className="font-mono text-sm font-bold tabular-nums text-[var(--text-label)]">
                                   {formatMoney(remaining, debt.currency)}
                                 </p>
                               </div>
@@ -511,14 +511,14 @@ export default function DebtsPage({ params }: Props) {
                                 <button
                                   onClick={() => loadPayments(debt.id)}
                                   aria-label={isExpanded ? "Réduire" : "Voir historique"}
-                                  className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                                  className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                                 >
                                   {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                                 </button>
                                 <button
                                   onClick={() => setDeleteId(debt.id)}
                                   aria-label="Supprimer"
-                                  className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-800 hover:text-red-400"
+                                  className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-red-400"
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -526,12 +526,12 @@ export default function DebtsPage({ params }: Props) {
                             </div>
 
                             {isExpanded && (
-                              <div className="mt-3 border-t border-slate-800 pt-3">
-                                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                              <div className="mt-3 border-t border-[var(--border-default)] pt-3">
+                                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-faint)]">
                                   {t("payment_history")}
                                 </p>
                                 {payments.length === 0 ? (
-                                  <p className="text-xs text-slate-600">Aucun paiement enregistré.</p>
+                                  <p className="text-xs text-[var(--text-faint)]">Aucun paiement enregistré.</p>
                                 ) : (
                                   <ul className="space-y-1.5">
                                     {payments.map((p) => {
@@ -540,12 +540,12 @@ export default function DebtsPage({ params }: Props) {
                                       return (
                                         <li key={p.id} className="flex items-center justify-between gap-3">
                                           <div className="min-w-0 flex-1">
-                                            <span className="text-xs text-slate-400">{formatDate(p.payment_date)}</span>
-                                            {payAcc && <span className="ml-2 text-[11px] text-slate-500">· {payAcc.name}</span>}
+                                            <span className="text-xs text-[var(--text-muted)]">{formatDate(p.payment_date)}</span>
+                                            {payAcc && <span className="ml-2 text-[11px] text-[var(--text-label)]">· {payAcc.name}</span>}
                                             {method !== "real_payment" && (
-                                              <span className="ml-2 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">{SETTLEMENT_BADGE[method]}</span>
+                                              <span className="ml-2 rounded-full bg-[var(--surface-chip)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]">{SETTLEMENT_BADGE[method]}</span>
                                             )}
-                                            {p.note && <span className="ml-2 text-[11px] text-slate-600">{p.note}</span>}
+                                            {p.note && <span className="ml-2 text-[11px] text-[var(--text-faint)]">{p.note}</span>}
                                           </div>
                                           <MoneyAmount amount={p.amount} currency={debt.currency} className="shrink-0 font-mono text-xs tabular-nums text-emerald-400" />
                                         </li>
@@ -574,21 +574,21 @@ export default function DebtsPage({ params }: Props) {
           onClick={() => setShowForm(false)}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-2.5 md:hidden">
-              <div className="h-1 w-10 rounded-full bg-slate-700" />
+              <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
             </div>
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 pb-3 pt-4">
-              <h2 className="text-base font-bold text-slate-50">{t("add")}</h2>
+              <h2 className="text-base font-bold text-[var(--text-strong)]">{t("add")}</h2>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                className="rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
               >
                 <X size={16} />
               </button>
@@ -600,7 +600,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Person */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("person")}
                     </label>
                     <input
@@ -614,7 +614,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Direction */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       Direction
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -626,7 +626,7 @@ export default function DebtsPage({ params }: Props) {
                           className={`rounded-xl py-2.5 text-xs font-medium transition-colors ${
                             direction === dir
                               ? "bg-orange-600 text-white"
-                              : "border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                              : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                           }`}
                         >
                           {t(dir)}
@@ -638,7 +638,7 @@ export default function DebtsPage({ params }: Props) {
                   {/* Amount + Currency */}
                   <div className="grid grid-cols-3 gap-2">
                     <div className="col-span-2">
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                         {t("amount")}
                       </label>
                       <input
@@ -653,7 +653,7 @@ export default function DebtsPage({ params }: Props) {
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                      <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                         Devise
                       </label>
                       <select
@@ -670,8 +670,8 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Due date */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("due_date")} <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      {t("due_date")} <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       type="date"
@@ -683,9 +683,9 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Linked account */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       Compte lié{" "}
-                      <span className="text-slate-600">
+                      <span className="text-[var(--text-faint)]">
                         {direction === "owes_me" ? "(facultatif)" : "(référence)"}
                       </span>
                     </label>
@@ -703,7 +703,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Affects balance (owes_me only) */}
                   {direction === "owes_me" && linkedAccountId && (
-                    <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-3.5">
+                    <div className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-glass)] p-3.5">
                       <label className="flex cursor-pointer items-start gap-3">
                         <input
                           type="checkbox"
@@ -711,11 +711,11 @@ export default function DebtsPage({ params }: Props) {
                           onChange={(e) => setAffectsBalance(e.target.checked)}
                           className="mt-0.5 h-4 w-4 accent-orange-500"
                         />
-                        <span className="text-xs text-slate-300">
+                        <span className="text-xs text-[var(--text-body)]">
                           L'argent a réellement quitté ce compte
                         </span>
                       </label>
-                      <p className={`mt-1.5 text-[11px] ${affectsBalance ? "text-amber-400" : "text-slate-600"}`}>
+                      <p className={`mt-1.5 text-[11px] ${affectsBalance ? "text-amber-400" : "text-[var(--text-faint)]"}`}>
                         {affectsBalance
                           ? `Le solde sera réduit de ${amount || "…"} ${currency}.`
                           : "Déclaration seulement — aucun compte ne sera modifié."}
@@ -725,8 +725,8 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Note */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("note")} <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      {t("note")} <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       value={note}
@@ -740,7 +740,7 @@ export default function DebtsPage({ params }: Props) {
 
               {/* Footer */}
               <div
-                className="shrink-0 border-t border-slate-800 px-5 pt-3"
+                className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3"
                 style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
               >
                 {formError && (
@@ -750,14 +750,14 @@ export default function DebtsPage({ params }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
-                    className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                    className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                   >
                     {tc("cancel")}
                   </button>
                   <button
                     type="submit"
                     disabled={!personName.trim() || !amount || saving}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
                     {saving ? "Sauvegarde en cours…" : tc("save")}
                   </button>
@@ -775,21 +775,21 @@ export default function DebtsPage({ params }: Props) {
           onClick={() => { setShowPaymentForm(null); setPayError(null); }}
         >
           <div
-            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-slate-800 bg-slate-950 shadow-2xl md:rounded-2xl"
+            className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-[var(--border-default)] bg-[var(--bg-app)] shadow-2xl md:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-2.5 md:hidden">
-              <div className="h-1 w-10 rounded-full bg-slate-700" />
+              <div className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
             </div>
 
             {/* Header */}
             <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
               <div>
-                <h2 className="text-base font-bold text-slate-50">{t("add_payment")}</h2>
-                <p className="mt-0.5 text-xs text-slate-500">
+                <h2 className="text-base font-bold text-[var(--text-strong)]">{t("add_payment")}</h2>
+                <p className="mt-0.5 text-xs text-[var(--text-label)]">
                   {currentDebt.person_name} · Restant :{" "}
-                  <span className="font-mono tabular-nums text-slate-300">
+                  <span className="font-mono tabular-nums text-[var(--text-body)]">
                     {formatMoney(currentRemaining, currentDebt.currency)}
                   </span>
                 </p>
@@ -797,7 +797,7 @@ export default function DebtsPage({ params }: Props) {
               <button
                 type="button"
                 onClick={() => { setShowPaymentForm(null); setPayError(null); }}
-                className="shrink-0 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                className="shrink-0 rounded-lg p-1.5 text-[var(--text-label)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
               >
                 <X size={16} />
               </button>
@@ -812,7 +812,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Settlement method */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       Mode de règlement
                     </label>
                     <div className="space-y-2">
@@ -822,7 +822,7 @@ export default function DebtsPage({ params }: Props) {
                           className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
                             settlementMethod === method
                               ? "border-orange-600/60 bg-orange-950/20"
-                              : "border-slate-700/80 hover:border-slate-600"
+                              : "border-[var(--border-strong)] hover:border-[var(--border-strong)]"
                           }`}
                         >
                           <input
@@ -834,10 +834,10 @@ export default function DebtsPage({ params }: Props) {
                             className="mt-0.5 accent-orange-500"
                           />
                           <div>
-                            <p className="text-xs font-medium text-slate-200">
+                            <p className="text-xs font-medium text-[var(--text-body)]">
                               {SETTLEMENT_LABELS[method]}
                             </p>
-                            <p className="mt-0.5 text-[10px] text-slate-500">
+                            <p className="mt-0.5 text-[10px] text-[var(--text-label)]">
                               {SETTLEMENT_DESCRIPTIONS[method]}
                             </p>
                           </div>
@@ -848,7 +848,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Amount */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {t("amount")}
                     </label>
                     <div className="flex gap-2">
@@ -875,7 +875,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Account */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
                       {settlementMethod === "real_payment"
                         ? t("linked_account")
                         : "Compte (référence seulement)"}
@@ -902,7 +902,7 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Date */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">Date</label>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">Date</label>
                     <input
                       type="date"
                       value={payDate}
@@ -914,8 +914,8 @@ export default function DebtsPage({ params }: Props) {
 
                   {/* Note */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                      {t("note")} <span className="text-slate-600">(optionnel)</span>
+                    <label className="mb-1.5 block text-xs font-medium text-[var(--text-muted)]">
+                      {t("note")} <span className="text-[var(--text-faint)]">(optionnel)</span>
                     </label>
                     <input
                       value={payNote}
@@ -940,21 +940,21 @@ export default function DebtsPage({ params }: Props) {
 
               {/* Footer */}
               <div
-                className="shrink-0 border-t border-slate-800 px-5 pt-3"
+                className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3"
                 style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
               >
                 <div className="flex gap-2.5">
                   <button
                     type="button"
                     onClick={() => { setShowPaymentForm(null); setPayError(null); }}
-                    className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                    className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                   >
                     {tc("cancel")}
                   </button>
                   <button
                     type="submit"
                     disabled={!payAmount}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
                     {tc("save")}
                   </button>
