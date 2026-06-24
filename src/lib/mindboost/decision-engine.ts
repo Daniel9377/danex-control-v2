@@ -4,7 +4,7 @@ import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getCurrentCalendarStatus } from "@/lib/mindboost/google-calendar";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
 import { getConversationHistory, saveConversationMessage, saveConversationSummary, saveParkingListItem } from "@/lib/mindboost/conversation-memory";
-import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, createClientAndOrder, getNextQuestion, detectClientMention, updateIntakeClientName, type ClientIntakeData } from "@/lib/mindboost/client-intake";
+import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, createClientAndOrder, getNextQuestion, detectClientMention, searchExistingClient, updateIntakeClientName, type ClientIntakeData } from "@/lib/mindboost/client-intake";
 
 const MINDBOOST_SYSTEM_PROMPT = `TU ES MINDBOOST
 Assistant personnel de Daniel Ngoy. Patron, gerant, controleur financier, conseiller.
@@ -28,17 +28,47 @@ REGLES ABSOLUES
 7. Tu te souviens de la conversation precedente. Tu ne repetes pas ce que tu as deja dit.
 8. Si Daniel pose une question, explique-le clairement et completement.
 
+MECANIQUE DE REPONSE — REGLES OBLIGATOIRES
+
+1. Commence TOUJOURS par le fait. Le premier mot de ta reponse est un chiffre, un nom, une date, ou un constat direct.
+   JAMAIS par "Bonjour", "D'accord", "Je comprends", "Tu as raison", "OK", une reformulation de la question, ou une intro.
+
+2. Distingue le RESULTAT du CHOIX. Si la situation est due a une decision de Daniel, nomme-la comme telle.
+   Quand c est un choix recurrent, ne t arrete pas a l acte isole — nomme brievement ce qu il revele.
+   Ex: pas seulement "tu n as pas fait l achat", mais "tu repousses encore une tache simple a fort rendement — le reflexe habituel quand c est repetitif plutot que strategique."
+   Cette lecture n est legitime QUE si les donnees la confirment (regle 8 ci-dessous).
+
+3. Quand un comportement se REPETE, nomme le pattern en UNE ligne courte entre parentheses. Jamais un paragraphe.
+   Exemple : "Tu as recu 200 USD pour Divine mais l achat est pas fait. (meme schema qu avec Idriss le mois dernier)"
+
+4. Donne TOUJOURS un chiffre concret : argent perdu, jours de retard, montant, difference. L abstrait ne declenche rien.
+   Exemple : CORRECT : "3 commandes sans achat = 540 USD immobilises depuis 12 jours."
+   INCORRECT : "Plusieurs commandes sont en attente."
+
+5. Termine TOUJOURS par le prochain pas : un calcul, une action precise, une question binaire. Jamais un jugement suspendu.
+   Exemple : CORRECT : "...Tu lances l achat ce soir ou tu rembourses Divine. Lequel ?"
+   INCORRECT : "...A toi de voir ce que tu veux faire."
+
+6. INTERDITS FORMELS :
+   - Pas de compliment avant critique (ex: "Tu fais du bon boulot, mais...")
+   - Pas de formule d adoucissement (ex: "C est pas grave", "Ca arrive a tout le monde")
+   - Pas de generalite vague (ex: "Il faut etre plus rigoureux") — remplace par le chiffre
+   - Pas de repetition de la question de Daniel
+   - Pas de phrase qui n ajoute ni info ni action
+
+7. Phrases courtes. Aucun remplissage. Si une phrase n ajoute ni info ni action, supprime-la.
+   Le rythme est direct et fluide, pas telegraphique — va a l essentiel sans hacher chaque mot.
+
+8. REGLE FONDATRICE : ce ton direct est EXCLUSIVEMENT reserve aux situations ou tu as des donnees reelles.
+   Si les donnees Supabase sont insuffisantes pour etre categorique, adopte un ton neutre et demande les precisions.
+   La durete sans donnee = du cynisme. La franchise avec donnee = du respect.
+   Exemple : tu peux dire "3 dettes en retard = 850 USD" (chiffre verifie).
+   Tu ne peux PAS dire "tu geres mal tes dettes" (jugement sans donnee).
+
 PHILOSOPHIE DE REPONSE
 Court si simple. Direct si faut stopper. Calme si Daniel est bloque.
 Dur si Daniel fuit. Jamais insultant. Jamais de flatterie. Jamais de motivation sans action.
 Ne repete JAMAIS la meme chose deux fois dans la meme conversation.
-
-STRUCTURE DE REPONSE
-1. Constater les faits (donnees Supabase / agenda).
-2. Nommer le probleme ou valider la situation.
-3. Decider : autoriser / refuser / reporter / exiger / aider.
-4. Donner une seule action concrete.
-5. Fixer une relance precise si urgence.
 
 PROTOCOLES ACTIFS
 
@@ -76,16 +106,7 @@ Modifier les donnees officielles. Encourager une idee qui eloigne de la priorite
 Flatter sans raison. Decider sur des suppositions sans donnees.
 Repeter exactement la meme reponse que le message precedent.
 Inventer un type de dette, une carte, un compte ou un nom absent des donnees.
-
-REGLES DE TON
-- Pas de salutations inutiles.
-- Pas d encouragement vide. Jamais "bien joue" ou "tu peux le faire".
-- Si Daniel est fatigue : reconnaître en une phrase, puis donner la prochaine action.
-- Si Daniel dit "d accord" : fixer la prochaine action et l heure de relance precise.
-- Si Daniel est vraiment bloque : baisser le ton, poser 3 questions, donner un plan simple.
-- Tu ne poses qu une seule question par message.
-- Tu fixes toujours une relance precise quand une action est demandee.
-- Tu es dur sur les priorites mais pas cruel. Tu critiques le comportement, jamais la personne.
+Commencer par Bonjour, OK, D accord, une salutation, un resume, ou du small talk.
 
 FORMAT STRICT
 Telegram = messages courts. Max 5 lignes sauf rapport ou plan structure.
@@ -213,26 +234,48 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   }
 
   // Ajouter le message actuel
-  // Detecter mention client non enregistre
+  // Detecter mention client — demander a DeepSeek de CLASSER l intention
   const mentionedClient = detectClientMention(userMessage);
   let enrichedMessage = userMessage;
   if (mentionedClient) {
-    enrichedMessage = `${userMessage}\n\n[SYSTEME: Client mentionne: "${mentionedClient}". Si ce client ou cette commande ne figure pas dans les donnees Supabase, propose de creer une session de suivi en disant exactement: NOUVEAU_CLIENT:${mentionedClient}]`;
+    enrichedMessage = `${userMessage}
+
+[SYSTEME: Un client potentiel a ete mentionne: "${mentionedClient}".
+CLASSE l intention de Daniel en UN seul mot-code sur la PREMIERE ligne de ta reponse:
+- INTENTION:INFO → Daniel demande des infos sur ce client (ex: "comment va X", "ou en est X")
+- INTENTION:CREATION → Daniel veut ajouter ce client ou une commande pour lui (ex: "nouveau client X", "X vient de me contacter pour une commande")
+- INTENTION:MENTION → Daniel mentionne ce nom sans intention precise (ex: "je vais voir X demain", "le truc de la cliente")
+
+Ensuite, sur les lignes suivantes, reponds normalement a Daniel.
+N'utilise PAS NOUVEAU_CLIENT dans ta reponse — le code gerera la creation.]`;
   }
 
   messages.push({ role: "user" as const, content: enrichedMessage });
 
   const response = await callDeepSeek(messages);
 
-  // Detecter si DeepSeek veut creer un nouveau client
+  // Traiter la reponse — extraire la classification d intention
   let finalResponse = deanonymize(map, response);
-  const newClientMatch = finalResponse.match(/NOUVEAU_CLIENT:(\S+)/);
-  if (newClientMatch) {
-    const clientName = newClientMatch[1].trim();
-    await createIntakeSession(userId, clientName);
-    finalResponse = finalResponse.replace(/NOUVEAU_CLIENT:\S+/, "").trim();
-    if (!finalResponse) {
-      finalResponse = `Je ne trouve pas ${clientName} dans l app. Je lance la collecte des infos.\n\nQuel produit ${clientName} a commandé ?`;
+  const intentMatch = finalResponse.match(/INTENTION:(INFO|CREATION|MENTION)/i);
+  const intent = intentMatch?.[1]?.toUpperCase() ?? null;
+
+  // Retirer la ligne d intention de la reponse visible
+  if (intentMatch) {
+    finalResponse = finalResponse.replace(/INTENTION:(INFO|CREATION|MENTION)\s*/i, "").trim();
+  }
+
+  // Si intention = CREATION, demander confirmation avant de creer
+  if (intent === "CREATION" && mentionedClient) {
+    const clientName = mentionedClient;
+    // Search if client already exists
+    const existing = await searchExistingClient(userId, clientName);
+    if (existing) {
+      // Client already exists — switch to INFO
+      finalResponse = `${clientName} est deja dans tes clients. ${finalResponse || "Tu veux les details ?"}`;
+    } else {
+      // Create intake session but in confirmation-pending mode
+      await createIntakeSession(userId, clientName);
+      finalResponse = finalResponse || `Je ne trouve pas ${clientName} dans tes clients. Tu veux creer un nouveau client ${clientName} ? (oui / non)`;
     }
   }
 
@@ -395,6 +438,31 @@ async function processIntakeResponse(
   let nextStep: ClientIntakeData["step"] = data.step;
 
   switch (data.step) {
+    case "confirm_create": {
+      const confirmed = /oui|yes|ok|confirme|vas-y|go/i.test(msg);
+      if (confirmed) {
+        // Confirmed — check if client already exists (may have been created between bot message and reply)
+        const supabaseIntake = (await import("@/lib/supabase/admin")).createAdminClient();
+        const existing = await searchExistingClient(userId, data.client_name);
+        if (existing) {
+          // Client exists — switch to existing flow
+          updates.existing_client_id = existing.id;
+          nextStep = "confirm_existing";
+        } else {
+          nextStep = "product";
+        }
+      } else {
+        // Refused — cancel the intake
+        try {
+          await closeIntakeSession(sessionId, "cancelled");
+          return "D accord, je ne cree pas de client.";
+        } catch {
+          return "Session annulee.";
+        }
+      }
+      break;
+    }
+
     case "confirm_existing": {
       const confirmed = /oui|yes|ok/i.test(msg);
       if (confirmed) {

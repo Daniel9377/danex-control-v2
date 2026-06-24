@@ -48,7 +48,7 @@ export type ClientIntakeData = {
   delivery_address?: string;
   client_contacted?: boolean;
   blocker?: string;
-  step: "confirm_existing" | "confirm_client" | "product" | "amount" | "supplier" | "price_china" | "delivery" | "contact" | "review" | "done";
+  step: "confirm_create" | "confirm_existing" | "confirm_client" | "product" | "amount" | "supplier" | "price_china" | "delivery" | "contact" | "review" | "done";
 };
 
 export type ClientIntakeSession = {
@@ -89,7 +89,7 @@ export async function createIntakeSession(
       session_id: sessionId,
       client_name: clientName,
       status: "collecting",
-      data: { client_name: clientName, step: "product" },
+      data: { client_name: clientName, step: "confirm_create" },
     })
     .select()
     .single();
@@ -159,6 +159,8 @@ export async function createMindboostTask(
 
 export function getNextQuestion(data: ClientIntakeData): string {
   switch (data.step) {
+    case "confirm_create":
+      return `Je ne trouve pas ${data.client_name} dans tes clients. Tu veux creer un nouveau client ${data.client_name} ? (oui / non)`;
     case "confirm_existing":
       return `J'ai trouvé ${data.client_name} dans l'app. Nouvelle commande pour ce client ? (oui / non)`;
     case "confirm_client":
