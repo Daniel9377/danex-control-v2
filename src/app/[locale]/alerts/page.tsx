@@ -41,8 +41,8 @@ const SEVERITY_CONFIG: Record<
   },
   high: {
     label: "Haute",
-    color: "text-orange-400",
-    bg: "bg-orange-950/20",
+    color: "text-[var(--brand-text)]",
+    bg: "bg-[var(--indigo-950)]/20",
     border: "border-orange-800/40",
     Icon: AlertTriangle,
   },
@@ -166,7 +166,7 @@ function AlertRow({ alert, locale }: { alert: SmartAlert; locale: string }) {
   // Severity border-left accent (matching the severity color)
   const severityBorder = {
     critical: "border-l-2 border-red-500/60",
-    high:     "border-l-2 border-orange-500/50",
+    high:     "border-l-2 border-[var(--brand)]/50",
     medium:   "border-l-2 border-yellow-500/40",
     low:      "",
   }[alert.severity];
@@ -313,10 +313,10 @@ export default function AlertsPage({ params }: Props) {
           {highCount > 0 && (
             <button
               onClick={() => { setActiveTab("critical"); setSeverityFilter("high"); }}
-              className="flex items-center gap-1.5 rounded-full border border-orange-800/40 bg-orange-950/20 px-3 py-1.5 transition-colors hover:border-orange-700/50"
+              className="flex items-center gap-1.5 rounded-full border border-orange-800/40 bg-[var(--indigo-950)]/20 px-3 py-1.5 transition-colors hover:border-[var(--brand-fill-hover)]/50"
             >
-              <AlertTriangle size={12} className="text-orange-400" />
-              <span className="text-xs font-semibold text-orange-300">
+              <AlertTriangle size={12} className="text-[var(--brand-text)]" />
+              <span className="text-xs font-semibold text-[var(--brand-text)]">
                 {highCount} haute{highCount > 1 ? "s" : ""}
               </span>
             </button>
@@ -373,7 +373,7 @@ export default function AlertsPage({ params }: Props) {
               placeholder={t("search_placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-3 text-sm text-[var(--text-body)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none"
+              className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-3 text-sm text-[var(--text-body)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none"
             />
             {search && (
               <button
@@ -392,7 +392,7 @@ export default function AlertsPage({ params }: Props) {
               onClick={() => setOpenSeverity(!openSeverity)}
               className={`flex items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors ${
                 severityFilter !== "all"
-                  ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                  ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
                   : "border-[var(--border-strong)] bg-[var(--surface-card)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
               }`}
             >
@@ -413,11 +413,11 @@ export default function AlertsPage({ params }: Props) {
                     key={opt.value}
                     onClick={() => { setSeverityFilter(opt.value); setOpenSeverity(false); }}
                     className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                      severityFilter === opt.value ? "text-orange-300" : "text-[var(--text-body)]"
+                      severityFilter === opt.value ? "text-[var(--brand-text)]" : "text-[var(--text-body)]"
                     }`}
                   >
                     {severityFilter === opt.value && (
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />
                     )}
                     {opt.label}
                   </button>

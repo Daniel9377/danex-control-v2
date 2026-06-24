@@ -435,7 +435,7 @@ export default function DiagnosticPage({ params }: Props) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-[var(--text-strong)] flex items-center gap-2">
-              <Database size={20} className="text-orange-400" />
+              <Database size={20} className="text-[var(--brand-text)]" />
               Diagnostic Supabase
             </h1>
             <p className="mt-1 text-xs text-[var(--text-label)]">
@@ -525,7 +525,7 @@ export default function DiagnosticPage({ params }: Props) {
 
           <div className="space-y-3 text-xs text-[var(--text-muted)] leading-relaxed">
             <Step n={1} title="Ouvrir Supabase Dashboard">
-              Va sur <span className="text-orange-400">supabase.com → ton projet → SQL Editor</span>
+              Va sur <span className="text-[var(--brand-text)]">supabase.com → ton projet → SQL Editor</span>
             </Step>
             <Step n={2} title="Si migration 001 manque">
               Ouvre le fichier <code className="rounded bg-[var(--surface-chip)] px-1 text-[var(--text-body)]">supabase/migrations/001_accounting_improvements.sql</code>,
@@ -584,7 +584,7 @@ export default function DiagnosticPage({ params }: Props) {
                   <tr key={col}>
                     <td className="py-1 pr-4 font-mono text-[var(--text-body)]">{col}</td>
                     <td className="py-1 pr-4 text-[var(--text-label)]">{type}</td>
-                    <td className={`py-1 ${source.includes("★") ? "text-orange-400" : source.includes("001") ? "text-blue-400" : "text-[var(--text-faint)]"}`}>
+                    <td className={`py-1 ${source.includes("★") ? "text-[var(--brand-text)]" : source.includes("001") ? "text-blue-400" : "text-[var(--text-faint)]"}`}>
                       {source}
                     </td>
                   </tr>
@@ -666,7 +666,7 @@ function MigrationBadge({ label, ok, file }: { label: string; ok: boolean; file:
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-3">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-600/30 text-[10px] font-bold text-orange-400">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-fill)]/30 text-[10px] font-bold text-[var(--brand-text)]">
         {n}
       </span>
       <div>

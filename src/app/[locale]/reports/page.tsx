@@ -76,7 +76,7 @@ function ReportRow({ label, value, indent, bold, color = "default", note, separa
   const colorClass =
     color === "green" ? "text-emerald-400"
     : color === "red" ? "text-red-400"
-    : color === "orange" ? "text-orange-400"
+    : color === "orange" ? "text-[var(--brand-text)]"
     : "text-[var(--text-strong)]";
 
   return (
@@ -296,7 +296,7 @@ export default function ReportsPage({ params }: Props) {
                 onClick={() => setPeriod(opt.value)}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   period === opt.value
-                    ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                    ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
                     : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                 }`}
               >
@@ -308,7 +308,7 @@ export default function ReportsPage({ params }: Props) {
                 type="checkbox"
                 checked={includeLegacy}
                 onChange={(e) => setIncludeLegacy(e.target.checked)}
-                className="h-3.5 w-3.5 accent-orange-500"
+                className="h-3.5 w-3.5 accent-[var(--brand)]"
               />
               <span className="text-xs text-[var(--text-faint)]">{t("include_legacy")}</span>
             </label>
@@ -322,7 +322,7 @@ export default function ReportsPage({ params }: Props) {
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none"
+                  className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                 />
               </div>
               <div>
@@ -331,7 +331,7 @@ export default function ReportsPage({ params }: Props) {
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none"
+                  className="rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                 />
               </div>
             </div>
@@ -606,7 +606,7 @@ export default function ReportsPage({ params }: Props) {
                 value={clientSearch}
                 onChange={(e) => setClientSearch(e.target.value)}
                 placeholder={t("client_search")}
-                className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-3 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none"
+                className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-3 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none"
               />
             </div>
             {clientReports.length === 0 ? (
@@ -632,7 +632,7 @@ export default function ReportsPage({ params }: Props) {
                             <span>Remboursé : <AmountCell value={r.refundsUSD} /></span>
                           )}
                           {r.profitValidatedUSD > 0 && (
-                            <span className="text-orange-400/80">Bénéfice : <AmountCell value={r.profitValidatedUSD} /></span>
+                            <span className="text-[var(--brand-text)]">Bénéfice : <AmountCell value={r.profitValidatedUSD} /></span>
                           )}
                         </div>
                       </div>
@@ -662,7 +662,7 @@ export default function ReportsPage({ params }: Props) {
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
                 placeholder={t("order_search")}
-                className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-3 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none"
+                className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-3 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none"
               />
             </div>
             {orderReports.length === 0 ? (
@@ -692,7 +692,7 @@ export default function ReportsPage({ params }: Props) {
                             <span>Estimé : <AmountCell value={r.estimatedProfitUSD} /></span>
                           )}
                           {r.profitValidatedUSD > 0 && (
-                            <span className="text-orange-400/80">Validé : <AmountCell value={r.profitValidatedUSD} /></span>
+                            <span className="text-[var(--brand-text)]">Validé : <AmountCell value={r.profitValidatedUSD} /></span>
                           )}
                         </div>
                       </div>
@@ -885,7 +885,7 @@ export default function ReportsPage({ params }: Props) {
 
                 <Link
                   href={`/${locale}/transactions`}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-orange-600/50 py-2.5 text-sm font-medium text-orange-400 transition-colors hover:bg-orange-950/20"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--brand-fill)]/50 py-2.5 text-sm font-medium text-[var(--brand-text)] transition-colors hover:bg-[var(--indigo-950)]/20"
                 >
                   <ExternalLink size={14} />
                   {t("legacy_action")}

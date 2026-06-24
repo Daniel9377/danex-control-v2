@@ -34,7 +34,7 @@ const trustVariant: Record<TrustLevel, "default" | "orange" | "danger"> = {
 };
 
 const fieldCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 export default function ClientsPage({ params }: Props) {
   const { locale } = use(params);
@@ -131,7 +131,7 @@ export default function ClientsPage({ params }: Props) {
                   {clients.length} client{clients.length > 1 ? "s" : ""}
                 </span>
                 {summary.activeOrdersCount > 0 && (
-                  <span className="text-orange-400/80">
+                  <span className="text-[var(--brand-text)]">
                     {summary.activeOrdersCount} cmd actives
                   </span>
                 )}
@@ -147,7 +147,7 @@ export default function ClientsPage({ params }: Props) {
           <button
             onClick={openAdd}
             aria-label={t("add")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--brand-fill)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand)]"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">{t("add")}</span>
@@ -162,7 +162,7 @@ export default function ClientsPage({ params }: Props) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={tc("search")}
-              className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-9 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none"
+              className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-9 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none"
             />
             {search && (
               <button
@@ -242,7 +242,7 @@ export default function ClientsPage({ params }: Props) {
                             {activeOrders.length > 0 && (
                               <>
                                 <span className="text-[var(--text-faint)]">·</span>
-                                <span className="shrink-0 text-[11px] text-orange-400/80">
+                                <span className="shrink-0 text-[11px] text-[var(--brand-text)]">
                                   {activeOrders.length} cmd
                                 </span>
                               </>
@@ -420,7 +420,7 @@ export default function ClientsPage({ params }: Props) {
                           onClick={() => setTrustLevel(lvl)}
                           className={`rounded-xl py-2.5 text-xs font-medium transition-colors ${
                             trustLevel === lvl
-                              ? "bg-orange-600 text-white"
+                              ? "bg-[var(--brand-fill)] text-white"
                               : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                           }`}
                         >
@@ -500,7 +500,7 @@ export default function ClientsPage({ params }: Props) {
                   <button
                     type="submit"
                     disabled={submitting || !name.trim()}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
                     {submitting ? "Enregistrement…" : tc("save")}
                   </button>

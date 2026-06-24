@@ -59,7 +59,7 @@ function computeOrderCosts(txs: Transaction[], orderId: string) {
 }
 
 const fieldCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 export default function OrdersPage({ params }: Props) {
   const { locale } = use(params);
@@ -445,7 +445,7 @@ export default function OrdersPage({ params }: Props) {
               type="button"
               onClick={handleQuickClientCreate}
               disabled={quickClientSaving || !quickClientName.trim() || !quickClientPhone.trim()}
-              className="flex-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-[var(--brand-fill)] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[var(--brand)] disabled:opacity-50"
             >
               {quickClientSaving ? "..." : "Ajouter ce client"}
             </button>
@@ -464,7 +464,7 @@ export default function OrdersPage({ params }: Props) {
       <button
         type="button"
         onClick={() => setShowQuickClient(true)}
-        className="mt-1.5 text-[11px] text-orange-400/70 transition-colors hover:text-orange-300"
+        className="mt-1.5 text-[11px] text-[var(--brand-text)]/70 transition-colors hover:text-[var(--brand-text)]"
       >
         + Nouveau client
       </button>
@@ -485,7 +485,7 @@ export default function OrdersPage({ params }: Props) {
                   {filtered.length} commande{filtered.length !== 1 ? "s" : ""}
                 </span>
                 {orderSummary.activeCount > 0 && (
-                  <span className="text-orange-400/80">
+                  <span className="text-[var(--brand-text)]">
                     {orderSummary.activeCount} active{orderSummary.activeCount !== 1 ? "s" : ""}
                   </span>
                 )}
@@ -512,7 +512,7 @@ export default function OrdersPage({ params }: Props) {
           <button
             onClick={openAdd}
             aria-label={t("add")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--brand-fill)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand)]"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">{t("add")}</span>
@@ -532,7 +532,7 @@ export default function OrdersPage({ params }: Props) {
                 onClick={() => setOpenDropdown(openDropdown === "status" ? null : "status")}
                 className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   filterStatus
-                    ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                    ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
                     : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                 }`}
               >
@@ -547,10 +547,10 @@ export default function OrdersPage({ params }: Props) {
                   <button
                     onClick={() => { setFilterStatus(""); setOpenDropdown(null); }}
                     className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                      !filterStatus ? "text-orange-300" : "text-[var(--text-body)]"
+                      !filterStatus ? "text-[var(--brand-text)]" : "text-[var(--text-body)]"
                     }`}
                   >
-                    {!filterStatus && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />}
+                    {!filterStatus && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />}
                     Tous les statuts
                   </button>
                   {ORDER_STATUSES.map((s) => (
@@ -558,11 +558,11 @@ export default function OrdersPage({ params }: Props) {
                       key={s}
                       onClick={() => { setFilterStatus(s); setOpenDropdown(null); }}
                       className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                        filterStatus === s ? "text-orange-300" : "text-[var(--text-muted)]"
+                        filterStatus === s ? "text-[var(--brand-text)]" : "text-[var(--text-muted)]"
                       }`}
                     >
                       {filterStatus === s && (
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />
                       )}
                       <span className="truncate">{t(`statuses.${s}`)}</span>
                     </button>
@@ -578,7 +578,7 @@ export default function OrdersPage({ params }: Props) {
                   onClick={() => setOpenDropdown(openDropdown === "client" ? null : "client")}
                   className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     filterClient
-                      ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                      ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
                       : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                   }`}
                 >
@@ -593,10 +593,10 @@ export default function OrdersPage({ params }: Props) {
                     <button
                       onClick={() => { setFilterClient(""); setOpenDropdown(null); }}
                       className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                        !filterClient ? "text-orange-300" : "text-[var(--text-body)]"
+                        !filterClient ? "text-[var(--brand-text)]" : "text-[var(--text-body)]"
                       }`}
                     >
-                      {!filterClient && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />}
+                      {!filterClient && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />}
                       Tous les clients
                     </button>
                     {clients.map((c) => (
@@ -604,11 +604,11 @@ export default function OrdersPage({ params }: Props) {
                         key={c.id}
                         onClick={() => { setFilterClient(c.id); setOpenDropdown(null); }}
                         className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                          filterClient === c.id ? "text-orange-300" : "text-[var(--text-muted)]"
+                          filterClient === c.id ? "text-[var(--brand-text)]" : "text-[var(--text-muted)]"
                         }`}
                       >
                         {filterClient === c.id && (
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />
                         )}
                         <span className="truncate">{c.name}</span>
                       </button>
@@ -710,13 +710,13 @@ export default function OrdersPage({ params }: Props) {
                               return (
                                 <div key={s} className="flex items-center">
                                   <div className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                                    active ? "bg-orange-500 ring-2 ring-orange-500/30"
-                                    : done  ? "bg-slate-500"
+                                    active ? "bg-[var(--brand)] ring-2 ring-[var(--brand)]/30"
+                                    : done  ? "bg-[var(--border-strong)]"
                                     : "bg-[var(--border-strong)]"
                                   }`} />
                                   {i < TIMELINE_STEPS.length - 1 && (
                                     <div className={`h-px w-5 ${
-                                      done && stepIdx > i ? "bg-slate-600" : "bg-[var(--surface-chip)]"
+                                      done && stepIdx > i ? "bg-[var(--border-strong)]" : "bg-[var(--surface-chip)]"
                                     }`} />
                                   )}
                                 </div>
@@ -786,7 +786,7 @@ export default function OrdersPage({ params }: Props) {
 
                         {/* Next action */}
                         {order.next_action && (
-                          <p className="mt-1.5 truncate text-[11px] text-orange-400/70">
+                          <p className="mt-1.5 truncate text-[11px] text-[var(--brand-text)]/70">
                             → {order.next_action}
                           </p>
                         )}
@@ -866,7 +866,7 @@ export default function OrdersPage({ params }: Props) {
                             <div className="mt-2 flex items-center justify-between border-t border-[var(--border-default)] pt-2">
                               <span className="text-xs text-[var(--text-muted)]">Solde client restant</span>
                               <span className={`font-mono text-sm font-bold tabular-nums ${
-                                costs.balance >= 0 ? "text-orange-400" : "text-red-400"
+                                costs.balance >= 0 ? "text-[var(--brand-text)]" : "text-red-400"
                               }`}>
                                 {costs.balance >= 0 ? "" : "−"}{formatMoney(Math.abs(costs.balance), order.currency)}
                               </span>
@@ -890,7 +890,7 @@ export default function OrdersPage({ params }: Props) {
                               {order.next_action && (
                                 <div className="flex items-start justify-between gap-2">
                                   <span className="shrink-0 text-xs text-[var(--text-label)]">Prochaine action</span>
-                                  <span className="text-right text-xs text-orange-400/80">{order.next_action}</span>
+                                  <span className="text-right text-xs text-[var(--brand-text)]">{order.next_action}</span>
                                 </div>
                               )}
                               {order.note && (
@@ -1017,7 +1017,7 @@ export default function OrdersPage({ params }: Props) {
                   <button
                     type="button"
                     onClick={openSimple}
-                    className="flex flex-col items-start gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] p-5 text-left transition-colors hover:border-orange-700/50 hover:bg-[var(--surface-chip)]"
+                    className="flex flex-col items-start gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] p-5 text-left transition-colors hover:border-[var(--brand-fill-hover)]/50 hover:bg-[var(--surface-chip)]"
                   >
                     <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--surface-chip)] text-[var(--text-muted)]">
                       <Plus size={18} />
@@ -1028,7 +1028,7 @@ export default function OrdersPage({ params }: Props) {
                   <button
                     type="button"
                     onClick={openDetailed}
-                    className="flex flex-col items-start gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] p-5 text-left transition-colors hover:border-orange-700/50 hover:bg-[var(--surface-chip)]"
+                    className="flex flex-col items-start gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] p-5 text-left transition-colors hover:border-[var(--brand-fill-hover)]/50 hover:bg-[var(--surface-chip)]"
                   >
                     <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--surface-chip)] text-[var(--text-muted)]">
                       <Pencil size={18} />
@@ -1144,7 +1144,7 @@ export default function OrdersPage({ params }: Props) {
                 <div className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
                   <div className="flex gap-2.5">
                     <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]">{tc("cancel")}</button>
-                    <button type="submit" disabled={submitting || !(!!clientId && !!productName.trim())} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]">{submitting ? "Enregistrement…" : tc("save")}</button>
+                    <button type="submit" disabled={submitting || !(!!clientId && !!productName.trim())} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]">{submitting ? "Enregistrement…" : tc("save")}</button>
                   </div>
                 </div>
               </form>
@@ -1282,7 +1282,7 @@ export default function OrdersPage({ params }: Props) {
                 <div className="shrink-0 border-t border-[var(--border-default)] px-5 pt-3" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
                   <div className="flex gap-2.5">
                     <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-xl border border-[var(--border-strong)] py-2.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]">{tc("cancel")}</button>
-                    <button type="submit" disabled={submitting || !(!!detailClientId && detailItems.some((it) => it.product_name.trim()))} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]">{submitting ? "Enregistrement…" : tc("save")}</button>
+                    <button type="submit" disabled={submitting || !(!!detailClientId && detailItems.some((it) => it.product_name.trim()))} className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]">{submitting ? "Enregistrement…" : tc("save")}</button>
                   </div>
                 </div>
               </form>
@@ -1338,7 +1338,7 @@ function ActionBtn({
     emerald: "border-emerald-800/50 text-emerald-400 hover:bg-emerald-950/40",
     red:     "border-red-800/50 text-red-400 hover:bg-red-950/40",
     amber:   "border-amber-800/50 text-amber-400 hover:bg-amber-950/40",
-    orange:  "border-orange-700/50 text-orange-400 hover:bg-orange-950/40",
+    orange:  "border-[var(--brand-fill-hover)]/50 text-[var(--brand-text)] hover:bg-[var(--indigo-950)]/40",
   };
   return (
     <button

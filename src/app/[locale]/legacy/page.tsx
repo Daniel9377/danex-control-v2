@@ -52,10 +52,10 @@ interface RowState {
 // ── Field styles ──────────────────────────────────────────────────────────────
 
 const inlineFieldCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none";
 
 const filterSelectCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-body)] focus:border-orange-500/70 focus:outline-none";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-body)] focus:border-[var(--brand)]/70 focus:outline-none";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ function getAccountingTypeBadge(at: AccountingType | null) {
     case "real_income":          return { label: "Vrai revenu",        color: "text-emerald-400" };
     case "non_income_inflow":    return { label: "Entrée non-revenu",  color: "text-sky-400" };
     case "real_expense":         return { label: "Vraie dépense",      color: "text-red-400" };
-    case "non_expense_outflow":  return { label: "Sortie non-dépense", color: "text-orange-400" };
+    case "non_expense_outflow":  return { label: "Sortie non-dépense", color: "text-[var(--brand-text)]" };
     case "adjustment":           return { label: "Ajustement",         color: "text-[var(--text-muted)]" };
     default:                     return { label: "Non classifié",      color: "text-[var(--text-label)]" };
   }
@@ -177,7 +177,7 @@ function SubTypePicker({
                   className={cn(
                     "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
                     value === st
-                      ? "bg-orange-600 text-white"
+                      ? "bg-[var(--brand-fill)] text-white"
                       : "bg-[var(--surface-chip)] text-[var(--text-muted)] hover:bg-[var(--border-strong)] hover:text-[var(--text-body)]"
                   )}
                 >
@@ -371,7 +371,7 @@ export default function LegacyPage({ params }: Props) {
         key={tx.id}
         className={cn(
           "rounded-xl border transition-colors",
-          isSelected ? "border-orange-600/50 bg-orange-950/20" : "border-[var(--border-default)] bg-[var(--surface-card)]"
+          isSelected ? "border-[var(--brand-fill)]/50 bg-[var(--indigo-950)]/20" : "border-[var(--border-default)] bg-[var(--surface-card)]"
         )}
       >
         {/* Row summary */}
@@ -380,7 +380,7 @@ export default function LegacyPage({ params }: Props) {
             type="checkbox"
             checked={isSelected}
             onChange={() => toggleSelect(tx.id)}
-            className="mt-1 h-4 w-4 accent-orange-500"
+            className="mt-1 h-4 w-4 accent-[var(--brand)]"
           />
 
           <div className="min-w-0 flex-1">
@@ -455,7 +455,7 @@ export default function LegacyPage({ params }: Props) {
                 className={cn(
                   "flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
                   row.open
-                    ? "bg-orange-600/20 text-orange-400"
+                    ? "bg-[var(--brand-fill)]/20 text-[var(--brand-text)]"
                     : "bg-[var(--surface-chip)] text-[var(--text-body)] hover:bg-[var(--border-strong)]"
                 )}
               >
@@ -539,24 +539,24 @@ export default function LegacyPage({ params }: Props) {
                 {!row.confirming ? (
                   <button
                     onClick={() => patchRow(tx.id, { confirming: true })}
-                    className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500"
+                    className="rounded-xl bg-[var(--brand-fill)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand)]"
                   >
                     Prévisualiser et confirmer
                   </button>
                 ) : (
                   <div className="space-y-2">
-                    <div className="flex items-start gap-2 rounded-xl border border-orange-600/50 bg-orange-950/30 px-3.5 py-2.5">
-                      <AlertTriangle size={12} className="mt-0.5 shrink-0 text-orange-400" />
-                      <p className="text-xs text-orange-300">
+                    <div className="flex items-start gap-2 rounded-xl border border-[var(--brand-fill)]/50 bg-orange-950/30 px-3.5 py-2.5">
+                      <AlertTriangle size={12} className="mt-0.5 shrink-0 text-[var(--brand-text)]" />
+                      <p className="text-xs text-[var(--brand-text)]">
                         Reclassifier en &ldquo;{SUB_TYPE_META[row.selectedSubType].label}&rdquo; ?
-                        <span className="ml-1 text-orange-400/60">Le solde physique ne change pas.</span>
+                        <span className="ml-1 text-[var(--brand-text)]/60">Le solde physique ne change pas.</span>
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleReclassify(tx)}
                         disabled={rLoading}
-                        className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                        className="rounded-xl bg-[var(--brand-fill)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                       >
                         {rLoading ? "…" : "Confirmer"}
                       </button>
@@ -598,7 +598,7 @@ export default function LegacyPage({ params }: Props) {
           <h1 className="text-xl font-bold text-[var(--text-strong)]">{t("title")}</h1>
           <p className="mt-0.5 text-sm text-[var(--text-label)]">
             {t("subtitle")}{" "}
-            <span className="text-orange-400/80">{t("balance_unchanged_notice")}</span>
+            <span className="text-[var(--brand-text)]">{t("balance_unchanged_notice")}</span>
           </p>
         </div>
 
@@ -617,13 +617,13 @@ export default function LegacyPage({ params }: Props) {
             <span className="text-xs text-[var(--text-label)]">
               {isDone ? "Migration terminée" : `${stats.reviewed + stats.ignored} / ${stats.total} traitées`}
             </span>
-            <span className={`font-mono text-xs font-semibold ${isDone ? "text-emerald-400" : "text-orange-400"}`}>
+            <span className={`font-mono text-xs font-semibold ${isDone ? "text-emerald-400" : "text-[var(--brand-text)]"}`}>
               {progressPct}%
             </span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-[var(--surface-chip)]">
             <div
-              className={`h-1.5 rounded-full transition-all ${isDone ? "bg-emerald-500" : "bg-orange-500"}`}
+              className={`h-1.5 rounded-full transition-all ${isDone ? "bg-emerald-500" : "bg-[var(--brand)]"}`}
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -672,7 +672,7 @@ export default function LegacyPage({ params }: Props) {
                 placeholder="Rechercher (note, catégorie, montant)…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-8 text-sm text-[var(--text-body)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none"
+                className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-2.5 pl-8 pr-8 text-sm text-[var(--text-body)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none"
               />
               {search && (
                 <button
@@ -690,14 +690,14 @@ export default function LegacyPage({ params }: Props) {
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm transition-colors",
                 showFilters || hasActiveFilter
-                  ? "border-orange-600/50 bg-orange-950/30 text-orange-400"
+                  ? "border-[var(--brand-fill)]/50 bg-orange-950/30 text-[var(--brand-text)]"
                   : "border-[var(--border-strong)] bg-[var(--surface-card)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
               )}
             >
               <Filter size={13} />
               Filtres
               {hasActiveFilter && (
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand)]" />
               )}
             </button>
           </div>
@@ -768,14 +768,14 @@ export default function LegacyPage({ params }: Props) {
 
         {/* ── Bulk action bar ── */}
         {selected.size > 0 && (
-          <div className="rounded-xl border border-orange-600/50 bg-orange-950/20 p-4">
+          <div className="rounded-xl border border-[var(--brand-fill)]/50 bg-[var(--indigo-950)]/20 p-4">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm font-semibold text-orange-300">
+              <span className="text-sm font-semibold text-[var(--brand-text)]">
                 {selected.size} transaction{selected.size > 1 ? "s" : ""} sélectionnée{selected.size > 1 ? "s" : ""}
               </span>
               <button
                 onClick={() => setShowBulkPicker((v) => !v)}
-                className="rounded-xl bg-orange-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-orange-500"
+                className="rounded-xl bg-[var(--brand-fill)] px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand)]"
               >
                 {showBulkPicker ? "Masquer" : "Choisir le type en masse"}
               </button>
@@ -817,24 +817,24 @@ export default function LegacyPage({ params }: Props) {
                     {!bulkConfirming ? (
                       <button
                         onClick={() => setBulkConfirming(true)}
-                        className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500"
+                        className="rounded-xl bg-[var(--brand-fill)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand)]"
                       >
                         Appliquer à {selected.size} transaction{selected.size > 1 ? "s" : ""}
                       </button>
                     ) : (
                       <div className="space-y-2">
-                        <div className="flex items-start gap-2 rounded-xl border border-orange-600/50 bg-orange-950/40 px-3.5 py-2.5">
-                          <AlertTriangle size={12} className="mt-0.5 shrink-0 text-orange-400" />
-                          <p className="text-xs text-orange-300">
+                        <div className="flex items-start gap-2 rounded-xl border border-[var(--brand-fill)]/50 bg-[var(--indigo-950)]/40 px-3.5 py-2.5">
+                          <AlertTriangle size={12} className="mt-0.5 shrink-0 text-[var(--brand-text)]" />
+                          <p className="text-xs text-[var(--brand-text)]">
                             Reclassifier {selected.size} tx en &ldquo;{SUB_TYPE_META[bulkSubType].label}&rdquo; ?
-                            <span className="ml-1 text-orange-400/60">Le solde physique ne change pas.</span>
+                            <span className="ml-1 text-[var(--brand-text)]/60">Le solde physique ne change pas.</span>
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={handleBulkReclassify}
                             disabled={rLoading}
-                            className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                            className="rounded-xl bg-[var(--brand-fill)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                           >
                             {rLoading ? "…" : "Confirmer"}
                           </button>

@@ -446,7 +446,7 @@ export default function DashboardPage({ params }: Props) {
             {actionableAlerts.map((alert) => {
               const isCritical = alert.severity === "critical";
               const Icon = isCritical ? AlertCircle : AlertTriangle;
-              const color = isCritical ? "text-red-400" : "text-orange-400";
+              const color = isCritical ? "text-red-400" : "text-[var(--brand-text)]";
               const bg = isCritical ? "border-red-900/30 bg-red-950/10" : "border-orange-900/20 bg-orange-950/5";
               const tp = (alert.titleParams as Record<string, string>) ?? {};
               const titleName = tp.clientName ?? tp.orderName ?? tp.person ?? "";
@@ -478,7 +478,7 @@ export default function DashboardPage({ params }: Props) {
           onClick={() => setOpenSheet("formula")}
           className="card-interactive relative w-full overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-card)] p-5 text-left"
         >
-          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-orange-500/5 blur-2xl" />
+          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-[var(--brand)]/5 blur-2xl" />
           <div className="relative flex items-end justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-faint)]">
@@ -575,13 +575,13 @@ export default function DashboardPage({ params }: Props) {
         <section>
           <div className="flex gap-2">
             <Link href={`/${locale}/transactions`}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-orange-500/30 hover:bg-[var(--surface-chip)] hover:text-[var(--text-strong)]">
-              <Plus size={15} className="text-orange-500" />
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/30 hover:bg-[var(--surface-chip)] hover:text-[var(--text-strong)]">
+              <Plus size={15} className="text-[var(--brand)]" />
               Transaction
             </Link>
             <Link href={`/${locale}/clients`}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-orange-500/30 hover:bg-[var(--surface-chip)] hover:text-[var(--text-strong)]">
-              <Plus size={15} className="text-orange-500" />
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] py-3 text-sm font-medium text-[var(--text-body)] transition-colors hover:border-[var(--brand)]/30 hover:bg-[var(--surface-chip)] hover:text-[var(--text-strong)]">
+              <Plus size={15} className="text-[var(--brand)]" />
               Client
             </Link>
           </div>
@@ -621,7 +621,7 @@ export default function DashboardPage({ params }: Props) {
               <li>
                 <button onClick={() => setOpenSheet("profit")} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]">
                   <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500/70" />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]/70" />
                     <span className="text-sm text-[var(--text-body)]">Bénéfice</span>
                   </div>
                   <span className="flex items-center gap-2">
@@ -648,7 +648,7 @@ export default function DashboardPage({ params }: Props) {
                 value={chartAccountId ?? ""}
                 onChange={(e) => { e.stopPropagation(); setChartAccountId(e.target.value || null); }}
                 onClick={(e) => e.stopPropagation()}
-                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-chip)] px-2 py-1 text-xs text-[var(--text-body)] focus:border-orange-500 focus:outline-none"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-chip)] px-2 py-1 text-xs text-[var(--text-body)] focus:border-[var(--brand)] focus:outline-none"
               >
                 <option value="">Tous</option>
                 {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -657,7 +657,7 @@ export default function DashboardPage({ params }: Props) {
                 value={chartPeriod}
                 onChange={(e) => { e.stopPropagation(); setChartPeriod(e.target.value as DashPeriod); }}
                 onClick={(e) => e.stopPropagation()}
-                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-chip)] px-2 py-1 text-xs text-[var(--text-body)] focus:border-orange-500 focus:outline-none"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-chip)] px-2 py-1 text-xs text-[var(--text-body)] focus:border-[var(--brand)] focus:outline-none"
               >
                 <option value="week">Semaine</option>
                 <option value="month">Mois</option>
@@ -733,7 +733,7 @@ export default function DashboardPage({ params }: Props) {
                 </ul>
                 {transactions.length > 3 && (
                   <div className="border-t border-[var(--border-subtle)] px-4 py-2.5">
-                    <Link href={`/${locale}/transactions`} className="flex items-center justify-center text-xs text-[var(--text-label)] transition-colors hover:text-orange-400">
+                    <Link href={`/${locale}/transactions`} className="flex items-center justify-center text-xs text-[var(--text-label)] transition-colors hover:text-[var(--brand-text)]">
                       {tc("see_all")} ({transactions.length}) →
                     </Link>
                   </div>

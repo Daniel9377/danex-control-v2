@@ -44,7 +44,7 @@ const SETTLEMENT_BADGE: Record<SettlementMethod, string> = {
 };
 
 const fieldCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -234,7 +234,7 @@ export default function DebtsPage({ params }: Props) {
           <button
             onClick={() => { setDirection(tab); setAffectsBalance(false); setShowForm(true); }}
             aria-label={t("add")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--brand-fill)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand)]"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">{t("add")}</span>
@@ -362,7 +362,7 @@ export default function DebtsPage({ params }: Props) {
                                   <div className="h-1 w-full rounded-full bg-[var(--surface-chip)]">
                                     <div
                                       className={`h-1 rounded-full transition-all ${
-                                        debt.status === "paid" ? "bg-emerald-500" : "bg-orange-500"
+                                        debt.status === "paid" ? "bg-emerald-500" : "bg-[var(--brand)]"
                                       }`}
                                       style={{ width: `${progress}%` }}
                                     />
@@ -396,7 +396,7 @@ export default function DebtsPage({ params }: Props) {
                                   onClick={() => openPaymentForm(debt.id)}
                                   aria-label={t("add_payment")}
                                   title={t("add_payment")}
-                                  className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-orange-400"
+                                  className="rounded-lg p-1.5 text-[var(--text-faint)] transition-colors hover:bg-[var(--surface-chip)] hover:text-[var(--brand-text)]"
                                 >
                                   <CreditCard size={13} />
                                 </button>
@@ -625,7 +625,7 @@ export default function DebtsPage({ params }: Props) {
                           onClick={() => { setDirection(dir); setAffectsBalance(false); }}
                           className={`rounded-xl py-2.5 text-xs font-medium transition-colors ${
                             direction === dir
-                              ? "bg-orange-600 text-white"
+                              ? "bg-[var(--brand-fill)] text-white"
                               : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
                           }`}
                         >
@@ -709,7 +709,7 @@ export default function DebtsPage({ params }: Props) {
                           type="checkbox"
                           checked={affectsBalance}
                           onChange={(e) => setAffectsBalance(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 accent-orange-500"
+                          className="mt-0.5 h-4 w-4 accent-[var(--brand)]"
                         />
                         <span className="text-xs text-[var(--text-body)]">
                           L'argent a réellement quitté ce compte
@@ -757,7 +757,7 @@ export default function DebtsPage({ params }: Props) {
                   <button
                     type="submit"
                     disabled={!personName.trim() || !amount || saving}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
                     {saving ? "Sauvegarde en cours…" : tc("save")}
                   </button>
@@ -821,7 +821,7 @@ export default function DebtsPage({ params }: Props) {
                           key={method}
                           className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
                             settlementMethod === method
-                              ? "border-orange-600/60 bg-orange-950/20"
+                              ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/20"
                               : "border-[var(--border-strong)] hover:border-[var(--border-strong)]"
                           }`}
                         >
@@ -831,7 +831,7 @@ export default function DebtsPage({ params }: Props) {
                             value={method}
                             checked={settlementMethod === method}
                             onChange={() => setSettlementMethod(method)}
-                            className="mt-0.5 accent-orange-500"
+                            className="mt-0.5 accent-[var(--brand)]"
                           />
                           <div>
                             <p className="text-xs font-medium text-[var(--text-body)]">
@@ -866,7 +866,7 @@ export default function DebtsPage({ params }: Props) {
                       <button
                         type="button"
                         onClick={() => setPayAmount(currentRemaining.toFixed(2))}
-                        className="shrink-0 rounded-xl border border-orange-700/60 bg-orange-950/30 px-3 py-2.5 text-xs font-medium text-orange-400 transition-colors hover:bg-orange-950/50"
+                        className="shrink-0 rounded-xl border border-orange-700/60 bg-orange-950/30 px-3 py-2.5 text-xs font-medium text-[var(--brand-text)] transition-colors hover:bg-orange-950/50"
                       >
                         Tout
                       </button>
@@ -954,7 +954,7 @@ export default function DebtsPage({ params }: Props) {
                   <button
                     type="submit"
                     disabled={!payAmount}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
                     {tc("save")}
                   </button>

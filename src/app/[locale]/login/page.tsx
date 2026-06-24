@@ -188,7 +188,7 @@ export default function LoginPage({ params }: Props) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg-app)] px-4">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-orange-500">DANEX</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--brand)]">DANEX</h1>
           <p className="mt-1 text-sm text-[var(--text-label)]">Control v2</p>
         </div>
         <div className="w-full max-w-sm rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 text-center">
@@ -199,7 +199,7 @@ export default function LoginPage({ params }: Props) {
           <p className="text-sm text-[var(--text-muted)]">{t("check_email_message")}</p>
           <button
             onClick={() => { setEmailSent(false); setMode("login"); }}
-            className="mt-5 text-sm text-orange-400 hover:text-orange-300"
+            className="mt-5 text-sm text-[var(--brand-text)] hover:text-[var(--brand-text)]"
           >
             ← {t("login")}
           </button>
@@ -212,7 +212,7 @@ export default function LoginPage({ params }: Props) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg-app)] px-4">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-orange-500">DANEX</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--brand)]">DANEX</h1>
           <p className="mt-1 text-sm text-[var(--text-label)]">Control v2</p>
         </div>
         <div className="w-full max-w-sm rounded-xl border border-[var(--border-default)] bg-[var(--surface-card)] p-6 text-center">
@@ -223,7 +223,7 @@ export default function LoginPage({ params }: Props) {
           <p className="text-sm text-[var(--text-muted)]">{t("reset_link_sent_message")}</p>
           <button
             onClick={backToLogin}
-            className="mt-5 text-sm text-orange-400 hover:text-orange-300"
+            className="mt-5 text-sm text-[var(--brand-text)] hover:text-[var(--brand-text)]"
           >
             ← {t("login")}
           </button>
@@ -235,7 +235,7 @@ export default function LoginPage({ params }: Props) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg-app)] px-4">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-orange-500">DANEX</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--brand)]">DANEX</h1>
         <p className="mt-1 text-sm text-[var(--text-label)]">Control v2</p>
       </div>
 
@@ -252,7 +252,7 @@ export default function LoginPage({ params }: Props) {
           <select
             value={locale}
             onChange={(e) => handleLanguageChange(e.target.value)}
-            className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-chip)] px-2 py-1 text-xs text-[var(--text-body)] focus:border-orange-500 focus:outline-none"
+            className="rounded-md border border-[var(--border-strong)] bg-[var(--surface-chip)] px-2 py-1 text-xs text-[var(--text-body)] focus:border-[var(--brand)] focus:outline-none"
             aria-label={t("choose_language")}
           >
             {LANGUAGES.map((l) => (
@@ -276,7 +276,7 @@ export default function LoginPage({ params }: Props) {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500 focus:outline-none"
+                className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)] focus:outline-none"
                 placeholder="email@example.com"
               />
             </div>
@@ -288,14 +288,14 @@ export default function LoginPage({ params }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-50"
+              className="w-full rounded-lg bg-[var(--brand-fill)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-50"
             >
               {loading ? "..." : t("send_reset_link")}
             </button>
             <button
               type="button"
               onClick={backToLogin}
-              className="w-full text-center text-sm text-orange-400 hover:text-orange-300"
+              className="w-full text-center text-sm text-[var(--brand-text)] hover:text-[var(--brand-text)]"
             >
               ← {t("login")}
             </button>
@@ -314,7 +314,7 @@ export default function LoginPage({ params }: Props) {
                 onChange={(e) => setFullName(e.target.value)}
                 required
                 autoComplete="name"
-                className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500 focus:outline-none"
+                className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)] focus:outline-none"
                 placeholder="Daniel Ngoy"
               />
             </div>
@@ -330,7 +330,7 @@ export default function LoginPage({ params }: Props) {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500 focus:outline-none"
+              className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)] focus:outline-none"
               placeholder="email@example.com"
             />
           </div>
@@ -347,7 +347,7 @@ export default function LoginPage({ params }: Props) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
-                className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 pr-10 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500 focus:outline-none"
+                className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 pr-10 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)] focus:outline-none"
                 placeholder="••••••••"
               />
               <button
@@ -378,7 +378,7 @@ export default function LoginPage({ params }: Props) {
                 <button
                   type="button"
                   onClick={goToForgot}
-                  className="text-xs text-orange-400 hover:text-orange-300"
+                  className="text-xs text-[var(--brand-text)] hover:text-[var(--brand-text)]"
                 >
                   {t("forgot_password")}
                 </button>
@@ -399,7 +399,7 @@ export default function LoginPage({ params }: Props) {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   autoComplete="new-password"
-                  className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 pr-10 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 pr-10 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)] focus:outline-none"
                   placeholder="••••••••"
                 />
                 <button
@@ -424,7 +424,7 @@ export default function LoginPage({ params }: Props) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-[var(--brand-fill)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-50"
           >
             {loading
               ? "..."
@@ -438,7 +438,7 @@ export default function LoginPage({ params }: Props) {
           {mode === "login" ? t("no_account") : t("has_account")}{" "}
           <button
             onClick={switchMode}
-            className="text-orange-400 hover:text-orange-300"
+            className="text-[var(--brand-text)] hover:text-[var(--brand-text)]"
           >
             {mode === "login" ? t("signup") : t("login")}
           </button>

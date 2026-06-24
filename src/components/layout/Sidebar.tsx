@@ -78,7 +78,7 @@ export function Sidebar({ locale, onClose }: Props) {
           className={cn(
             "relative flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
             isActive
-              ? "bg-[var(--surface-chip)] text-[var(--text-strong)] before:absolute before:left-0 before:top-1/2 before:h-5 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-orange-500 before:content-['']"
+              ? "bg-[var(--surface-chip)] text-[var(--text-strong)] before:absolute before:left-0 before:top-1/2 before:h-5 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-[var(--brand)] before:content-['']"
               : "text-[var(--text-muted)] hover:bg-[var(--surface-chip)] hover:text-[var(--text-body)]"
           )}
         >
@@ -93,12 +93,12 @@ export function Sidebar({ locale, onClose }: Props) {
     <nav className="relative flex h-full flex-col">
       {navigating && (
         <div className="absolute left-0 top-0 z-10 h-0.5 w-full overflow-hidden">
-          <div className="h-full animate-[progress_1.5s_ease-in-out_infinite] bg-orange-500" />
+          <div className="h-full animate-[progress_1.5s_ease-in-out_infinite] bg-[var(--brand)]" />
         </div>
       )}
 
       <div className="flex items-center justify-between px-4 py-5">
-        <span className="text-lg font-bold tracking-tight text-orange-500">DANEX</span>
+        <span className="text-lg font-bold tracking-tight text-[var(--brand)]">DANEX</span>
         {onClose && (
           <button
             onClick={onClose}

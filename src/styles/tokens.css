@@ -1,31 +1,33 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   DANEX Control — Design Tokens (synced from Claude Design)
+   DANEX Control — Design Tokens
+   Zinc/Graphite neutrals + Indigo brand.
    Imported once by globals.css.  No selectors — pure custom properties.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Palette (colors) ──────────────────────────────────────────────────── */
 :root {
-  /* Slate neutrals */
-  --slate-950: #020817;
-  --slate-900: #0f172a;
-  --slate-800: #1e293b;
-  --slate-700: #334155;
-  --slate-600: #475569;
-  --slate-500: #64748b;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
-  --slate-200: #e2e8f0;
-  --slate-100: #f1f5f9;
-  --slate-50:  #f8fafc;
+  /* Zinc/graphite neutrals */
+  --zinc-950: #0c0c0d;
+  --zinc-900: #18181b;
+  --zinc-800: #242426;
+  --zinc-700: #2c2c2e;
+  --zinc-600: #3f3f42;
+  --zinc-500: #52525b;
+  --zinc-400: #71717a;
+  --zinc-300: #a1a1aa;
+  --zinc-200: #d4d4d8;
+  --zinc-100: #e4e4e7;
+  --zinc-50:  #f4f4f5;
 
-  /* Brand — DANEX orange */
-  --orange-400: #fb923c;
-  --orange-500: #f97316;
-  --orange-600: #ea580c;
-  --orange-700: #c2410c;
-  --orange-950: #431407;
+  /* Brand — DANEX indigo */
+  --indigo-300: #a5b4fc;
+  --indigo-400: #818cf8;
+  --indigo-500: #6366f1;
+  --indigo-600: #4f46e5;
+  --indigo-700: #4338ca;
+  --indigo-950: #1e1b4b;
 
-  /* Semantic money & status */
+  /* Semantic money & status — UNCHANGED */
   --emerald-400: #34d399;
   --emerald-500: #10b981;
   --emerald-950: #022c22;
@@ -41,62 +43,60 @@
   --sky-300: #7dd3fc;
   --blue-400: #60a5fa;
   --blue-950: #172554;
-
-  --indigo-500: #6366f1;
 }
 
-/* ── Semantic aliases ──────────────────────────────────────────────────── */
+/* ── Semantic aliases — DARK MODE (:root) ─────────────────────────────── */
 :root {
   /* Surfaces */
-  --bg-app:           var(--slate-950);
-  --surface-card:     var(--slate-900);
-  --surface-raised:   #1e293bcc;
-  --surface-sunken:   var(--slate-950);
-  --surface-glass:    rgba(15, 22, 41, 0.65);
-  --surface-chip:     rgba(30, 41, 59, 0.7);
-  --surface-hover:    rgba(30, 41, 59, 0.5);
+  --bg-app:           var(--zinc-950);
+  --surface-card:     var(--zinc-900);
+  --surface-raised:   var(--zinc-800);
+  --surface-sunken:   var(--zinc-950);
+  --surface-glass:    rgba(12, 12, 13, 0.75);
+  --surface-chip:     rgba(36, 36, 38, 0.8);
+  --surface-hover:    rgba(36, 36, 38, 0.5);
 
   /* Borders */
-  --border-default:   var(--slate-800);
-  --border-strong:    var(--slate-700);
-  --border-subtle:    rgba(30, 41, 59, 0.6);
-  --border-focus:     var(--orange-500);
+  --border-default:   var(--zinc-700);
+  --border-strong:    var(--zinc-600);
+  --border-subtle:    rgba(44, 44, 46, 0.6);
+  --border-focus:     var(--indigo-400);
 
   /* Text */
-  --text-strong:      var(--slate-100);
-  --text-body:        var(--slate-200);
-  --text-muted:       var(--slate-400);
-  --text-label:       var(--slate-500);
-  --text-faint:       var(--slate-600);
+  --text-strong:      var(--zinc-100);
+  --text-body:        var(--zinc-200);
+  --text-muted:       var(--zinc-300);
+  --text-label:       var(--zinc-400);
+  --text-faint:       var(--zinc-500);
   --text-on-brand:    #ffffff;
 
-  /* Brand */
-  --brand:            var(--orange-500);
-  --brand-fill:       var(--orange-600);
-  --brand-fill-hover: var(--orange-700);
-  --brand-text:       var(--orange-400);
+  /* Brand — indigo */
+  --brand:            var(--indigo-500);
+  --brand-fill:       var(--indigo-600);
+  --brand-fill-hover: var(--indigo-700);
+  --brand-text:       var(--indigo-400);
 
-  /* Money / status semantics */
+  /* Money / status semantics — UNCHANGED except money-neutral */
   --money-positive:   var(--emerald-400);
   --money-negative:   var(--red-400);
   --status-warning:   var(--amber-400);
-  --status-attention: var(--orange-400);
+  --status-attention: var(--amber-400);
   --money-client:     var(--sky-400);
-  --money-neutral:    var(--slate-100);
+  --money-neutral:    var(--zinc-100);
 
-  /* Status tints (badge backgrounds) */
+  /* Status tints */
   --tint-success-bg:  rgba(2, 44, 34, 0.6);
   --tint-success-fg:  var(--emerald-400);
   --tint-danger-bg:   rgba(69, 10, 10, 0.6);
   --tint-danger-fg:   var(--red-400);
   --tint-warning-bg:  rgba(69, 26, 3, 0.6);
   --tint-warning-fg:  var(--amber-400);
-  --tint-info-bg:     rgba(23, 37, 84, 0.6);
-  --tint-info-fg:     var(--blue-400);
-  --tint-orange-bg:   rgba(67, 20, 7, 0.6);
-  --tint-orange-fg:   var(--orange-400);
-  --tint-default-bg:  rgba(30, 41, 59, 0.6);
-  --tint-default-fg:  var(--slate-300);
+  --tint-info-bg:     rgba(30, 27, 75, 0.5);
+  --tint-info-fg:     var(--indigo-400);
+  --tint-orange-bg:   rgba(69, 26, 3, 0.6);
+  --tint-orange-fg:   var(--amber-400);
+  --tint-default-bg:  rgba(36, 36, 38, 0.6);
+  --tint-default-fg:  var(--zinc-200);
 }
 
 /* ── Typography ────────────────────────────────────────────────────────── */
@@ -161,21 +161,17 @@
 
 /* ── Effects ───────────────────────────────────────────────────────────── */
 :root {
-  /* Shadows */
   --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md:   0 4px 12px rgba(0, 0, 0, 0.3);
   --shadow-lg:   0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-card: 0 1px 0 rgba(255,255,255,0.02), 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.01), 0 1px 3px rgba(0,0,0,0.4);
 
-  /* Status glows */
   --glow-positive: 0 0 40px -10px rgba(16, 185, 129, 0.10);
-  --glow-warning:  0 0 40px -10px rgba(249, 115, 22, 0.12);
+  --glow-warning:  0 0 40px -10px rgba(99, 102, 241, 0.10);
   --glow-danger:   0 0 40px -10px rgba(239, 68, 68, 0.15);
 
-  /* Blur */
   --blur-glass: 16px;
 
-  /* Motion */
   --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
   --ease-standard:ease-out;
   --dur-fast:     0.08s;
@@ -183,11 +179,11 @@
   --dur-base:     0.22s;
   --dur-slow:     0.28s;
 
-  /* Premium background */
+  /* Premium background — indigo glow (was orange) */
   --bg-danex:
-    radial-gradient(ellipse 70% 50% at 5% 5%,  rgba(234,88,12,0.055)  0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(99,102,241,0.035) 0%, transparent 60%),
-    var(--slate-950);
+    radial-gradient(ellipse 70% 50% at 5% 5%,  rgba(99,102,241,0.045) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(129,140,248,0.03) 0%, transparent 60%),
+    var(--zinc-950);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -196,45 +192,45 @@
 
 .light {
   /* ── Surfaces ────────────────────────────────────────────────────────── */
-  --bg-app:           #f8fafc;       /* slate-50  */
-  --surface-card:     #ffffff;       /* white     */
+  --bg-app:           #fafafa;
+  --surface-card:     #ffffff;
   --surface-raised:   #ffffff;
-  --surface-sunken:   #f1f5f9;       /* slate-100 */
-  --surface-glass:    rgba(255, 255, 255, 0.8);
-  --surface-chip:     rgba(241, 245, 249, 0.8);
-  --surface-hover:    rgba(241, 245, 249, 0.6);
+  --surface-sunken:   var(--zinc-50);
+  --surface-glass:    rgba(255, 255, 255, 0.85);
+  --surface-chip:     rgba(244, 244, 245, 0.8);
+  --surface-hover:    rgba(244, 244, 245, 0.6);
 
   /* ── Borders ─────────────────────────────────────────────────────────── */
-  --border-default:   #e2e8f0;       /* slate-200 */
-  --border-strong:    #cbd5e1;       /* slate-300 */
-  --border-subtle:    rgba(226, 232, 240, 0.8);
+  --border-default:   var(--zinc-100);
+  --border-strong:    var(--zinc-200);
+  --border-subtle:    rgba(228, 228, 231, 0.8);
 
   /* ── Text ────────────────────────────────────────────────────────────── */
-  --text-strong:      #0f172a;       /* slate-900 */
-  --text-body:        #334155;       /* slate-700 */
-  --text-muted:       #64748b;       /* slate-500 */
-  --text-label:       #94a3b8;       /* slate-400 */
-  --text-faint:       #cbd5e1;       /* slate-300 */
+  --text-strong:      var(--zinc-900);
+  --text-body:        var(--zinc-700);
+  --text-muted:       var(--zinc-500);
+  --text-label:       var(--zinc-400);
+  --text-faint:       var(--zinc-300);
 
   /* ── Brand ───────────────────────────────────────────────────────────── */
-  --brand-text:       #ea580c;       /* orange-600 — darker for light bg */
+  --brand-text:       var(--indigo-600);
 
   /* ── Money / status ──────────────────────────────────────────────────── */
-  --money-neutral:    #0f172a;       /* slate-900 */
+  --money-neutral:    var(--zinc-900);
 
-  /* ── Status tints (opaque enough for white backgrounds) ──────────────── */
+  /* ── Status tints ────────────────────────────────────────────────────── */
   --tint-success-bg:  rgba(16, 185, 129, 0.2);
-  --tint-success-fg:  #047857;       /* emerald-700 */
+  --tint-success-fg:  #047857;
   --tint-danger-bg:   rgba(239, 68, 68, 0.2);
-  --tint-danger-fg:   #b91c1c;       /* red-700 */
+  --tint-danger-fg:   #b91c1c;
   --tint-warning-bg:  rgba(249, 115, 22, 0.2);
-  --tint-warning-fg:  #c2410c;       /* orange-700 — was amber-400, too pale on white */
-  --tint-info-bg:     rgba(96, 165, 250, 0.2);
-  --tint-info-fg:     #1d4ed8;       /* blue-700 */
+  --tint-warning-fg:  #c2410c;
+  --tint-info-bg:     rgba(79, 70, 229, 0.15);
+  --tint-info-fg:     var(--indigo-700);
   --tint-orange-bg:   rgba(249, 115, 22, 0.2);
-  --tint-orange-fg:   #c2410c;       /* orange-700 */
-  --tint-default-bg:  rgba(203, 213, 225, 0.5);
-  --tint-default-fg:  #1e293b;       /* slate-800 */
+  --tint-orange-fg:   #c2410c;
+  --tint-default-bg:  rgba(228, 228, 231, 0.5);
+  --tint-default-fg:  var(--zinc-700);
 
   /* ── Shadows ─────────────────────────────────────────────────────────── */
   --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.06);
@@ -244,7 +240,7 @@
 
   /* ── Premium background ──────────────────────────────────────────────── */
   --bg-danex:
-    radial-gradient(ellipse 70% 50% at 5% 5%,  rgba(234,88,12,0.04)  0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(99,102,241,0.03) 0%, transparent 60%),
-    #f8fafc;
+    radial-gradient(ellipse 70% 50% at 5% 5%,  rgba(99,102,241,0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 95%, rgba(129,140,248,0.02) 0%, transparent 60%),
+    #fafafa;
 }

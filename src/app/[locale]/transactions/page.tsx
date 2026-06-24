@@ -252,7 +252,7 @@ export default function TransactionsPage({ params }: Props) {
             <button
               onClick={() => setShowNewForm(true)}
               aria-label={t("add")}
-              className="flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+              className="flex items-center gap-2 rounded-lg bg-[var(--brand-fill)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand)]"
             >
               <Plus size={15} />
               <span className="hidden sm:inline">{t("add")}</span>
@@ -274,7 +274,7 @@ export default function TransactionsPage({ params }: Props) {
               onClick={() => { setFilterType(v); setShowAll(false); }}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 filterType === v
-                  ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                  ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
                   : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
               }`}
             >
@@ -290,7 +290,7 @@ export default function TransactionsPage({ params }: Props) {
               onClick={() => setOpenDropdown(openDropdown === "account" ? null : "account")}
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 filterAccount
-                  ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                  ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
                   : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
               }`}
             >
@@ -310,11 +310,11 @@ export default function TransactionsPage({ params }: Props) {
                     key={opt.id}
                     onClick={() => { setFilterAccount(opt.id); setShowAll(false); setOpenDropdown(null); }}
                     className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                      filterAccount === opt.id ? "text-orange-300" : "text-[var(--text-body)]"
+                      filterAccount === opt.id ? "text-[var(--brand-text)]" : "text-[var(--text-body)]"
                     }`}
                   >
                     {filterAccount === opt.id && (
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />
                     )}
                     <span className="truncate">{opt.label}</span>
                   </button>
@@ -329,7 +329,7 @@ export default function TransactionsPage({ params }: Props) {
               onClick={() => setOpenDropdown(openDropdown === "subtype" ? null : "subtype")}
               className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 filterSubType
-                  ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                  ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
                   : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
               }`}
             >
@@ -344,10 +344,10 @@ export default function TransactionsPage({ params }: Props) {
                 <button
                   onClick={() => { setFilterSubType(""); setShowAll(false); setOpenDropdown(null); }}
                   className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                    !filterSubType ? "text-orange-300" : "text-[var(--text-body)]"
+                    !filterSubType ? "text-[var(--brand-text)]" : "text-[var(--text-body)]"
                   }`}
                 >
-                  {!filterSubType && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />}
+                  {!filterSubType && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />}
                   Tous sous-types
                 </button>
                 {SUBTYPE_FILTER_GROUPS.map((group) => (
@@ -360,11 +360,11 @@ export default function TransactionsPage({ params }: Props) {
                         key={st}
                         onClick={() => { setFilterSubType(st); setShowAll(false); setOpenDropdown(null); }}
                         className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                          filterSubType === st ? "text-orange-300" : "text-[var(--text-muted)]"
+                          filterSubType === st ? "text-[var(--brand-text)]" : "text-[var(--text-muted)]"
                         }`}
                       >
                         {filterSubType === st && (
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />
                         )}
                         <span className="truncate">{SUB_TYPE_META[st].label}</span>
                       </button>
@@ -454,7 +454,7 @@ export default function TransactionsPage({ params }: Props) {
                 const client    = tx.client_id ? clients.find((c) => c.id === tx.client_id) : null;
                 const isAdj     = tx.accounting_type === "adjustment";
                 const subLabel  = tx.sub_type ? SUB_TYPE_META[tx.sub_type]?.label : null;
-                const dotColor  = isAdj ? "bg-orange-600" : tx.type === "expense" ? "bg-red-500/70" : "bg-emerald-500/70";
+                const dotColor  = isAdj ? "bg-[var(--brand-fill)]" : tx.type === "expense" ? "bg-red-500/70" : "bg-emerald-500/70";
                 const amtColor  = isAdj ? "text-[var(--tint-warning-fg)]" : tx.type === "expense" ? "text-red-400" : "text-emerald-400";
                 const amtPrefix = isAdj ? "" : tx.type === "expense" ? "−" : "+";
 
@@ -664,7 +664,7 @@ export default function TransactionsPage({ params }: Props) {
                         if (acc) setAdjTargetBalance(String(Number(acc.balance).toFixed(2)));
                       }}
                       required
-                      className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none"
+                      className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                     >
                       <option value="">—</option>
                       {accounts.map((a) => (
@@ -732,7 +732,7 @@ export default function TransactionsPage({ params }: Props) {
                       value={adjTargetBalance}
                       onChange={(e) => setAdjTargetBalance(e.target.value)}
                       required
-                      className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-sm tabular-nums text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20"
+                      className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 font-mono text-sm tabular-nums text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20"
                     />
                   </div>
 
@@ -744,7 +744,7 @@ export default function TransactionsPage({ params }: Props) {
                       value={adjDate}
                       onChange={(e) => setAdjDate(e.target.value)}
                       required
-                      className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none"
+                      className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                     />
                   </div>
 
@@ -757,7 +757,7 @@ export default function TransactionsPage({ params }: Props) {
                       value={adjNote}
                       onChange={(e) => setAdjNote(e.target.value)}
                       placeholder="Ex : Vérification Alipay"
-                      className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none"
+                      className="w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -800,7 +800,7 @@ export default function TransactionsPage({ params }: Props) {
                       adjTargetBalance === "" ||
                       (adjDifference !== null && Math.abs(adjDifference) < 0.001)
                     }
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
                     {isSubmitting ? "Application…" : "Appliquer"}
                   </button>

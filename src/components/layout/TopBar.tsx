@@ -31,7 +31,7 @@ export function TopBar({ onMenuClick, locale }: Props) {
       >
         <Menu size={20} />
       </button>
-      <span className="text-sm font-bold tracking-tight text-orange-500 md:hidden">
+      <span className="text-sm font-bold tracking-tight text-[var(--brand)] md:hidden">
         DANEX
       </span>
       <div className="ml-auto">

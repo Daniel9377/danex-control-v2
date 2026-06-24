@@ -121,7 +121,7 @@ export default function ResetPasswordPage({ params }: Props) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg-app)] px-4">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-orange-500">DANEX</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--brand)]">DANEX</h1>
         <p className="mt-1 text-sm text-[var(--text-label)]">Control v2</p>
       </div>
 
@@ -141,7 +141,7 @@ export default function ResetPasswordPage({ params }: Props) {
             <p className="text-sm text-[var(--text-muted)]">{t("reset_invalid_message")}</p>
             <button
               onClick={() => router.push(`/${locale}/login`)}
-              className="mt-5 text-sm text-orange-400 hover:text-orange-300"
+              className="mt-5 text-sm text-[var(--brand-text)] hover:text-[var(--brand-text)]"
             >
               ← {t("login")}
             </button>
@@ -175,7 +175,7 @@ export default function ResetPasswordPage({ params }: Props) {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="new-password"
-                    className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 pr-10 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 pr-10 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)] focus:outline-none"
                     placeholder="••••••••"
                   />
                   <button
@@ -213,7 +213,7 @@ export default function ResetPasswordPage({ params }: Props) {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     autoComplete="new-password"
-                    className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 pr-10 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--surface-chip)] px-3 py-2.5 pr-10 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)] focus:outline-none"
                     placeholder="••••••••"
                   />
                   <button
@@ -237,7 +237,7 @@ export default function ResetPasswordPage({ params }: Props) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-50"
+                className="w-full rounded-lg bg-[var(--brand-fill)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-50"
               >
                 {loading ? "..." : t("update_password_button")}
               </button>

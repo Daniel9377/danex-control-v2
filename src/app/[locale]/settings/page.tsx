@@ -20,7 +20,7 @@ import Link from "next/link";
 type Props = { params: Promise<{ locale: string }> };
 
 const fieldCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 export default function SettingsPage({ params }: Props) {
   const { locale } = use(params);
@@ -130,7 +130,7 @@ export default function SettingsPage({ params }: Props) {
           {/* User info card */}
           {profile?.email && (
             <div className="mb-4 flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-glass)] px-4 py-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-600/20 text-orange-400">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-fill)]/20 text-[var(--brand-text)]">
                 <User size={16} />
               </div>
               <div className="min-w-0">
@@ -207,7 +207,7 @@ export default function SettingsPage({ params }: Props) {
                 type="submit"
                 disabled={profileSaving}
                 aria-label={profileSaving ? "Enregistrement…" : tc("save")}
-                className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                className="flex items-center gap-2 rounded-xl bg-[var(--brand-fill)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
               >
                 {profileSaved ? <Check size={14} /> : <Save size={14} />}
                 {profileSaving ? "Enregistrement…" : profileSaved ? t("saved") : tc("save")}
@@ -288,7 +288,7 @@ export default function SettingsPage({ params }: Props) {
                         value={rates[c.code] ?? ""}
                         onChange={(e) => setRates((r) => ({ ...r, [c.code]: e.target.value }))}
                         aria-label={`Taux de change ${c.code} / USD`}
-                        className="w-28 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-right font-mono text-sm text-[var(--text-strong)] tabular-nums focus:border-orange-500/70 focus:outline-none"
+                        className="w-28 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-right font-mono text-sm text-[var(--text-strong)] tabular-nums focus:border-[var(--brand)]/70 focus:outline-none"
                       />
                       <button
                         onClick={() => saveCurrencyRate(c.code)}
@@ -296,7 +296,7 @@ export default function SettingsPage({ params }: Props) {
                         className={`rounded-lg p-2 transition-colors ${
                           isSaved
                             ? "bg-emerald-950/40 text-emerald-400"
-                            : "text-[var(--text-faint)] hover:bg-[var(--surface-chip)] hover:text-orange-400"
+                            : "text-[var(--text-faint)] hover:bg-[var(--surface-chip)] hover:text-[var(--brand-text)]"
                         }`}
                       >
                         {isSaved ? <Check size={14} /> : <Save size={14} />}
@@ -324,7 +324,7 @@ export default function SettingsPage({ params }: Props) {
                   className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <DollarSign size={15} className="shrink-0 text-orange-400" />
+                    <DollarSign size={15} className="shrink-0 text-[var(--brand-text)]" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-[var(--text-body)]">Export des données</p>
                       <p className="text-[11px] text-[var(--text-label)]">CSV, JSON, backup complet</p>

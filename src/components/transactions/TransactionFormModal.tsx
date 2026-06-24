@@ -88,7 +88,7 @@ const ICONS: Record<TransactionSubType, React.ReactNode> = {
 const GROUP_COLORS: Record<string, string> = {
   personnel: "text-blue-400",
   business:  "text-violet-400",
-  client:    "text-orange-400",
+  client:    "text-[var(--brand-text)]",
   dette:     "text-[var(--tint-warning-fg)]",
   autre:     "text-[var(--text-muted)]",
 };
@@ -96,7 +96,7 @@ const GROUP_COLORS: Record<string, string> = {
 const ITEM_COLORS: Record<string, string> = {
   personnel: "border-blue-800/40 bg-blue-950/20 hover:border-blue-600/60 hover:bg-blue-950/40 text-blue-300",
   business:  "border-violet-800/40 bg-violet-950/20 hover:border-violet-600/60 hover:bg-violet-950/40 text-violet-300",
-  client:    "border-orange-800/40 bg-orange-950/20 hover:border-orange-600/60 hover:bg-orange-950/40 text-orange-300",
+  client:    "border-orange-800/40 bg-[var(--indigo-950)]/20 hover:border-[var(--brand-fill)]/60 hover:bg-[var(--indigo-950)]/40 text-[var(--brand-text)]",
   dette:     "border-amber-800/40 bg-amber-950/20 hover:border-amber-600/60 hover:bg-amber-950/40 text-[var(--tint-warning-fg)]",
   autre:     "border-[var(--border-strong)] bg-[var(--surface-glass)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-chip)] text-[var(--text-body)]",
 };
@@ -104,7 +104,7 @@ const ITEM_COLORS: Record<string, string> = {
 // ── Field style helper ────────────────────────────────────────────────────────
 
 const fieldCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -546,7 +546,7 @@ export function TransactionFormModal({
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value.toUpperCase())}
                       maxLength={4}
-                      className="w-20 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2.5 text-center font-mono text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none"
+                      className="w-20 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2.5 text-center font-mono text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -702,7 +702,7 @@ export function TransactionFormModal({
                           onClick={() => setAllocMethod(m)}
                           className={`rounded-lg px-2.5 py-1 text-xs transition-colors ${
                             allocMethod === m
-                              ? "bg-orange-600 text-white"
+                              ? "bg-[var(--brand-fill)] text-white"
                               : "border border-[var(--border-strong)] text-[var(--text-muted)] hover:bg-[var(--surface-chip)]"
                           }`}
                         >
@@ -719,7 +719,7 @@ export function TransactionFormModal({
                         <select
                           value={row.clientId}
                           onChange={(e) => updateAllocation(row.id, "clientId", e.target.value)}
-                          className="flex-1 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none"
+                          className="flex-1 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                         >
                           <option value="">Client</option>
                           {clients.map((c) => (
@@ -730,7 +730,7 @@ export function TransactionFormModal({
                           <select
                             value={row.orderId}
                             onChange={(e) => updateAllocation(row.id, "orderId", e.target.value)}
-                            className="flex-1 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none"
+                            className="flex-1 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none"
                           >
                             <option value="">Commande</option>
                             {rowOrders.map((o) => (
@@ -746,7 +746,7 @@ export function TransactionFormModal({
                           onChange={(e) => updateAllocation(row.id, "amount", e.target.value)}
                           disabled={allocMethod === "equal"}
                           placeholder="Part"
-                          className="w-20 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-right text-xs text-[var(--text-strong)] tabular-nums focus:border-orange-500/70 focus:outline-none disabled:opacity-40"
+                          className="w-20 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-right text-xs text-[var(--text-strong)] tabular-nums focus:border-[var(--brand)]/70 focus:outline-none disabled:opacity-40"
                         />
                         <button
                           type="button"
@@ -762,7 +762,7 @@ export function TransactionFormModal({
                   <button
                     type="button"
                     onClick={addAllocationRow}
-                    className="flex items-center gap-1.5 text-xs text-orange-400 transition-colors hover:text-orange-300"
+                    className="flex items-center gap-1.5 text-xs text-[var(--brand-text)] transition-colors hover:text-[var(--brand-text)]"
                   >
                     <Plus size={12} />
                     Ajouter un client
@@ -871,7 +871,7 @@ export function TransactionFormModal({
                   (meta?.needsDebtSelect && openDebts.length === 0) ||
                   (meta?.needsReceivableSelect && openReceivables.length === 0)
                 }
-                className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
               >
                 {submitting ? "Enregistrement…" : "Enregistrer"}
               </button>

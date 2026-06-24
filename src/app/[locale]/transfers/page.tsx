@@ -18,7 +18,7 @@ import { Plus, ArrowRight, ChevronDown, X } from "lucide-react";
 type Props = { params: Promise<{ locale: string }> };
 
 const fieldCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
 
 export default function TransfersPage({ params }: Props) {
   const { locale } = use(params);
@@ -159,7 +159,7 @@ export default function TransfersPage({ params }: Props) {
           <button
             onClick={openForm}
             aria-label={t("add")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--brand-fill)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand)]"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">{t("add")}</span>
@@ -178,7 +178,7 @@ export default function TransfersPage({ params }: Props) {
                   onClick={() => setOpenDropdown(!openDropdown)}
                   className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     filterAccount
-                      ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                      ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
                       : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                   }`}
                 >
@@ -193,10 +193,10 @@ export default function TransfersPage({ params }: Props) {
                     <button
                       onClick={() => { setFilterAccount(""); setOpenDropdown(false); }}
                       className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                        !filterAccount ? "text-orange-300" : "text-[var(--text-body)]"
+                        !filterAccount ? "text-[var(--brand-text)]" : "text-[var(--text-body)]"
                       }`}
                     >
-                      {!filterAccount && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />}
+                      {!filterAccount && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />}
                       Tous les comptes
                     </button>
                     {accounts.map((a) => (
@@ -204,11 +204,11 @@ export default function TransfersPage({ params }: Props) {
                         key={a.id}
                         onClick={() => { setFilterAccount(a.id); setOpenDropdown(false); }}
                         className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-[var(--surface-chip)] ${
-                          filterAccount === a.id ? "text-orange-300" : "text-[var(--text-muted)]"
+                          filterAccount === a.id ? "text-[var(--brand-text)]" : "text-[var(--text-muted)]"
                         }`}
                       >
                         {filterAccount === a.id && (
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand)]" />
                         )}
                         <span className="truncate">{a.name}</span>
                       </button>
@@ -264,7 +264,7 @@ export default function TransfersPage({ params }: Props) {
                           {/* Arrow */}
                           <ArrowRight
                             size={12}
-                            className="mx-0.5 shrink-0 text-orange-500/60"
+                            className="mx-0.5 shrink-0 text-[var(--brand)]/60"
                           />
                           {/* To */}
                           <div className="flex min-w-0 items-center gap-1.5">
@@ -392,7 +392,7 @@ export default function TransfersPage({ params }: Props) {
                           {fromAcc.name}
                         </span>
                       </span>
-                      <ArrowRight size={12} className="shrink-0 text-orange-500/60" />
+                      <ArrowRight size={12} className="shrink-0 text-[var(--brand)]/60" />
                       <span className="flex items-center gap-1.5 min-w-0">
                         <span className="h-2 w-2 shrink-0 rounded-full bg-sky-500/60" />
                         <span className="min-w-0 truncate text-xs font-medium text-[var(--text-body)]">
@@ -537,7 +537,7 @@ export default function TransfersPage({ params }: Props) {
                   <button
                     type="submit"
                     disabled={!canSave || saving}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                   >
                     {saving ? "Sauvegarde en cours…" : tc("save")}
                   </button>

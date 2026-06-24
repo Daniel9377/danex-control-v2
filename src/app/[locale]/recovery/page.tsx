@@ -49,10 +49,10 @@ interface ResetStats {
 // ── CSS helpers ───────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none";
 
 const miniInputCls =
-  "rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-orange-500/70 focus:outline-none";
+  "rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-2.5 py-2 text-xs text-[var(--text-strong)] placeholder:text-[var(--text-faint)] focus:border-[var(--brand)]/70 focus:outline-none";
 
 // ── CSV parser ────────────────────────────────────────────────────────────────
 
@@ -668,7 +668,7 @@ export default function RecoveryPage({ params }: Props) {
                                   value={zeroValues[acc.id] ?? ""}
                                   onChange={(e) => setZeroValues((prev) => ({ ...prev, [acc.id]: e.target.value }))}
                                   aria-label={`Solde réel pour ${acc.name}`}
-                                  className="w-36 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-right font-mono text-sm text-[var(--text-strong)] tabular-nums focus:border-orange-500/70 focus:outline-none"
+                                  className="w-36 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2 text-right font-mono text-sm text-[var(--text-strong)] tabular-nums focus:border-[var(--brand)]/70 focus:outline-none"
                                 />
                                 <button
                                   onClick={() => handleApplyZeroPoint(acc.id)}
@@ -962,7 +962,7 @@ function OperationCard({
       open
         ? danger
           ? "border-red-800/40 bg-red-950/10"
-          : "border-orange-600/30 bg-[var(--surface-card)]"
+          : "border-[var(--brand-fill)]/30 bg-[var(--surface-card)]"
         : "border-[var(--border-default)] bg-[var(--surface-glass)]"
     }`}>
       <button

@@ -43,7 +43,7 @@ const CLIENT_SUBTYPES = new Set([
 ]);
 
 const fieldCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-orange-500/70 focus:outline-none";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] focus:border-[var(--brand)]/70 focus:outline-none";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -258,13 +258,13 @@ export default function ExportPage({ params }: Props) {
                   aria-label={TYPE_LABELS[type]}
                   className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition-all ${
                     active
-                      ? "border-orange-600/50 bg-orange-950/30 text-orange-200"
+                      ? "border-[var(--brand-fill)]/50 bg-orange-950/30 text-orange-200"
                       : "border-[var(--border-default)] bg-[var(--surface-card)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                   }`}
                 >
                   <Icon
                     size={14}
-                    className={`mt-0.5 shrink-0 ${active ? "text-orange-400" : "text-[var(--text-faint)]"}`}
+                    className={`mt-0.5 shrink-0 ${active ? "text-[var(--brand-text)]" : "text-[var(--text-faint)]"}`}
                   />
                   <span className="min-w-0 truncate text-xs font-medium leading-tight">
                     {TYPE_LABELS[type]}
@@ -320,7 +320,7 @@ export default function ExportPage({ params }: Props) {
                           onClick={() => setPeriod(opt.value)}
                           className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                             period === opt.value
-                              ? "border-orange-600/60 bg-orange-950/40 text-orange-300"
+                              ? "border-[var(--brand-fill)]/60 bg-[var(--indigo-950)]/40 text-[var(--brand-text)]"
                               : "border-[var(--border-strong)] text-[var(--text-label)] hover:border-[var(--border-strong)] hover:text-[var(--text-body)]"
                           }`}
                         >
@@ -419,7 +419,7 @@ export default function ExportPage({ params }: Props) {
                       type="checkbox"
                       checked={includeLegacy}
                       onChange={(e) => setIncludeLegacy(e.target.checked)}
-                      className="h-4 w-4 rounded border-[var(--border-default)] accent-orange-500"
+                      className="h-4 w-4 rounded border-[var(--border-default)] accent-[var(--brand)]"
                     />
                     <span className="text-xs text-[var(--text-muted)]">{t("include_legacy")}</span>
                   </label>
@@ -448,7 +448,7 @@ export default function ExportPage({ params }: Props) {
               ? "border-[var(--border-default)] bg-[var(--surface-glass)]"
               : "border-[var(--border-default)] bg-[var(--surface-glass)]"
           }`}>
-            <Filter size={13} className={previewCount === 0 ? "text-[var(--text-faint)]" : "text-orange-400/80"} />
+            <Filter size={13} className={previewCount === 0 ? "text-[var(--text-faint)]" : "text-[var(--brand-text)]"} />
             <p className="text-sm text-[var(--text-muted)]">
               <span className={`font-semibold ${previewCount === 0 ? "text-[var(--text-label)]" : "text-[var(--text-body)]"}`}>
                 {previewCount}
@@ -479,7 +479,7 @@ export default function ExportPage({ params }: Props) {
                 onClick={handleCSV}
                 disabled={busy || previewCount === 0}
                 aria-label={busy ? t("generating") : t("btn_csv")}
-                className="flex items-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                className="flex items-center gap-2 rounded-xl py-2.5 px-4 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
               >
                 <FileDown size={15} />
                 {busy ? t("generating") : t("btn_csv")}

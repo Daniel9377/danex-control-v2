@@ -251,7 +251,7 @@ export default function AccountsPage({ params }: Props) {
           <button
             onClick={openAdd}
             aria-label={t("add")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-500"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--brand-fill)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand)]"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">{t("add")}</span>
@@ -349,7 +349,7 @@ export default function AccountsPage({ params }: Props) {
                               acc.availability === "immediate" ? "bg-emerald-500"
                               : acc.availability === "close" ? "bg-amber-500"
                               : acc.availability === "distant" ? "bg-amber-600"
-                              : "bg-slate-600"
+                              : "bg-[var(--border-strong)]"
                             }`} />
                             {availLabels[acc.availability ?? "immediate"]}
                           </span>
@@ -473,7 +473,7 @@ export default function AccountsPage({ params }: Props) {
                                 onClick={() => setType(key)}
                                 className={`rounded-xl border p-2.5 text-xs font-medium transition-colors ${
                                   type === key
-                                    ? "border-orange-600/50 bg-orange-950/25 text-orange-300"
+                                    ? "border-[var(--brand-fill)]/50 bg-[var(--indigo-950)]/25 text-[var(--brand-text)]"
                                     : "border-[var(--border-strong)] bg-[var(--surface-glass)] text-[var(--text-muted)] hover:border-[var(--border-strong)]"
                                 }`}
                               >
@@ -500,7 +500,7 @@ export default function AccountsPage({ params }: Props) {
                               onClick={() => setAvailability(key)}
                               className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
                                 isSel
-                                  ? "border-orange-600/50 bg-orange-950/25"
+                                  ? "border-[var(--brand-fill)]/50 bg-[var(--indigo-950)]/25"
                                   : "border-[var(--border-strong)] bg-[var(--surface-glass)] hover:border-[var(--border-strong)]"
                               }`}
                             >
@@ -508,10 +508,10 @@ export default function AccountsPage({ params }: Props) {
                                 key === "immediate" ? "bg-emerald-500"
                                 : key === "close" ? "bg-amber-500"
                                 : key === "distant" ? "bg-amber-600"
-                                : "bg-slate-600"
+                                : "bg-[var(--border-strong)]"
                               }`} />
                               <div>
-                                <p className={`text-xs font-medium ${isSel ? "text-orange-300" : "text-[var(--text-body)]"}`}>
+                                <p className={`text-xs font-medium ${isSel ? "text-[var(--brand-text)]" : "text-[var(--text-body)]"}`}>
                                   {availLabels[key]}
                                 </p>
                                 <p className="mt-0.5 text-[10px] leading-tight text-[var(--text-faint)]">
@@ -603,7 +603,7 @@ export default function AccountsPage({ params }: Props) {
                     <button
                       type="submit"
                       disabled={saving}
-                      className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-orange-600 text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
+                      className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors bg-[var(--brand-fill)] text-white hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-[var(--surface-chip)] disabled:text-[var(--text-label)]"
                     >
                       {saving ? "Sauvegarde en cours…" : tc("save")}
                     </button>
@@ -619,4 +619,4 @@ export default function AccountsPage({ params }: Props) {
 }
 
 const fieldCls =
-  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] transition-colors focus:border-orange-500/70 focus:outline-none focus:ring-1 focus:ring-orange-500/20";
+  "w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3.5 py-2.5 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-faint)] transition-colors focus:border-[var(--brand)]/70 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]/20";
