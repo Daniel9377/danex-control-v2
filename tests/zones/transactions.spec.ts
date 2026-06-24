@@ -207,7 +207,7 @@ test("Transactions - suppression: supprimer 30 USD restaure Comptes, Clients et 
 
   await page.goto("/fr/clients");
   await page.waitForLoadState("networkidle");
-  const divineText = normalizeText((await page.locator("article").filter({ hasText: "Divine Test" }).first().textContent()) ?? "");
+  const divineText = normalizeText((await page.locator("li, article").filter({ hasText: "Divine Test" }).first().textContent()) ?? "");
   console.log(`Scenario 4 - Clients apres suppression: ${divineText}`);
   expect(divineText, "La page Clients ne doit pas conserver de trace financiere de la depense Mercury supprimee.").not.toMatch(
     /30(?:[,.]00)?\s*(?:USD|\$US|US\$|\$)/i
