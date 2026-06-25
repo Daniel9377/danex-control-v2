@@ -51,6 +51,19 @@ export async function GET(req: NextRequest) {
       lines.push('Rien d urgent. Continue.');
     }
 
+    // Rotating open question — pick deterministically by day of month
+    const questions = [
+      "Tu as réglé un client cette semaine ?",
+      "C'est quoi tes projets pour les prochains jours ?",
+      "Tu as eu un nouveau contact récemment ?",
+      "Un client est resté sans réponse cette semaine ?",
+      "Qu'est-ce qui t'a pris le plus de temps cette semaine ?",
+      "Tu as une commande qui bloque en ce moment ?",
+    ];
+    const today = new Date().getDate();
+    lines.push('');
+    lines.push(questions[today % questions.length]);
+
     await sendTelegramMessage(chatId, lines.join('\n'));
 
     return NextResponse.json({ ok: true, sent: true });
