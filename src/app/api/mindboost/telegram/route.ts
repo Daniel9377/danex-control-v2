@@ -25,8 +25,35 @@ export const runtime = "nodejs";
 
 const MINDBOOST_USER_ID = process.env.MINDBOOST_USER_ID ?? "unknown";
 
-// In-process dedup: drop Telegram retries for the same update_id
-const recentUpdateIds = new Set<number>();
+// ── Persisted dedup (survives cold starts / concurrent instances) ──────
+async function checkAndMarkUpdateId(updateId: number, userId: string): Promise<boolean> {
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createAdminClient();
+  const key = `telegram_update_${updateId}`;
+
+  // Check if already processed
+  const { data } = await supabase
+    .from("mindboost_memory")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("memory_type", key)
+    .maybeSingle();
+
+  if (data) return true; // duplicate — already processed
+
+  // Mark as processed
+  const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  await supabase.from("mindboost_memory").insert({
+    user_id: userId,
+    memory_type: key,
+    content: JSON.stringify({ received_at: new Date().toISOString() }),
+    relevance_score: 1,
+    expires_at: expires,
+    updated_at: new Date().toISOString(),
+  });
+
+  return false; // new update
+}
 
 function requireWebhookSecret() {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -251,16 +278,12 @@ export async function POST(request: NextRequest) {
 
   const update = (await request.json()) as TelegramUpdate;
 
-  // Deduplication: drop retries for the same update_id
+  // Deduplication: persisted check across cold starts / concurrent instances
   const updateId = update.update_id;
   if (updateId !== undefined) {
-    if (recentUpdateIds.has(updateId)) {
+    const isDup = await checkAndMarkUpdateId(updateId, MINDBOOST_USER_ID);
+    if (isDup) {
       return NextResponse.json({ ok: true, ignored: "duplicate" });
-    }
-    recentUpdateIds.add(updateId);
-    if (recentUpdateIds.size > 100) {
-      const oldest = recentUpdateIds.values().next().value;
-      if (oldest !== undefined) recentUpdateIds.delete(oldest);
     }
   }
 

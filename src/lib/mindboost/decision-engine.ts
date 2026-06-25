@@ -10,14 +10,36 @@ import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, close
 async function openMention(userId: string, personName: string, rawMsg: string): Promise<void> {
   const { createAdminClient: mAdmin } = await import("@/lib/supabase/admin");
   const db = mAdmin();
-  const { error } = await db.from("mindboost_mentions").insert({
-    user_id: userId,
-    person_name: personName,
-    description: rawMsg.trim(),
-    status: "open",
-  });
-  if (error) {
-    console.error("[mentions] deterministic insert error:", error.code, error.message);
+
+  // Check if an open mention already exists for this person (case-insensitive)
+  const { data: existing } = await db
+    .from("mindboost_mentions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "open")
+    .ilike("person_name", personName)
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    // Update existing mention with latest message text
+    const { error: updErr } = await db
+      .from("mindboost_mentions")
+      .update({ description: rawMsg.trim() })
+      .eq("id", existing.id);
+    if (updErr) {
+      console.error("[mentions] update error:", updErr.code, updErr.message);
+    }
+  } else {
+    const { error } = await db.from("mindboost_mentions").insert({
+      user_id: userId,
+      person_name: personName,
+      description: rawMsg.trim(),
+      status: "open",
+    });
+    if (error) {
+      console.error("[mentions] insert error:", error.code, error.message);
+    }
   }
 }
 
