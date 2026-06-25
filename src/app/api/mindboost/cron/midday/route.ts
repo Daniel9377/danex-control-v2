@@ -32,23 +32,23 @@ export async function GET(req: NextRequest) {
     const urgentDebts = alerts.debts.filter((d) => d.daysOld >= 7);
     const hasUrgency = urgentPurchases.length > 0 || urgentDebts.length > 0 || summary.transactionCount === 0;
 
-    if (!hasUrgency) {
-      return NextResponse.json({ ok: true, sent: false, reason: 'Rien d urgent, app active.' });
-    }
+    const lines = hasUrgency
+      ? ['Controle midi.', `Transactions aujourd hui : ${summary.transactionCount} (${summary.realExpenseCount} vraies depenses).`]
+      : ['Controle midi. Rien d urgent.'];
 
-    const lines = ['Controle midi.', `Transactions aujourd hui : ${summary.transactionCount} (${summary.realExpenseCount} vraies depenses).`];
+    if (hasUrgency) {
+      if (urgentPurchases.length > 0) {
+        const p = urgentPurchases[0];
+        lines.push(`ACHAT EN ATTENTE : ${p.client_name} — ${p.product_name}. Pas encore fait.`);
+      }
 
-    if (urgentPurchases.length > 0) {
-      const p = urgentPurchases[0];
-      lines.push(`ACHAT EN ATTENTE : ${p.client_name} — ${p.product_name}. Pas encore fait.`);
-    }
+      if (urgentDebts.length > 0) {
+        lines.push(`Dette a surveiller : ${urgentDebts.length} dette(s) active(s).`);
+      }
 
-    if (urgentDebts.length > 0) {
-      lines.push(`Dette a surveiller : ${urgentDebts.length} dette(s) active(s).`);
-    }
-
-    if (urgentPurchases.length === 0 && urgentDebts.length === 0) {
-      lines.push('Rien d urgent. Continue.');
+      if (urgentPurchases.length === 0 && urgentDebts.length === 0) {
+        lines.push('Rien d urgent. Continue.');
+      }
     }
 
     // Rotating open question — pick deterministically by day of month
