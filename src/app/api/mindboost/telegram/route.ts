@@ -4,6 +4,7 @@ import {
   handleTelegramCommand,
   isAllowedTelegramChat,
   sendTelegramMessage,
+  sendTelegramDocument,
   downloadTelegramPhoto,
   analyzeImage,
   downloadTelegramVoice,
@@ -15,6 +16,7 @@ import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { evaluateEscalationLevel, logEscalation, applyEscalationToReply, checkAndUpdateAlertCooldown } from "@/lib/mindboost/escalation";
 import { incrementLoopCount, resetLoopCount, getEveningCheckPending, deleteEveningCheckPending } from "@/lib/mindboost/conversation-memory";
 import { getActiveIntakeSession, detectIntakeTrigger, startIntakeSession, searchExistingClient } from "@/lib/mindboost/client-intake";
+import { getDailySummaries } from "@/lib/mindboost/conversation-memory";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
 import { getUrgentPurchaseAlerts } from "@/lib/mindboost/alerts";
 import { saveReport } from "@/lib/mindboost/reports";
@@ -45,6 +47,10 @@ async function processText(text: string, chatId: number | string): Promise<void>
 
   // Slash commands = concrete action → reset loop, skip escalation
   if (isSlashCommand(text)) {
+    if (text.trim() === "/pdf") {
+      await handlePdfCommand(userId, chatId);
+      return;
+    }
     const reply = await handleTelegramCommand(text);
     await resetLoopCount(userId);
     await sendTelegramMessage(chatId, reply);
@@ -315,4 +321,70 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ ok: true });
+}
+
+// ── /pdf command — generates PDF from daily summaries + full transcript ──
+
+async function handlePdfCommand(userId: string, chatId: number | string): Promise<void> {
+  const supabase = (await import("@/lib/supabase/admin")).createAdminClient();
+
+  // Fetch data
+  const [summaries, { data: messages }] = await Promise.all([
+    getDailySummaries(userId),
+    supabase.from("mindboost_conversation").select("role, content, created_at")
+      .eq("user_id", userId).order("created_at", { ascending: true }),
+  ]);
+
+  const msgCount = messages?.length ?? 0;
+  if (msgCount > 5000) {
+    console.warn(`[/pdf] Large transcript: ${msgCount} messages — PDF may be heavy`);
+  }
+
+  // Generate PDF with jspdf
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  let y = 15;
+
+  // Title
+  doc.setFontSize(14);
+  doc.text("Mindboost — Archive", 15, y);
+  y += 10;
+
+  // Section 1: Daily summaries
+  doc.setFontSize(11);
+  doc.text("Resumes par jour", 15, y);
+  y += 6;
+  doc.setFontSize(9);
+  if (summaries.length === 0) {
+    doc.text("(aucun resume)", 15, y); y += 5;
+  } else {
+    for (const s of summaries) {
+      const lines = doc.splitTextToSize(`[${s.summary_date}] ${s.summary}`, 180);
+      for (const line of lines) { doc.text(line, 15, y); y += 4; if (y > 280) { doc.addPage(); y = 15; } }
+      y += 2;
+    }
+  }
+
+  // Section 2: Full transcript
+  y += 5;
+  doc.addPage();
+  y = 15;
+  doc.setFontSize(11);
+  doc.text("Transcript complet", 15, y);
+  y += 6;
+  doc.setFontSize(8);
+  if (!messages || messages.length === 0) {
+    doc.text("(aucun message)", 15, y);
+  } else {
+    for (const m of messages as any[]) {
+      const ts = m.created_at ? new Date(m.created_at).toISOString().slice(11, 19) : "?";
+      const line = `[${ts}] ${m.role}: ${m.content}`;
+      const wrapped = doc.splitTextToSize(line, 180);
+      for (const w of wrapped) { doc.text(w, 15, y); y += 3.5; if (y > 280) { doc.addPage(); y = 15; } }
+    }
+  }
+
+  // Send
+  const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
+  await sendTelegramDocument(chatId, pdfBuffer, `mindboost-archive.pdf`, `Archive Mindboost — ${summaries.length} jours, ${msgCount} messages`);
 }

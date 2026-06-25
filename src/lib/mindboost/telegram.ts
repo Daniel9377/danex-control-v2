@@ -66,6 +66,29 @@ export async function sendTelegramMessage(chatId: number | string, text: string)
   }
 }
 
+export async function sendTelegramDocument(
+  chatId: number | string,
+  buffer: Buffer,
+  filename: string,
+  caption?: string
+) {
+  const token = requireEnv("TELEGRAM_BOT_TOKEN");
+  const formData = new FormData();
+  formData.append("chat_id", String(chatId));
+  formData.append("document", new Blob([buffer]), filename);
+  if (caption) formData.append("caption", caption);
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/sendDocument`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Telegram sendDocument failed: ${response.status} ${errorText}`);
+  }
+}
+
 function formatTotals(totalsByCurrency: Record<string, number>) {
   const entries = Object.entries(totalsByCurrency);
   if (entries.length === 0) return "Aucune vraie depense detectee.";
@@ -212,6 +235,10 @@ export async function handleTelegramCommand(text: string) {
 
   if (!cleanText || cleanText === "/help" || cleanText === "help") {
     return getHelpMessage();
+  }
+
+  if (cleanText === "/pdf") {
+    return "PDF en cours de génération…"; // Actual PDF sent via separate flow in route.ts
   }
 
   if (cleanText === "/today" || cleanText === "/status") {

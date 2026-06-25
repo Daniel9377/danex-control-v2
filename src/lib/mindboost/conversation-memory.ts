@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getChinaDateISO } from "@/lib/mindboost/time";
 
 export type ConversationMessage = {
   role: "user" | "assistant";
@@ -6,41 +7,43 @@ export type ConversationMessage = {
   created_at?: string;
 };
 
-const MAX_HISTORY = 5;
-
 export type ConversationHistoryResult = {
   messages: ConversationMessage[];
-  summary: string | null;
+  summary: string | null; // cumulative daily summaries log
 };
 
 export async function getConversationHistory(userId: string): Promise<ConversationHistoryResult> {
   const supabase = createAdminClient();
+  const todayChina = getChinaDateISO();
 
-  const [messagesResult, summaryResult] = await Promise.all([
-    supabase
-      .from("mindboost_conversation")
-      .select("role, content, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(MAX_HISTORY),
-    supabase
-      .from("mindboost_conversation_summary")
-      .select("summary")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single(),
-  ]);
+  // 1. Raw messages from today only (China date)
+  const { data: todayMessages, error: msgError } = await supabase
+    .from("mindboost_conversation")
+    .select("role, content, created_at")
+    .eq("user_id", userId)
+    .gte("created_at", `${todayChina}T00:00:00+08:00`)
+    .order("created_at", { ascending: true });
 
-  if (messagesResult.error) {
-    console.error("Error fetching conversation history:", messagesResult.error.message);
+  if (msgError) {
+    console.error("Error fetching conversation history:", msgError.message);
     return { messages: [], summary: null };
   }
 
-  const messages = ((messagesResult.data ?? []) as ConversationMessage[]).reverse();
-  const summary = summaryResult.data?.summary ?? null;
+  // 2. Cumulative daily summary log (all past days)
+  const { data: summaries } = await supabase
+    .from("mindboost_daily_summary")
+    .select("summary_date, summary")
+    .eq("user_id", userId)
+    .order("summary_date", { ascending: true });
 
-  return { messages, summary };
+  const summaryLog = summaries?.length
+    ? summaries.map((s: any) => `[${s.summary_date}] ${s.summary}`).join("\n")
+    : null;
+
+  return {
+    messages: (todayMessages ?? []) as ConversationMessage[],
+    summary: summaryLog,
+  };
 }
 
 export async function saveConversationSummary(
@@ -95,21 +98,41 @@ export async function saveConversationMessage(
     // Non-fatal: bot has already generated its response, only short-term memory affected
     return;
   }
+  // Messages retained indefinitely — no pruning.
+  // Daily summaries (mindboost_daily_summary) provide long-term memory;
+  // date-based filtering in getConversationHistory() limits context to today.
+}
 
-  // Keep only the 20 latest messages
-  const { data } = await supabase
-    .from("mindboost_conversation")
-    .select("id, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+// ── Daily summaries (mindboost_daily_summary) ─────────────────────────────
 
-  if (data && data.length > 20) {
-    const toDelete = data.slice(20).map((d: { id: string }) => d.id);
-    const { error: delErr } = await supabase.from("mindboost_conversation").delete().in("id", toDelete);
-    if (delErr) {
-      console.error("[saveConversationMessage] prune error:", delErr.code, delErr.message);
-    }
+export async function upsertDailySummary(
+  userId: string,
+  summaryDate: string,
+  summaryText: string
+): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("mindboost_daily_summary").upsert({
+    user_id: userId,
+    summary_date: summaryDate,
+    summary: summaryText,
+    created_at: new Date().toISOString(),
+  }, { onConflict: "user_id,summary_date" });
+  if (error) {
+    console.error("[upsertDailySummary] error:", error.code, error.message);
+    throw new Error("Échec de la sauvegarde du résumé quotidien.");
   }
+}
+
+export async function getDailySummaries(
+  userId: string
+): Promise<Array<{ summary_date: string; summary: string }>> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("mindboost_daily_summary")
+    .select("summary_date, summary")
+    .eq("user_id", userId)
+    .order("summary_date", { ascending: true });
+  return (data ?? []) as Array<{ summary_date: string; summary: string }>;
 }
 
 // --- Parking list ---
