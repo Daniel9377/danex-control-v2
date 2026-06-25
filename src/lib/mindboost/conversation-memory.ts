@@ -135,6 +135,21 @@ export async function getDailySummaries(
   return (data ?? []) as Array<{ summary_date: string; summary: string }>;
 }
 
+// ── Reconciliation escalation ─────────────────────────────────────────────
+
+export function formatReconciliationLine(rc: { person_name: string; entity_type: string; created_at: string; escalation_day: number; claim_text: string }): string {
+  const ageDays = Math.floor((Date.now() - new Date(rc.created_at).getTime()) / 86400000);
+  const desc = rc.claim_text.slice(0, 80);
+
+  if (rc.escalation_day <= 1) {
+    return `○ ${rc.person_name} (${rc.entity_type === "new_entity" ? "nouveau" : rc.entity_type}) — ${desc}`;
+  } else if (rc.escalation_day <= 3) {
+    return `⚠ ${rc.person_name} — ${ageDays}j sans mise à jour dans l'app. Tu le fais quand ?`;
+  } else {
+    return `🚨 ${rc.person_name} — ${ageDays}j. Demain, je garde la donnée de l'app.`;
+  }
+}
+
 // ── Mention escalation tiers ──────────────────────────────────────────────
 
 export function formatMentionLine(mention: { person_name: string; description: string; created_at: string }): string {

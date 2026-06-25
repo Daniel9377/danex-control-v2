@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getChinaDateISO } from "@/lib/mindboost/time";
-import { getConversationHistory, upsertDailySummary, saveEveningCheckPending, formatMentionLine } from "@/lib/mindboost/conversation-memory";
+import { getConversationHistory, upsertDailySummary, saveEveningCheckPending, formatMentionLine, formatReconciliationLine } from "@/lib/mindboost/conversation-memory";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
 import { formatEveningReport } from "@/lib/mindboost/evening-report";
 import { getUrgentPurchaseAlerts } from "@/lib/mindboost/alerts";
@@ -81,6 +81,50 @@ Ne mets PAS de formules de politesse, pas de "Résumé du jour:", pas de "Bonjou
       ? openMentions.map((m: any) => formatMentionLine(m)).join("\n")
       : "Aucune mention en attente.";
 
+    // Process pending reconciliations — escalate or close based on app state
+    const { data: pendingRcs } = await supabase
+      .from("mindboost_reconciliations")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+
+    const rcLines: string[] = [];
+    if (pendingRcs) {
+      for (const rc of pendingRcs as any[]) {
+        if (rc.entity_type !== "new_entity" && rc.entity_id && rc.snapshot) {
+          // Compare current Supabase state against snapshot
+          const table = rc.entity_type === "debt" ? "debts" : "orders";
+          const { data: current } = await supabase.from(table).select("*").eq("id", rc.entity_id).maybeSingle();
+          if (current) {
+            const snap = rc.snapshot as Record<string, unknown>;
+            const changed = Object.keys(snap).some((k) => String(current[k]) !== String(snap[k]));
+            if (changed) {
+              await supabase.from("mindboost_reconciliations")
+                .update({ status: "app_updated", resolved_at: new Date().toISOString() })
+                .eq("id", rc.id);
+              continue; // Skip — resolved
+            }
+          }
+        }
+
+        // Not changed or new_entity — escalate
+        const newDay = (rc.escalation_day ?? 0) + 1;
+        if (newDay >= 5) {
+          // Default to app truth after 5 days
+          await supabase.from("mindboost_reconciliations")
+            .update({ status: "defaulted_to_app", escalation_day: newDay, resolved_at: new Date().toISOString() })
+            .eq("id", rc.id);
+          // Don't show this one anymore in context going forward
+        } else {
+          await supabase.from("mindboost_reconciliations")
+            .update({ escalation_day: newDay, last_reminded_at: new Date().toISOString() })
+            .eq("id", rc.id);
+          rcLines.push(formatReconciliationLine({ ...rc, escalation_day: newDay }));
+        }
+      }
+    }
+
     // 6. Send evening report to Telegram + trigger evening check flow
     const urgentAlerts = await getUrgentPurchaseAlerts(userId);
     const urgentNote = urgentAlerts.length > 0
@@ -89,7 +133,7 @@ Ne mets PAS de formules de politesse, pas de "Résumé du jour:", pas de "Bonjou
 
     await sendTelegramMessage(
       process.env.TELEGRAM_ALLOWED_CHAT_ID!,
-      `🌙 Soir — ${todayChina}\n\n${reportText}${urgentNote}\n\nMentions en attente:\n${mentionLines}\n\nApp completée ? (oui / non)`
+      `🌙 Soir — ${todayChina}\n\n${reportText}${urgentNote}\n\nReconciliations:\n${rcLines.length > 0 ? rcLines.join("\n") : "Aucune en attente."}\n\nMentions en attente:\n${mentionLines}\n\nApp completée ? (oui / non)`
     );
 
     // Save evening check pending so the oui/non flow engages

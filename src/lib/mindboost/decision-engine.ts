@@ -43,6 +43,30 @@ async function openMention(userId: string, personName: string, rawMsg: string): 
   }
 }
 
+async function openReconciliation(
+  userId: string,
+  personName: string,
+  claimText: string,
+  entityType: "debt" | "order" | "new_entity",
+  entityId: string | null,
+  snapshot: Record<string, unknown> | null
+): Promise<void> {
+  const { createAdminClient: rAdmin } = await import("@/lib/supabase/admin");
+  const db = rAdmin();
+  // Upsert: one active claim per person+type. If re-claimed, update the claim text.
+  await db.from("mindboost_reconciliations").upsert({
+    user_id: userId,
+    entity_type: entityType,
+    entity_id: entityId,
+    person_name: personName,
+    claim_text: claimText.trim(),
+    snapshot,
+    status: "pending",
+    escalation_day: 0,
+    created_at: new Date().toISOString(),
+  }, { onConflict: "user_id,entity_type,person_name,status" });
+}
+
 const MINDBOOST_SYSTEM_PROMPT = `TU ES MINDBOOST
 Assistant personnel de Daniel Ngoy. Patron, gerant, controleur financier, conseiller.
 Tu travailles AVEC Daniel, pas seulement pour lui.
@@ -107,7 +131,9 @@ MECANIQUE DE REPONSE — REGLES OBLIGATOIRES
    Ne repete JAMAIS le meme texte standard ("urgences reelles", "voici les donnees") quand Daniel vient de dire quelque chose de nouveau et de different. Chaque message substantiel merite une reponse qui y fait explicitement reference.
    Si deux messages consecutifs de Daniel sont differents et substantiels, tes deux reponses doivent etre VISIBLEMENT differentes — la premiere phrase de chaque reponse doit refleter ce que Daniel vient de dire.
 
-9bis. URGENCE = DONNEES REELLES, JAMAIS MEMOIRE : une chose n est URGENTE que si les VRAIES donnees Supabase le prouvent.
+9bis. RECLAMATIONS = VERITE CONVERSATIONNELLE : les entrees du bloc RECLAMATIONS EN ATTENTE representent ce que Daniel a verbalement affirme. Traite-les comme la verite courante dans la conversation, meme si elles contredisent les donnees Supabase. Tu peux mentionner le decalage ("tu m'as dit que c'etait regle, meme si l'app n'a pas encore ete mise a jour"), mais tu ne dois JAMAIS nier l'existence d'une entite qui apparait dans ce bloc — l'information de Daniel est prioritaire dans la conversation, seul le registre officiel (l'app) a le dernier mot comptable.
+
+9ter. URGENCE = DONNEES REELLES, JAMAIS MEMOIRE : une chose n est URGENTE que si les VRAIES donnees Supabase le prouvent.
    - Une commande en retard = son statut reel (orders.status) et sa vraie date (transactions.transaction_date).
    - Une dette urgente = sa VRAIE date d echeance (debts.due_date) est proche ou depassee.
    - Une dette dont l echeance est lointaine n est PAS urgente, meme si la conversation en a parle.
@@ -266,14 +292,19 @@ export async function processMessageWithAI(userMessage: string): Promise<{ reply
     return `nuit (${heureChine})`;
   })();
 
-  // Load all-time transaction count + client roster for context richness
+  // Load all-time transaction count + client roster + pending reconciliations
   const { createAdminClient: ctxAdmin } = await import("@/lib/supabase/admin");
   const supabaseCtx = ctxAdmin();
-  const { count: totalTxCount } = await supabaseCtx
-    .from("transactions").select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
-  const { data: allClients } = await supabaseCtx
-    .from("clients").select("id, name").eq("user_id", userId).order("name");
+  const [txCountResult, allClientsResult, pendingRcResult] = await Promise.all([
+    supabaseCtx.from("transactions").select("*", { count: "exact", head: true }).eq("user_id", userId),
+    supabaseCtx.from("clients").select("id, name").eq("user_id", userId).order("name"),
+    supabaseCtx.from("mindboost_reconciliations").select("*").eq("user_id", userId).eq("status", "pending").order("created_at", { ascending: true }),
+  ]);
+  const totalTxCount = txCountResult.count;
+  const allClients = allClientsResult.data;
+  const pendingReconciliations = (pendingRcResult.data ?? []) as Array<{
+    person_name: string; entity_type: string; claim_text: string; created_at: string; escalation_day: number;
+  }>;
 
   const contextBlock = [
     `--- CONTEXTE SUPABASE ANONYMISE ---`,
@@ -286,6 +317,14 @@ export async function processMessageWithAI(userMessage: string): Promise<{ reply
     `Vraies depenses aujourd'hui: ${summary.realExpenseCount}`,
     `Dettes (avec echeance):`,
     ...(urgencyLines.length > 0 ? urgencyLines : ["Aucune"]),
+    ...(pendingReconciliations.length > 0
+      ? [
+          `RECLAMATIONS EN ATTENTE (a traiter comme vraies sauf preuve du contraire):`,
+          ...pendingReconciliations.map((rc: any) =>
+            `- ${rc.person_name}: ${rc.entity_type === "new_entity" ? "nouvelle entite (pas dans Supabase)" : rc.entity_type + " " + (rc.claim_text?.slice(0, 80) ?? "")} — dit le ${new Date(rc.created_at).toISOString().slice(0, 10)}${rc.escalation_day > 0 ? ` (${rc.escalation_day}j sans confirmation)` : ""}`
+          ),
+        ]
+      : []),
     `Urgences: ${alerts.hasUrgentIssues ? "oui" : "non"}`,
     anonymizedContext,
     // Client roster — anonymized AFTER anonymizeContext so counters don't conflict
@@ -428,6 +467,53 @@ Pas de phrase. Pas d'explication.`,
         finalResponse = `Mention notee pour ${detectedClient}.` + (finalResponse ? `\n\n${finalResponse}` : "");
         mentionOpened = true;
       }
+    }
+  }
+
+  // ── Reconciliation claim detection (deterministic, like mention-resolve) ──
+  const claimDoneRe = /c'est réglé|cest regle|c'est deja fait|cest deja fait|déjà fait|deja fait|déjà traité|deja traite|déjà effectué|c'était déjà fait|cetait deja fait/i;
+  const claimNewRe = /(?:il|elle)\s+me\s+doit\s+(\d+)\s*(?:USD|\$|dollars?|CNY|kuai|RMB|EUR|€)/i;
+  const claimOweRe = /je\s+(?:lui\s+)?dois\s+(\d+)\s*(?:USD|\$|dollars?|CNY|kuai|RMB|EUR|€)\s+(?:à\s+)?([A-Za-zÀ-ÿ]+)/i;
+
+  // Existing entity claims: "c'est réglé/déjà fait" + matching person in debts/orders
+  if (claimDoneRe.test(userMessage)) {
+    const rcName = detectClientMention(userMessage);
+    if (rcName) {
+      // Check if this name appears in active debts
+      const matchedDebt = alerts.debts.find((d: any) =>
+        d.person_name.toLowerCase().includes(rcName.toLowerCase()) || rcName.toLowerCase().includes(d.person_name.toLowerCase())
+      );
+      if (matchedDebt) {
+        await openReconciliation(userId, matchedDebt.person_name, userMessage, "debt", matchedDebt.id, {
+          status: matchedDebt.status, due_date: matchedDebt.due_date, amount: matchedDebt.amount,
+        });
+        finalResponse = (finalResponse ? finalResponse + "\n" : "") + `Note — reconciliation pour ${matchedDebt.person_name}.`;
+      }
+    }
+  }
+
+  // New entity claims: "il/elle me doit X$"
+  const newEntityMatch = userMessage.match(claimNewRe);
+  if (newEntityMatch) {
+    const entName = detectClientMention(userMessage);
+    if (entName) {
+      // Only trigger if this person is NOT in existing clients/debts data
+      const existsInAlerts = alerts.debts.some((d: any) => d.person_name.toLowerCase().includes(entName.toLowerCase()));
+      if (!existsInAlerts) {
+        await openReconciliation(userId, entName, userMessage, "new_entity", null, null);
+        finalResponse = (finalResponse ? finalResponse + "\n" : "") + `Note — ${entName} en attente d'ajout dans l'app.`;
+      }
+    }
+  }
+
+  // "je dois à X Y$" — new_entity if X not in existing data
+  const oweMatch = userMessage.match(claimOweRe);
+  if (oweMatch) {
+    const oweName = oweMatch[2];
+    const existsInAlerts = alerts.debts.some((d: any) => d.person_name.toLowerCase().includes(oweName.toLowerCase()));
+    if (!existsInAlerts) {
+      await openReconciliation(userId, oweName, userMessage, "new_entity", null, null);
+      finalResponse = (finalResponse ? finalResponse + "\n" : "") + `Note — ${oweName} en attente d'ajout dans l'app.`;
     }
   }
 
