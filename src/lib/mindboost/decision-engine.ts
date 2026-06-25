@@ -73,6 +73,13 @@ MECANIQUE DE REPONSE — REGLES OBLIGATOIRES
    Si une info n est NI dans le bloc CONTEXTE SUPABASE NI donnee par Daniel a l instant, TU NE L INVENTES PAS. Tu demandes.
    Les heures de relance sont exclusivement : "ce soir", "demain matin", "demain soir". Jamais une heure precise inventee.
 
+10. VALIDE LES CHOIX DE DANIEL : quand Daniel exprime une decision claire (je prefere X, je commence par Y, je le fais plus tard), VALIDE ce choix.
+    Ex: "Je prefere completer l'app" → "Bien. Ouvre l'app, saisis tes depenses du jour. Dis-moi quand c est fait."
+    Ex: "Je commence par les dettes" → "OK. Commence par Jean-Luc Test : 300 USD, 22 jours de retard. Tu rembourses combien ce soir ?"
+    Ne ramene PAS une autre priorite. Ne dis PAS "oui mais". Ne fais PAS de reproche.
+    NUANCE : si Daniel FUIT (change de sujet, ne decide rien, repond "bof" ou "je sais pas"), tu gardes le droit de le recadrer.
+    Valider un CHOIX ≠ laisser filer une FUITE. Un choix clair se valide. Une fuite se recadre.
+
 PHILOSOPHIE DE REPONSE
 Court si simple. Direct si faut stopper. Calme si Daniel est bloque.
 Dur si Daniel fuit. Jamais insultant. Jamais de flatterie. Jamais de motivation sans action.
@@ -272,9 +279,10 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   messages.push({ role: "user", content: contextBlock });
 
   // 4. RAPPEL explicite avant le message de Daniel
+  const isSmallTalk = /^(salut|bonjour|coucou|hey|yo|bon|il fait|la meteo|le temps|ca va|comment va|quoi de neuf|wesh|slt|bjr|cc)$/i.test(userMessage.trim()) || userMessage.trim().length < 10;
   messages.push({
     role: "user",
-    content: `RAPPEL: les seuls faits financiers valides sont ceux du bloc CONTEXTE SUPABASE ci-dessus. Si l'historique de conversation contredit Supabase, Supabase a raison. Si une info n'est NI dans Supabase NI donnee par Daniel a l'instant, tu ne l'inventes pas — tu demandes. Les heures de relance sont "ce soir", "demain matin", ou "demain soir" — jamais une heure precise inventee.`,
+    content: `RAPPEL: les seuls faits financiers valides sont ceux du bloc CONTEXTE SUPABASE ci-dessus. Si l'historique de conversation contredit Supabase, Supabase a raison. Si une info n'est NI dans Supabase NI donnee par Daniel a l'instant, tu ne l'inventes pas — tu demandes. Les heures de relance sont "ce soir", "demain matin", ou "demain soir" — jamais une heure precise inventee.${isSmallTalk ? " Ceci est du small talk — reponse breve, une phrase max, ne deroule pas les donnees financieres sauf si Daniel les demande." : ""}`,
   });
 
   // Étape 1 — Classification d'intention (appel DeepSeek léger, sans contexte lourd)
@@ -303,14 +311,21 @@ Reponds UNIQUEMENT avec le mot et le nom. Pas de phrase. Pas d'explication.`,
   const response = await callDeepSeek(messages);
   let finalResponse = deanonymize(map, response);
 
-  // Si intention = CREATION, demander confirmation avant de creer
+  // Si intention = CREATION, demander confirmation AVANT de creer quoi que ce soit
   if (intent === "CREATION" && detectedName) {
     const existing = await searchExistingClient(userId, detectedName);
     if (existing) {
-      finalResponse = `${detectedName} est deja dans tes clients. ${finalResponse || "Tu veux les details ?"}`;
+      // Client exists — switch to INFO
+      finalResponse = `${detectedName} est deja dans tes clients. ${finalResponse}`;
     } else {
+      // Nouveau client — créer l'intake en mode confirmation, FORCER l'affichage
       await createIntakeSession(userId, detectedName);
-      finalResponse = finalResponse || `Je ne trouve pas ${detectedName} dans tes clients. Tu veux creer un nouveau client ${detectedName} ? (oui / non)`;
+      // Toujours prefixer la reponse avec la question de confirmation,
+      // quel que soit le contenu produit par DeepSeek
+      const confirmMsg = `Je ne trouve pas ${detectedName} dans tes clients. Tu veux creer un nouveau client ${detectedName} ? (oui / non)`;
+      finalResponse = finalResponse
+        ? `${confirmMsg}\n\n${finalResponse}`
+        : confirmMsg;
     }
   }
 
