@@ -7,6 +7,20 @@ import { getChinaNow, getChinaHour } from "@/lib/mindboost/time";
 import { getConversationHistory, saveConversationMessage, saveConversationSummary, saveParkingListItem } from "@/lib/mindboost/conversation-memory";
 import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, createClientAndOrder, getNextQuestion, detectClientMention, searchExistingClient, updateIntakeClientName, type ClientIntakeData } from "@/lib/mindboost/client-intake";
 
+async function openMention(userId: string, personName: string, rawMsg: string): Promise<void> {
+  const { createAdminClient: mAdmin } = await import("@/lib/supabase/admin");
+  const db = mAdmin();
+  const { error } = await db.from("mindboost_mentions").insert({
+    user_id: userId,
+    person_name: personName,
+    description: rawMsg.trim(),
+    status: "open",
+  });
+  if (error) {
+    console.error("[mentions] deterministic insert error:", error.code, error.message);
+  }
+}
+
 const MINDBOOST_SYSTEM_PROMPT = `TU ES MINDBOOST
 Assistant personnel de Daniel Ngoy. Patron, gerant, controleur financier, conseiller.
 Tu travailles AVEC Daniel, pas seulement pour lui.
@@ -369,20 +383,24 @@ Pas de phrase. Pas d'explication.`,
     }
   }
 
-  // MENTION + need cue → save as open mention (fire-and-forget)
+  // MENTION + need cue → save as open mention (classifier-based, fire-and-forget)
+  let mentionOpened = false;
   const needCueRe = /a besoin|veut\b|voulait|demande\b|demandait|cherche\b|attend\b/i;
   if (intent === "MENTION" && detectedName && needCueRe.test(userMessage)) {
-    const { createAdminClient: mentionAdmin } = await import("@/lib/supabase/admin");
-    const mentionDb = mentionAdmin();
-    const { error: mentionErr } = await mentionDb.from("mindboost_mentions").insert({
-      user_id: userId,
-      person_name: detectedName,
-      description: userMessage.trim(),
-      status: "open",
-    });
-    if (mentionErr) {
-      console.error("[mentions] insert error:", mentionErr.code, mentionErr.message);
-      // Non-fatal — the reply is already generated
+    await openMention(userId, detectedName, userMessage);
+    mentionOpened = true;
+  }
+
+  // Deterministic mention detection (independent of classifier intent)
+  // Matches Daniel's real speech patterns: "il m'a demandé de", "pas encore fait", etc.
+  if (!mentionOpened) {
+    const detCueRe = /il m'a demand[eé] de|elle m'a demand[eé] de|j'avais la flemme|j'ai la flemme|pas encore fait|je n'ai pas encore fait|depuis (?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i;
+    if (detCueRe.test(userMessage)) {
+      const detectedClient = detectClientMention(userMessage);
+      if (detectedClient) {
+        await openMention(userId, detectedClient, userMessage);
+        mentionOpened = true;
+      }
     }
   }
 

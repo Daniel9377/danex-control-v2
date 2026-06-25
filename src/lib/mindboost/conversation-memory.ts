@@ -135,6 +135,24 @@ export async function getDailySummaries(
   return (data ?? []) as Array<{ summary_date: string; summary: string }>;
 }
 
+// ── Mention escalation tiers ──────────────────────────────────────────────
+
+export function formatMentionLine(mention: { person_name: string; description: string; created_at: string }): string {
+  const ageDays = Math.floor((Date.now() - new Date(mention.created_at).getTime()) / 86400000);
+  const desc = mention.description.slice(0, 100);
+
+  if (ageDays <= 1) {
+    // Tier 0: neutral
+    return `○ ${mention.person_name} — ${desc}`;
+  } else if (ageDays <= 3) {
+    // Tier 1: firmer
+    return `⚠ ${mention.person_name} (${ageDays}j) — ${desc} — Tu le fais quand ?`;
+  } else {
+    // Tier 2: insistent — Daniel explicitly asked to be pushed hard
+    return `🚨 ${mention.person_name} (${ageDays}j) — Tu m'as dit de te pousser à fond. ${desc}. Fais-le aujourd'hui.`;
+  }
+}
+
 // --- Parking list ---
 
 export async function saveParkingListItem(userId: string, idea: string): Promise<void> {

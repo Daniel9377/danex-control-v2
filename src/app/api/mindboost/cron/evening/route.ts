@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getChinaDateISO } from "@/lib/mindboost/time";
-import { getConversationHistory, upsertDailySummary, saveEveningCheckPending } from "@/lib/mindboost/conversation-memory";
+import { getConversationHistory, upsertDailySummary, saveEveningCheckPending, formatMentionLine } from "@/lib/mindboost/conversation-memory";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
 import { formatEveningReport } from "@/lib/mindboost/evening-report";
 import { getUrgentPurchaseAlerts } from "@/lib/mindboost/alerts";
@@ -78,7 +78,7 @@ Ne mets PAS de formules de politesse, pas de "Résumé du jour:", pas de "Bonjou
       .order("created_at", { ascending: true });
 
     const mentionLines = openMentions?.length
-      ? openMentions.map((m: any) => `  ${m.person_name} — ${m.description.slice(0, 100)}`).join("\n")
+      ? openMentions.map((m: any) => formatMentionLine(m)).join("\n")
       : "Aucune mention en attente.";
 
     // 6. Send evening report to Telegram + trigger evening check flow

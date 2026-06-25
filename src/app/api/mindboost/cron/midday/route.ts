@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { formatMentionLine } from '@/lib/mindboost/conversation-memory';
 import { getMindboostTodaySummary } from '@/lib/mindboost/today-summary';
 import { getMindboostAlerts, getUrgentPurchaseAlerts } from '@/lib/mindboost/alerts';
 import { sendTelegramMessage } from '@/lib/mindboost/telegram';
@@ -32,9 +34,30 @@ export async function GET(req: NextRequest) {
     const urgentDebts = alerts.debts.filter((d) => d.daysOld >= 7);
     const hasUrgency = urgentPurchases.length > 0 || urgentDebts.length > 0 || summary.transactionCount === 0;
 
-    const lines = hasUrgency
-      ? ['Controle midi.', `Transactions aujourd hui : ${summary.transactionCount} (${summary.realExpenseCount} vraies depenses).`]
-      : ['Controle midi. Rien d urgent.'];
+    // Open mentions first — Daniel's top priority
+    const supabase = createAdminClient();
+    const { data: openMentions } = await supabase
+      .from("mindboost_mentions")
+      .select("person_name, description, created_at")
+      .eq("user_id", userId)
+      .eq("status", "open")
+      .order("created_at", { ascending: true });
+
+    const lines = ['Controle midi.'];
+
+    if (openMentions && openMentions.length > 0) {
+      lines.push(`\nMentions en attente (${openMentions.length}):`);
+      for (const m of openMentions as any[]) {
+        lines.push(formatMentionLine(m));
+      }
+    } else {
+      lines.push("\nAucune mention en attente.");
+    }
+
+    lines.push('');
+    lines.push(hasUrgency
+      ? `Transactions aujourd hui : ${summary.transactionCount} (${summary.realExpenseCount} vraies depenses).`
+      : 'Rien d urgent.');
 
     if (hasUrgency) {
       if (urgentPurchases.length > 0) {
