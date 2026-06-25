@@ -81,7 +81,11 @@ MECANIQUE DE REPONSE — REGLES OBLIGATOIRES
    Exemple : tu peux dire "3 dettes en retard = 850 USD" (chiffre verifie).
    Tu ne peux PAS dire "tu geres mal tes dettes" (jugement sans donnee).
 
-9. URGENCE = DONNEES REELLES, JAMAIS MEMOIRE : une chose n est URGENTE que si les VRAIES donnees Supabase le prouvent.
+9. REPONDS AU NOUVEAU, PAS AU VIEUX : si le dernier message de Daniel contient une information NOUVELLE et substantielle sur un client specifique (une situation, un probleme, une demande — pas une question generique ni du small talk), ta reponse doit d ABORD reconnaitre et traiter ce contenu specifique avant de lister les urgences connues.
+   Ne repete JAMAIS le meme texte standard ("urgences reelles", "voici les donnees") quand Daniel vient de dire quelque chose de nouveau et de different. Chaque message substantiel merite une reponse qui y fait explicitement reference.
+   Si deux messages consecutifs de Daniel sont differents et substantiels, tes deux reponses doivent etre VISIBLEMENT differentes — la premiere phrase de chaque reponse doit refleter ce que Daniel vient de dire.
+
+9bis. URGENCE = DONNEES REELLES, JAMAIS MEMOIRE : une chose n est URGENTE que si les VRAIES donnees Supabase le prouvent.
    - Une commande en retard = son statut reel (orders.status) et sa vraie date (transactions.transaction_date).
    - Une dette urgente = sa VRAIE date d echeance (debts.due_date) est proche ou depassee.
    - Une dette dont l echeance est lointaine n est PAS urgente, meme si la conversation en a parle.
@@ -383,22 +387,23 @@ Pas de phrase. Pas d'explication.`,
     }
   }
 
-  // MENTION + need cue → save as open mention (classifier-based, fire-and-forget)
+  // MENTION + need cue → save as open mention (classifier-based)
   let mentionOpened = false;
   const needCueRe = /a besoin|veut\b|voulait|demande\b|demandait|cherche\b|attend\b/i;
   if (intent === "MENTION" && detectedName && needCueRe.test(userMessage)) {
     await openMention(userId, detectedName, userMessage);
+    finalResponse = `Mention notee pour ${detectedName}.` + (finalResponse ? `\n\n${finalResponse}` : "");
     mentionOpened = true;
   }
 
   // Deterministic mention detection (independent of classifier intent)
-  // Matches Daniel's real speech patterns: "il m'a demandé de", "pas encore fait", etc.
   if (!mentionOpened) {
     const detCueRe = /il m'a demand[eé] de|elle m'a demand[eé] de|j'avais la flemme|j'ai la flemme|pas encore fait|je n'ai pas encore fait|depuis (?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i;
     if (detCueRe.test(userMessage)) {
       const detectedClient = detectClientMention(userMessage);
       if (detectedClient) {
         await openMention(userId, detectedClient, userMessage);
+        finalResponse = `Mention notee pour ${detectedClient}.` + (finalResponse ? `\n\n${finalResponse}` : "");
         mentionOpened = true;
       }
     }
@@ -416,6 +421,16 @@ Pas de phrase. Pas d'explication.`,
   const savedTask = await detectAndSaveTasks(userId, userMessage);
   if (savedTask) {
     finalResponse = `${finalResponse}\nTache ajoutee : ${savedTask}`;
+    // Also open a mention if a client name is found — task-worthy messages
+    // with a named client deserve mention tracking too
+    if (!mentionOpened) {
+      const taskClient = detectClientMention(userMessage);
+      if (taskClient) {
+        await openMention(userId, taskClient, userMessage);
+        finalResponse = finalResponse + `\nMention notee pour ${taskClient}.`;
+        mentionOpened = true;
+      }
+    }
   }
 
   // Sauvegarder dans la memoire — résumé STRUCTURÉ (contexte de discussion uniquement)

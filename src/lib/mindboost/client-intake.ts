@@ -467,15 +467,31 @@ export async function startIntakeSession(
 }
 
 export function detectClientMention(message: string): string | null {
-  const patterns = [
-    /(?:cliente?|client)\s+([A-Za-zÀ-ÿ]+)/i,
-    /([A-Za-zÀ-ÿ]+)\s+(?:a payé|a envoyé|a commandé|a déposé)/i,
-    /commande\s+(?:de\s+)?([A-Za-zÀ-ÿ]+)/i,
+  // French stopwords — common function words that the generic client/cliente
+  // pattern could accidentally capture as a "name"
+  const STOPWORDS = new Set([
+    "ne", "a", "le", "la", "les", "est", "son", "sa", "ses",
+    "du", "de", "des", "pas", "plus", "encore", "et", "ou",
+    "un", "une", "sur", "dans", "pour", "par", "avec", "sans",
+    "ce", "cette", "ces", "mon", "ma", "mes", "ton", "ta", "tes",
+  ]);
+
+  // Most specific patterns FIRST (commande de X, X a payé/envoyé/commandé/déposé),
+  // then the generic client/cliente + word LAST — avoids "client ne" matching.
+  const patterns: Array<{ re: RegExp; isGeneric: boolean }> = [
+    { re: /commande\s+(?:de\s+)?([A-Za-zÀ-ÿ]+)/i, isGeneric: false },
+    { re: /([A-Za-zÀ-ÿ]+)\s+(?:a pay[eé]|a envoy[eé]|a command[eé]|a d[eé]pos[eé])/i, isGeneric: false },
+    { re: /(?:cliente?|client)\s+([A-Za-zÀ-ÿ]+)/i, isGeneric: true },
   ];
 
-  for (const pattern of patterns) {
-    const match = message.match(pattern);
-    if (match?.[1]) return match[1];
+  for (const { re, isGeneric } of patterns) {
+    const match = message.match(re);
+    if (match?.[1]) {
+      const captured = match[1];
+      // Stopword guard for generic pattern only
+      if (isGeneric && STOPWORDS.has(captured.toLowerCase())) continue;
+      return captured;
+    }
   }
   return null;
 }
