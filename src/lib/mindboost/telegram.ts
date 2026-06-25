@@ -75,7 +75,7 @@ export async function sendTelegramDocument(
   const token = requireEnv("TELEGRAM_BOT_TOKEN");
   const formData = new FormData();
   formData.append("chat_id", String(chatId));
-  formData.append("document", new Blob([buffer]), filename);
+  formData.append("document", new Blob([new Uint8Array(buffer)]), filename);
   if (caption) formData.append("caption", caption);
 
   const response = await fetch(`https://api.telegram.org/bot${token}/sendDocument`, {

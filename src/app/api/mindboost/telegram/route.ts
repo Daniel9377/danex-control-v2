@@ -147,14 +147,15 @@ async function processText(text: string, chatId: number | string): Promise<void>
   ]);
 
   const reply = result.reply;
-  const cooperated = result.cooperated;
+  const signal = result.cooperationSignal;
 
-  // Cooperation signal: if Daniel made a clear decision, reset the loop counter
-  if (cooperated) {
+  // Cooperation signal: DECISION → reset, EVASION → increment, NEUTRE → do nothing
+  if (signal === "DECISION") {
     await resetLoopCount(userId);
-  } else {
+  } else if (signal === "EVASION") {
     await incrementLoopCount(userId);
   }
+  // NEUTRE: leave counter untouched (info requests, small talk, questions)
 
   const level = await evaluateEscalationLevel(text, alerts, userId);
 

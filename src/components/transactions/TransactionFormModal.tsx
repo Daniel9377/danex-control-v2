@@ -266,10 +266,19 @@ export function TransactionFormModal({
     if (!subType || !meta) return;
 
     // Block submission if an order is required but none selected
-    if (meta.needsOrder && !orderId) {
-      clearError();
-      setError("Sélectionne une commande pour cette opération.");
-      return;
+    if (meta.needsOrder) {
+      if (meta.needsAllocations) {
+        const missing = allocations.find((a) => !a.orderId);
+        if (missing) {
+          clearError();
+          setError("Chaque ligne de répartition doit avoir une commande sélectionnée.");
+          return;
+        }
+      } else if (!orderId) {
+        clearError();
+        setError("Sélectionne une commande pour cette opération.");
+        return;
+      }
     }
 
     const input: CreateOperationInput = {

@@ -1,5 +1,5 @@
 import { callDeepSeek, type DeepSeekMessage } from "@/lib/mindboost/deepseek";
-import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost/anonymizer";
+import { createAnonymizer, anonymize, anonymizeContext, deanonymize } from "@/lib/mindboost/anonymizer";
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getCurrentCalendarStatus } from "@/lib/mindboost/google-calendar";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
@@ -133,7 +133,7 @@ Pas de markdown. Pas d asterisques, pas de gras, pas d italique, pas de tirets m
 Chaque reponse : un constat + une decision + une action ou une relance.
 Langue : francais par defaut. Comprend fautes, abreviations, melanges fr/en/zh.`;
 
-export async function processMessageWithAI(userMessage: string): Promise<{ reply: string; cooperated: boolean }> {
+export async function processMessageWithAI(userMessage: string): Promise<{ reply: string; cooperationSignal: "DECISION" | "EVASION" | "NEUTRE" }> {
   const map = createAnonymizer();
   const userId = process.env.MINDBOOST_USER_ID ?? "unknown";
 
@@ -141,7 +141,7 @@ export async function processMessageWithAI(userMessage: string): Promise<{ reply
   const activeIntake = await getActiveIntakeSession(userId);
   if (activeIntake) {
     const intakeReply = await processIntakeResponse(activeIntake.session_id, activeIntake.client_name, activeIntake.data as ClientIntakeData, userMessage, userId);
-    return { reply: intakeReply, cooperated: false };
+    return { reply: intakeReply, cooperationSignal: "NEUTRE" };
   }
 
   // Task completion — check BEFORE DeepSeek, skip AI if match found
@@ -151,7 +151,7 @@ export async function processMessageWithAI(userMessage: string): Promise<{ reply
       saveConversationMessage(userId, "user", userMessage),
       saveConversationMessage(userId, "assistant", `Tache marquee comme faite : ${completedTask}. Bien.`),
     ]);
-    return { reply: `Tache marquee comme faite : ${completedTask}. Bien.`, cooperated: true };
+    return { reply: `Tache marquee comme faite : ${completedTask}. Bien.`, cooperationSignal: "DECISION" };
   }
 
   const busyKeywords = /en cours|en r[eé]union|en classe|en exam|je peux pas|occup[eé]|je suis pas dispo/i;
@@ -222,26 +222,13 @@ export async function processMessageWithAI(userMessage: string): Promise<{ reply
   })();
 
   // Load all-time transaction count + client roster for context richness
-  const supabaseCtx = createAdminClient();
+  const { createAdminClient: ctxAdmin } = await import("@/lib/supabase/admin");
+  const supabaseCtx = ctxAdmin();
   const { count: totalTxCount } = await supabaseCtx
     .from("transactions").select("*", { count: "exact", head: true })
     .eq("user_id", userId);
   const { data: allClients } = await supabaseCtx
     .from("clients").select("id, name").eq("user_id", userId).order("name");
-
-  // Build client summary lines (anonymized)
-  const clientLines: string[] = [];
-  if (allClients && allClients.length > 0) {
-    clientLines.push(`${allClients.length} clients:`);
-    for (const c of allClients) {
-      const token = map.tokens.get(c.name) ?? c.name;
-      const cm = alerts.clientMoney.find((cm: any) => cm.client_id === c.id);
-      const held = cm ? `${cm.balance} ${cm.currency}` : "0";
-      clientLines.push(`  ${token} (argent detenu: ${held})`);
-    }
-  } else {
-    clientLines.push("0 client");
-  }
 
   const contextBlock = [
     `--- CONTEXTE SUPABASE ANONYMISE ---`,
@@ -255,9 +242,20 @@ export async function processMessageWithAI(userMessage: string): Promise<{ reply
     `Dettes (avec echeance):`,
     ...(urgencyLines.length > 0 ? urgencyLines : ["Aucune"]),
     `Urgences: ${alerts.hasUrgentIssues ? "oui" : "non"}`,
-    ...clientLines,
-    `Argent client total: ${alerts.clientMoney.reduce((s: number, c: any) => s + c.balance, 0)} USD`,
     anonymizedContext,
+    // Client roster — anonymized AFTER anonymizeContext so counters don't conflict
+    (() => {
+      if (!allClients || allClients.length === 0) return "0 client";
+      const lines = [`${allClients.length} clients:`];
+      for (const c of allClients) {
+        const token = anonymize(map, c.name, "entity");
+        const cm = alerts.clientMoney.find((cm: any) => cm.client_id === c.id);
+        const held = cm ? `${cm.balance} ${cm.currency}` : "0";
+        lines.push(`  ${token} (argent detenu: ${held})`);
+      }
+      return lines.join("\n");
+    })(),
+    `Argent client total: ${alerts.clientMoney.reduce((s: number, c: any) => s + c.balance, 0)} USD`,
     ...(alerts.hasUrgentPurchases
       ? [
           ``,
@@ -336,8 +334,11 @@ Pas de phrase. Pas d'explication.`,
   const intent = classParts?.[1]?.toUpperCase() ?? null;
   const detectedName = classParts?.[2]?.trim() || null;
   const cooperationCode = classParts?.[3]?.toUpperCase() ?? null;
-  const cooperated = cooperationCode === "DECISION";
-  console.log("[classifier]", classif, "→ intent:", intent, "name:", detectedName, "coop:", cooperationCode);
+  // Default to NEUTRE on parse failure — never assume evasion
+  const validCodes = ["DECISION", "EVASION", "NEUTRE"] as const;
+  const cooperationSignal: "DECISION" | "EVASION" | "NEUTRE" =
+    validCodes.includes(cooperationCode as any) ? (cooperationCode as any) : "NEUTRE";
+  console.log("[classifier]", classif, "→ intent:", intent, "name:", detectedName, "coop:", cooperationSignal);
 
   // Étape 2 — Réponse normale avec contexte Supabase
   messages.push({ role: "user" as const, content: userMessage });
@@ -387,7 +388,7 @@ Pas de phrase. Pas d'explication.`,
     saveConversationSummary(userId, exchangeSummary),
   ]);
 
-  return { reply: finalResponse, cooperated };
+  return { reply: finalResponse, cooperationSignal };
 }
 
 const TASK_CREATION_PATTERNS: RegExp[] = [
