@@ -1,4 +1,5 @@
 ﻿import { createAdminClient } from "@/lib/supabase/admin";
+import { getChinaDateISO } from "@/lib/mindboost/time";
 import type { Transaction } from "@/lib/supabase/types";
 
 type CategorySummary = {
@@ -18,14 +19,6 @@ export type MindboostTodaySummary = {
   message: string;
 };
 
-function getTodayISODate() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isValidISODate(date: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(date);
-}
-
 function isRealExpense(tx: Transaction) {
   if (tx.sub_type === "personal_expense") return true;
   if (tx.sub_type === "business_expense") return true;
@@ -37,12 +30,8 @@ function isRealExpense(tx: Transaction) {
 }
 
 export async function getMindboostTodaySummary(
-  date: string = getTodayISODate()
+  date: string = getChinaDateISO()
 ): Promise<MindboostTodaySummary> {
-  if (!isValidISODate(date)) {
-    throw new Error("Invalid date format. Expected YYYY-MM-DD.");
-  }
-
   const userId = process.env.MINDBOOST_USER_ID;
 
   if (!userId) {

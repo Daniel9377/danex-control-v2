@@ -3,6 +3,7 @@ import { createAnonymizer, anonymizeContext, deanonymize } from "@/lib/mindboost
 import { getMindboostAlerts } from "@/lib/mindboost/alerts";
 import { getCurrentCalendarStatus } from "@/lib/mindboost/google-calendar";
 import { getMindboostTodaySummary } from "@/lib/mindboost/today-summary";
+import { getChinaNow, getChinaHour } from "@/lib/mindboost/time";
 import { getConversationHistory, saveConversationMessage, saveConversationSummary, saveParkingListItem } from "@/lib/mindboost/conversation-memory";
 import { getActiveIntakeSession, createIntakeSession, updateIntakeSession, closeIntakeSession, createMindboostTask, createClientAndOrder, getNextQuestion, detectClientMention, searchExistingClient, updateIntakeClientName, type ClientIntakeData } from "@/lib/mindboost/client-intake";
 
@@ -132,14 +133,15 @@ Pas de markdown. Pas d asterisques, pas de gras, pas d italique, pas de tirets m
 Chaque reponse : un constat + une decision + une action ou une relance.
 Langue : francais par defaut. Comprend fautes, abreviations, melanges fr/en/zh.`;
 
-export async function processMessageWithAI(userMessage: string): Promise<string> {
+export async function processMessageWithAI(userMessage: string): Promise<{ reply: string; cooperated: boolean }> {
   const map = createAnonymizer();
   const userId = process.env.MINDBOOST_USER_ID ?? "unknown";
 
   // Verifier session intake active
   const activeIntake = await getActiveIntakeSession(userId);
   if (activeIntake) {
-    return await processIntakeResponse(activeIntake.session_id, activeIntake.client_name, activeIntake.data as ClientIntakeData, userMessage, userId);
+    const intakeReply = await processIntakeResponse(activeIntake.session_id, activeIntake.client_name, activeIntake.data as ClientIntakeData, userMessage, userId);
+    return { reply: intakeReply, cooperated: false };
   }
 
   // Task completion — check BEFORE DeepSeek, skip AI if match found
@@ -149,7 +151,7 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
       saveConversationMessage(userId, "user", userMessage),
       saveConversationMessage(userId, "assistant", `Tache marquee comme faite : ${completedTask}. Bien.`),
     ]);
-    return `Tache marquee comme faite : ${completedTask}. Bien.`;
+    return { reply: `Tache marquee comme faite : ${completedTask}. Bien.`, cooperated: true };
   }
 
   const busyKeywords = /en cours|en r[eé]union|en classe|en exam|je peux pas|occup[eé]|je suis pas dispo/i;
@@ -209,27 +211,52 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   }
 
   // Heure actuelle en Chine
-  const nowChina = new Date(Date.now() + 8 * 60 * 60 * 1000);
-  const heureChine = nowChina.toISOString().slice(11, 16);
+  const maintenant = getChinaNow();
+  const heureChine = maintenant.toISOString().slice(11, 16);
   const momentJournee = (() => {
-    const h = parseInt(heureChine.slice(0, 2));
+    const h = getChinaHour();
     if (h >= 5 && h < 12) return `matin (${heureChine})`;
     if (h >= 12 && h < 18) return `apres-midi (${heureChine})`;
     if (h >= 18 && h < 22) return `soir (${heureChine})`;
     return `nuit (${heureChine})`;
   })();
 
+  // Load all-time transaction count + client roster for context richness
+  const supabaseCtx = createAdminClient();
+  const { count: totalTxCount } = await supabaseCtx
+    .from("transactions").select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+  const { data: allClients } = await supabaseCtx
+    .from("clients").select("id, name").eq("user_id", userId).order("name");
+
+  // Build client summary lines (anonymized)
+  const clientLines: string[] = [];
+  if (allClients && allClients.length > 0) {
+    clientLines.push(`${allClients.length} clients:`);
+    for (const c of allClients) {
+      const token = map.tokens.get(c.name) ?? c.name;
+      const cm = alerts.clientMoney.find((cm: any) => cm.client_id === c.id);
+      const held = cm ? `${cm.balance} ${cm.currency}` : "0";
+      clientLines.push(`  ${token} (argent detenu: ${held})`);
+    }
+  } else {
+    clientLines.push("0 client");
+  }
+
   const contextBlock = [
     `--- CONTEXTE SUPABASE ANONYMISE ---`,
     `Date: ${summary.date}`,
     `Heure Chine: ${momentJournee}`,
     `Info: Daniel complete son app le soir, pas le matin. Ne pas pousser a completer l app avant 18h sauf urgence.`,
-    `App completee: ${summary.appCompleted ? "oui" : "non"}`,
-    `Transactions: ${summary.transactionCount}`,
-    `Vraies depenses: ${summary.realExpenseCount}`,
+    `App completee aujourd'hui: ${summary.appCompleted ? "oui" : "non"}`,
+    `Transactions aujourd'hui: ${summary.transactionCount}`,
+    `Transactions totales (historique): ${totalTxCount ?? "?"}`,
+    `Vraies depenses aujourd'hui: ${summary.realExpenseCount}`,
     `Dettes (avec echeance):`,
     ...(urgencyLines.length > 0 ? urgencyLines : ["Aucune"]),
     `Urgences: ${alerts.hasUrgentIssues ? "oui" : "non"}`,
+    ...clientLines,
+    `Argent client total: ${alerts.clientMoney.reduce((s: number, c: any) => s + c.balance, 0)} USD`,
     anonymizedContext,
     ...(alerts.hasUrgentPurchases
       ? [
@@ -289,21 +316,28 @@ export async function processMessageWithAI(userMessage: string): Promise<string>
   const classificationResult = await callDeepSeek([
     {
       role: "system",
-      content: `Tu es un classifieur. Analyse le message de Daniel et reponds avec UN SEUL mot parmi: INFO, CREATION, MENTION, ou AUCUN.
-INFO = Daniel demande des infos sur un client (comment va X, ou en est X). Inclus le nom du client apres deux-points. Ex: "INFO:Divine Test"
-CREATION = Daniel veut ajouter un nouveau client (nouveau client X, X veut une commande). Inclus le nom. Ex: "CREATION:Marc"
-MENTION = Daniel mentionne un nom sans intention precise (je vais voir X, le truc de la cliente). Inclus le nom si possible. Ex: "MENTION" ou "MENTION:Serge"
-AUCUN = aucun client mentionne. Ex: "AUCUN"
-Reponds UNIQUEMENT avec le mot et le nom. Pas de phrase. Pas d'explication.`,
+      content: `Tu es un classifieur. Analyse le message de Daniel et reponds avec DEUX informations sur une ligne:
+1. Intention: INFO, CREATION, MENTION, ou AUCUN (avec le nom du client si applicable, ex: "INFO:Divine Test")
+2. Cooperation: DECISION, EVASION, ou NEUTRE
+  - DECISION = Daniel prend une decision claire, accepte, s'engage (oui, d'accord, je vais le faire, ok je commence par X, je gere)
+  - EVASION = Daniel evite, repousse, change de sujet, dit "je sais pas" / "bof" / "on verra", repete sans avancer
+  - NEUTRE = ni decision ni fuite claire (question, small talk, info pure)
+
+Reponds EXACTEMENT dans ce format sur une ligne:
+INTENTION DECISION
+Ex: "INFO:Divine Test DECISION" ou "CREATION:Marc NEUTRE" ou "MENTION EVASION" ou "AUCUN DECISION"
+Pas de phrase. Pas d'explication.`,
     },
     { role: "user", content: userMessage },
   ], 30);
 
   const classif = classificationResult.trim();
-  const classParts = classif.match(/^(INFO|CREATION|MENTION|AUCUN)(?::(.+))?$/i);
+  const classParts = classif.match(/^(INFO|CREATION|MENTION|AUCUN)(?::(.+?))?\s+(DECISION|EVASION|NEUTRE)$/i);
   const intent = classParts?.[1]?.toUpperCase() ?? null;
   const detectedName = classParts?.[2]?.trim() || null;
-  console.log("[classifier]", classif, "→ intent:", intent, "name:", detectedName);
+  const cooperationCode = classParts?.[3]?.toUpperCase() ?? null;
+  const cooperated = cooperationCode === "DECISION";
+  console.log("[classifier]", classif, "→ intent:", intent, "name:", detectedName, "coop:", cooperationCode);
 
   // Étape 2 — Réponse normale avec contexte Supabase
   messages.push({ role: "user" as const, content: userMessage });
@@ -353,7 +387,7 @@ Reponds UNIQUEMENT avec le mot et le nom. Pas de phrase. Pas d'explication.`,
     saveConversationSummary(userId, exchangeSummary),
   ]);
 
-  return finalResponse;
+  return { reply: finalResponse, cooperated };
 }
 
 const TASK_CREATION_PATTERNS: RegExp[] = [

@@ -51,5 +51,5 @@ export function useSubmit() {
     setError(null);
   }
 
-  return { submitting, error, submit, clearError };
+  return { submitting, error, submit, clearError, setError };
 }

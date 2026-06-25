@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "message requis" }, { status: 400 });
     }
 
-    const response = await processMessageWithAI(message);
+    const result = await processMessageWithAI(message);
+    const response = result.reply;
 
     if (chatId) {
       await sendTelegramMessage(chatId, response);

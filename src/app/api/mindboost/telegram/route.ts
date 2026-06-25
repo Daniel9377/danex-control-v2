@@ -128,17 +128,27 @@ async function processText(text: string, chatId: number | string): Promise<void>
   // Active intake (ongoing response) — bypass escalation + loop entirely
   const activeIntake = await getActiveIntakeSession(userId);
   if (activeIntake) {
-    const reply = await processMessageWithAI(text);
+    const result = await processMessageWithAI(text);
     await resetLoopCount(userId);
-    await sendTelegramMessage(chatId, reply);
+    await sendTelegramMessage(chatId, result.reply);
     return;
   }
 
   // No active intake: run AI + alerts in parallel
-  const [reply, alerts] = await Promise.all([
+  const [result, alerts] = await Promise.all([
     processMessageWithAI(text),
     getMindboostAlerts(),
   ]);
+
+  const reply = result.reply;
+  const cooperated = result.cooperated;
+
+  // Cooperation signal: if Daniel made a clear decision, reset the loop counter
+  if (cooperated) {
+    await resetLoopCount(userId);
+  } else {
+    await incrementLoopCount(userId);
+  }
 
   const level = await evaluateEscalationLevel(text, alerts, userId);
 
@@ -174,8 +184,6 @@ async function processText(text: string, chatId: number | string): Promise<void>
     finalReply = applyEscalationToReply(reply, 3);
   }
 
-  // Plain text reply = no concrete action → increment loop counter
-  await incrementLoopCount(userId);
   await sendTelegramMessage(chatId, finalReply);
 }
 
@@ -283,7 +291,8 @@ export async function POST(request: NextRequest) {
       if (isSlashCommand(text)) {
         reply = await handleTelegramCommand(text);
       } else {
-        reply = await processMessageWithAI(text);
+        const result = await processMessageWithAI(text);
+        reply = result.reply;
       }
       return NextResponse.json({ ok: true, dryRun: true, reply });
     } catch (error) {

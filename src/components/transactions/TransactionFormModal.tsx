@@ -118,7 +118,7 @@ export function TransactionFormModal({
   onClose,
   onSubmit,
 }: Props) {
-  const { submitting, error, submit, clearError } = useSubmit();
+  const { submitting, error, submit, clearError, setError } = useSubmit();
 
   const [subType, setSubType]           = useState<TransactionSubType | null>(defaultSubType ?? null);
   const [idempotencyKey, setIdempotencyKey] = useState(generateIdempotencyKey);
@@ -264,6 +264,13 @@ export function TransactionFormModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!subType || !meta) return;
+
+    // Block submission if an order is required but none selected
+    if (meta.needsOrder && !orderId) {
+      clearError();
+      setError("Sélectionne une commande pour cette opération.");
+      return;
+    }
 
     const input: CreateOperationInput = {
       subType,
