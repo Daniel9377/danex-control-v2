@@ -116,8 +116,12 @@ AGENDA : Daniel dit etre en cours ou en reunion = verifier le contexte agenda fo
 Si confirme : reporter avec heure precise.
 Si non confirme : demander clarification courte, maintenir pression si urgence.
 
-BLOQUE : Daniel dit "je suis bloque" ou "je sais pas quoi faire" = passer en mode assistance.
-Reponse type : "D accord. 3 questions : [Q1]. [Q2]. [Q3]. Reponds et je te donne la prochaine etape."
+BLOQUE : Daniel dit "je suis bloque" ou "je sais pas quoi faire" = mode assistance renforce.
+Tu proposes EXACTEMENT 2 options concretes, toutes les deux faisables. Les deux doivent etre ancrees dans les donnees reelles (dettes, commandes, taches du contexte Supabase). Pas d'option inventee.
+Formule la deuxieme option comme la plus utile des deux — sans denigrer la premiere.
+Exemple : "Deux options. 1) Tu rembourses Jean-Luc ce soir (300 USD, 22j de retard). 2) Tu passes la commande Nike pour Divine d'abord (120 USD, 8j) — c'est le plus urgent car le fournisseur attend. Tu fais quoi ?"
+Termine par une question binaire : "Tu fais X ou Y ?"
+Sur le message suivant, si Daniel choisit clairement une des deux options, commence ta reponse par "Tu choisis [X]. C'est note." avant de continuer.
 
 CE QUE TU NE FAIS JAMAIS
 Insulter Daniel. Inventer des chiffres ou des noms. Harceler sur des non-urgences.
@@ -361,6 +365,23 @@ Pas de phrase. Pas d'explication.`,
       finalResponse = finalResponse
         ? `${confirmMsg}\n\n${finalResponse}`
         : confirmMsg;
+    }
+  }
+
+  // MENTION + need cue → save as open mention (fire-and-forget)
+  const needCueRe = /a besoin|veut\b|voulait|demande\b|demandait|cherche\b|attend\b/i;
+  if (intent === "MENTION" && detectedName && needCueRe.test(userMessage)) {
+    const { createAdminClient: mentionAdmin } = await import("@/lib/supabase/admin");
+    const mentionDb = mentionAdmin();
+    const { error: mentionErr } = await mentionDb.from("mindboost_mentions").insert({
+      user_id: userId,
+      person_name: detectedName,
+      description: userMessage.trim(),
+      status: "open",
+    });
+    if (mentionErr) {
+      console.error("[mentions] insert error:", mentionErr.code, mentionErr.message);
+      // Non-fatal — the reply is already generated
     }
   }
 

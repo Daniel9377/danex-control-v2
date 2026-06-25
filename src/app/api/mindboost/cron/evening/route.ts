@@ -69,6 +69,18 @@ Ne mets PAS de formules de politesse, pas de "Résumé du jour:", pas de "Bonjou
     // 5. Upsert into daily summaries
     await upsertDailySummary(userId, todayChina, summaryText);
 
+    // 5b. Fetch open mentions
+    const { data: openMentions } = await supabase
+      .from("mindboost_mentions")
+      .select("person_name, description, created_at")
+      .eq("user_id", userId)
+      .eq("status", "open")
+      .order("created_at", { ascending: true });
+
+    const mentionLines = openMentions?.length
+      ? openMentions.map((m: any) => `  ${m.person_name} — ${m.description.slice(0, 100)}`).join("\n")
+      : "Aucune mention en attente.";
+
     // 6. Send evening report to Telegram + trigger evening check flow
     const urgentAlerts = await getUrgentPurchaseAlerts(userId);
     const urgentNote = urgentAlerts.length > 0
@@ -77,7 +89,7 @@ Ne mets PAS de formules de politesse, pas de "Résumé du jour:", pas de "Bonjou
 
     await sendTelegramMessage(
       process.env.TELEGRAM_ALLOWED_CHAT_ID!,
-      `🌙 Soir — ${todayChina}\n\n${reportText}${urgentNote}\n\nApp completée ? (oui / non)`
+      `🌙 Soir — ${todayChina}\n\n${reportText}${urgentNote}\n\nMentions en attente:\n${mentionLines}\n\nApp completée ? (oui / non)`
     );
 
     // Save evening check pending so the oui/non flow engages

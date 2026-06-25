@@ -241,6 +241,26 @@ export async function handleTelegramCommand(text: string) {
     return "PDF en cours de génération…"; // Actual PDF sent via separate flow in route.ts
   }
 
+  if (cleanText === "/mentions") {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const supabase = createAdminClient();
+    const userId = process.env.MINDBOOST_USER_ID;
+    const { data } = await supabase
+      .from("mindboost_mentions")
+      .select("person_name, description, created_at, status")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+    if (!data || data.length === 0) return "Aucune mention enregistree.";
+
+    const lines = data.map((m: any) => {
+      const age = Math.floor((Date.now() - new Date(m.created_at).getTime()) / 86400000);
+      const statusIcon = m.status === "resolved" ? "✓" : "○";
+      return `${statusIcon} ${m.person_name} — ${m.description.slice(0, 120)} (${age}j)`;
+    });
+    return lines.join("\n");
+  }
+
   if (cleanText === "/today" || cleanText === "/status") {
     const summary = await getMindboostTodaySummary();
     return formatTodaySummary(summary);
