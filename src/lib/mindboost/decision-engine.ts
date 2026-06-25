@@ -321,7 +321,7 @@ export async function processMessageWithAI(userMessage: string): Promise<{ reply
       ? [
           `RECLAMATIONS EN ATTENTE (a traiter comme vraies sauf preuve du contraire):`,
           ...pendingReconciliations.map((rc: any) =>
-            `- ${rc.person_name}: ${rc.entity_type === "new_entity" ? "nouvelle entite (pas dans Supabase)" : rc.entity_type + " " + (rc.claim_text?.slice(0, 80) ?? "")} — dit le ${new Date(rc.created_at).toISOString().slice(0, 10)}${rc.escalation_day > 0 ? ` (${rc.escalation_day}j sans confirmation)` : ""}`
+            `- ${anonymize(map, rc.person_name, "entity")}: ${rc.entity_type === "new_entity" ? "nouvelle entite (pas dans Supabase)" : rc.entity_type + " " + (rc.claim_text?.slice(0, 80) ?? "")} — dit le ${new Date(rc.created_at).toISOString().slice(0, 10)}${rc.escalation_day > 0 ? ` (${rc.escalation_day}j sans confirmation)` : ""}`
           ),
         ]
       : []),
@@ -492,10 +492,26 @@ Pas de phrase. Pas d'explication.`,
     }
   }
 
+  // Fallback name extraction: detectClientMention first, then "ajoute X" pattern
+  function extractName(msg: string): string | null {
+    const detected = detectClientMention(msg);
+    if (detected) return detected;
+    // Fallback: "ajoute X", "ajoute aussi X", "ajouter X"
+    const ajouteMatch = msg.match(/ajoute(?:r)?\s+(?:aussi\s+)?([A-Za-zÀ-ÿ]+)/i);
+    if (ajouteMatch?.[1]) return ajouteMatch[1];
+    return null;
+  }
+
   // New entity claims: "il/elle me doit X$"
   const newEntityMatch = userMessage.match(claimNewRe);
   if (newEntityMatch) {
-    const entName = detectClientMention(userMessage);
+    // Try multiple extraction strategies: detectClientMention → "ajoute X" → "X me doit"
+    let entName = extractName(userMessage);
+    if (!entName) {
+      // Direct pattern: "X me doit Y$" — capture the name before "me doit"
+      const directMatch = userMessage.match(/([A-Za-zÀ-ÿ]+)\s+me\s+doit/i);
+      if (directMatch?.[1]) entName = directMatch[1];
+    }
     if (entName) {
       // Only trigger if this person is NOT in existing clients/debts data
       const existsInAlerts = alerts.debts.some((d: any) => d.person_name.toLowerCase().includes(entName.toLowerCase()));
@@ -509,11 +525,13 @@ Pas de phrase. Pas d'explication.`,
   // "je dois à X Y$" — new_entity if X not in existing data
   const oweMatch = userMessage.match(claimOweRe);
   if (oweMatch) {
-    const oweName = oweMatch[2];
-    const existsInAlerts = alerts.debts.some((d: any) => d.person_name.toLowerCase().includes(oweName.toLowerCase()));
-    if (!existsInAlerts) {
-      await openReconciliation(userId, oweName, userMessage, "new_entity", null, null);
-      finalResponse = (finalResponse ? finalResponse + "\n" : "") + `Note — ${oweName} en attente d'ajout dans l'app.`;
+    const oweName = oweMatch[2] || extractName(userMessage);
+    if (oweName) {
+      const existsInAlerts = alerts.debts.some((d: any) => d.person_name.toLowerCase().includes(oweName.toLowerCase()));
+      if (!existsInAlerts) {
+        await openReconciliation(userId, oweName, userMessage, "new_entity", null, null);
+        finalResponse = (finalResponse ? finalResponse + "\n" : "") + `Note — ${oweName} en attente d'ajout dans l'app.`;
+      }
     }
   }
 
