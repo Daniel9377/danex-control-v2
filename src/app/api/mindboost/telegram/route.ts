@@ -109,6 +109,33 @@ async function processText(text: string, chatId: number | string): Promise<void>
     return;
   }
 
+  // Mention resolve — deterministic regex, standalone early-return
+  const resolveRe = /(?:c'est bon pour|cest bon pour|réglé pour|regle pour|réglé avec|regle avec|résolu pour|resolu pour)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'-]*)|([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'-]*)\s+(?:c'est fait|cest fait|est réglé|est regle|est résolu|est resolu)/i;
+  const resolveMatch = text.match(resolveRe);
+  if (resolveMatch) {
+    const name = (resolveMatch[1] || resolveMatch[2]).trim();
+    const supabase = (await import("@/lib/supabase/admin")).createAdminClient();
+    const { data: openMentions } = await supabase
+      .from("mindboost_mentions")
+      .select("id, person_name, description")
+      .eq("user_id", userId)
+      .eq("status", "open")
+      .ilike("person_name", `%${name}%`)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (openMentions && openMentions.length > 0) {
+      const mention = openMentions[0];
+      await supabase.from("mindboost_mentions")
+        .update({ status: "resolved", resolved_at: new Date().toISOString() })
+        .eq("id", mention.id);
+      await sendTelegramMessage(chatId, `Mention pour ${mention.person_name} marquee resolue.`);
+    } else {
+      await sendTelegramMessage(chatId, `Aucune mention ouverte trouvee pour "${name}".`);
+    }
+    return;
+  }
+
   // Intake trigger detection — must run BEFORE any DB/AI call
   const trigger = detectIntakeTrigger(text);
   if (trigger.triggered) {
@@ -124,35 +151,6 @@ async function processText(text: string, chatId: number | string): Promise<void>
     if (trigger.clientName) {
       const found = await searchExistingClient(userId, trigger.clientName);
       existingClientId = found?.id ?? null;
-    }
-
-    // Mention resolve check — deterministic regex, no AI needed
-    if (!isSlashCommand(text)) {
-      const resolveRe = /(?:c'est bon pour|cest bon pour|réglé pour|regle pour|réglé avec|regle avec|résolu pour|resolu pour)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'-]*)|([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'-]*)\s+(?:c'est fait|cest fait|est réglé|est regle|est résolu|est resolu)/i;
-      const resolveMatch = text.match(resolveRe);
-      if (resolveMatch) {
-        const name = (resolveMatch[1] || resolveMatch[2]).trim();
-        const supabase = (await import("@/lib/supabase/admin")).createAdminClient();
-        const { data: openMentions } = await supabase
-          .from("mindboost_mentions")
-          .select("id, person_name, description")
-          .eq("user_id", userId)
-          .eq("status", "open")
-          .ilike("person_name", `%${name}%`)
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        if (openMentions && openMentions.length > 0) {
-          const mention = openMentions[0];
-          await supabase.from("mindboost_mentions")
-            .update({ status: "resolved", resolved_at: new Date().toISOString() })
-            .eq("id", mention.id);
-          await sendTelegramMessage(chatId, `Mention pour ${mention.person_name} marquee resolue.`);
-        } else {
-          await sendTelegramMessage(chatId, `Aucune mention ouverte trouvee pour "${name}".`);
-        }
-        return;
-      }
     }
     const { firstQuestion } = await startIntakeSession(userId, trigger.clientName, existingClientId);
     await resetLoopCount(userId);
